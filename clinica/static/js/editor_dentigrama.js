@@ -175,7 +175,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         setTimeout(() => {
             const dataURL = canvas.toDataURL('image/png');
-            document.getElementById('dentigrama_canvas_input').value = dataURL;
+            document.getElementById('dentigrama_url_input').value = dataURL;
             alert("Dentigrama actualizado. No olvides guardar los cambios del formulario.");
         }, 100); // ← da tiempo al navegador para aplicar el layout
     };

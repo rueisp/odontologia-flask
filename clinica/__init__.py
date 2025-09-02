@@ -42,6 +42,28 @@ def create_app():
         secure = True
     )
     # ▲▲▲ FIN DEL BLOQUE A AÑADIR ▲▲▲
+    
+        # --- INICIO BLOQUE DE CONFIGURACIÓN CORS (dentro de create_app) ---
+    @app.after_request
+    def add_cors_headers(response):
+        # Para que esto funcione, 'request' debe estar importado desde 'flask'
+        # Asegúrate de que tu aplicación maneje las OPTIONS requests si es necesario,
+        # aunque @app.after_request generalmente cubre todas las respuestas.
+        response.headers['Access-Control-Allow-Origin'] = '*'  # Permite cualquier origen
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+        response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
+        
+        # Opcional: Esto ayuda a asegurar que el navegador siempre cargue la última versión
+        # de tus archivos estáticos durante el desarrollo, ignorando la caché.
+        # En producción, podrías querer un control de caché más sofisticado.
+        if 'Cache-Control' not in response.headers:
+             response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+             response.headers['Pragma'] = 'no-cache'
+             response.headers['Expires'] = '0'
+
+        return response
+    # --- FIN BLOQUE DE CONFIGURACIÓN CORS ---
+
 
     # --- 2. INICIALIZAR EXTENSIONES CON LA APP ---
     db.init_app(app)

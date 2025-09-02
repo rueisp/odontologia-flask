@@ -88,114 +88,187 @@
     </div> <!-- ✅ CIERRE CORRECTO DEL TERCER ITEM -->
 
 
-    <!-- =========== SECCIÓN 4: DENTIGRAMA (ADAPTADO PARA CREAR Y EDITAR) =========== -->
-    <div class="accordion-item">
-        <h2 class="accordion-header" id="headingDentigrama">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDentigrama" aria-expanded="false" aria-controls="collapseDentigrama">
-                <i data-lucide="image" class="accordion-icon"></i>
-                <strong>Dentigrama</strong>
-            </button>
-        </h2>
-        <div id="collapseDentigrama" class="accordion-collapse collapse" aria-labelledby="headingDentigrama" data-bs-parent="#accordionRegistroPaciente">
 <!-- En _accordion_registro_paciente.html -->
 
-            <div class="accordion-body">
-                        
-                <!-- Contenedor visual del dentigrama. TIENE el fondo. -->
-                <div id="dentigrama-container" style="position: relative; width: 800px; height: 400px; background-image: url('{{ url_for('static', filename='img/plantilla_dentigrama.png') }}'); background-size: contain; background-repeat: no-repeat; margin: 0 auto; border: 1px solid #ccc;">
+<!-- =========== SECCIÓN 4: DENTIGRAMA (ADAPTADO PARA CREAR Y EDITAR) =========== -->
+<div class="accordion-item">
+    <h2 class="accordion-header" id="headingDentigrama">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDentigrama" aria-expanded="false" aria-controls="collapseDentigrama">
+            <i data-lucide="image" class="accordion-icon"></i>
+            <strong>Dentigrama</strong>
+        </button>
+    </h2>
+    <div id="collapseDentigrama" class="accordion-collapse show" aria-labelledby="headingDentigrama" data-bs-parent="#accordionRegistroPaciente">
+        <div class="accordion-body">
                     
-                    <!-- El canvas donde se dibuja. Es un hijo directo. -->
-                    <canvas id="dentigrama_canvas" width="800" height="400" style="position: absolute; top: 0; left: 0;"></canvas>
-                    
-                    <!-- Imagen oculta para precargar los trazos en modo edición. NO es visible. -->
-                    {% if paciente and paciente.dentigrama_url %}
-                        <img id="dentigrama_overlay_src" src="{{ paciente.dentigrama_url }}" style="display: none;">
-                    {% endif %}
-                </div>
-
-                <div class="mt-3 text-center">
-                    <button type="button" class="btn btn-light btn-sm" id="btnColorRojo">🔴 Rojo</button>
-                    <button type="button" class="btn btn-light btn-sm" id="btnColorAzul">🔵 Azul</button>
-                    <button type="button" class="btn btn-light btn-sm" id="btnColorNegro">⚫ Negro</button>
-                    <button type="button" class="btn btn-light btn-sm" id="btnActivarCheck">✔️ Check</button>
-                    <span class="mx-2">/</span>
-                    <button type="button" class="btn btn-warning btn-sm" id="btnLimpiar">🧹 Limpiar</button>
-                    <button type="button" class="btn btn-info btn-sm" id="btnDeshacer">↩️ Deshacer</button>
-                    <span class="mx-2">/</span>
-                    <button type="button" class="btn btn-primary" id="btnGuardarDentigrama">💾 Aplicar Cambios al Dentigrama</button>
-                </div>```
-
+            <!-- Contenedor visual del dentigrama. TIENE el fondo. -->
+            <!-- Aseguramos que este contenedor tenga un tamaño definido (800x400) -->
+            <div id="dentigrama-container" style="position: relative; width: 800px; height: 413px; margin: 0 auto; border: 1px solid #ccc; background-color: white;">                
+                <!-- El canvas donde se dibuja. Ocupa el 100% de su padre. -->
+                <!-- También pasamos la URL del fondo como un data attribute. -->
+                <canvas id="dentigrama_canvas" 
+                        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
+                        data-background-url="{{ url_for('static', filename='img/plantilla_dentigrama.png') }}"></canvas>
                 
-                <!-- Input oculto para la URL de Cloudinary -->
-                <input type="hidden" name="dentigrama_url" id="dentigrama_url_input" value="{{ paciente.dentigrama_url or '' }}">
+                <!-- Imagen oculta para precargar los trazos en modo edición. NO es visible. -->
+                {% if paciente and paciente.dentigrama_url %}
+                    <img id="dentigrama_overlay_src" src="{{ paciente.dentigrama_url }}" style="display: none;">
+                {% endif %}
+            </div>
 
+            <div class="mt-3 text-center">
+                <button type="button" class="btn btn-light btn-sm" id="btnColorRojo">🔴 Rojo</button>
+                <button type="button" class="btn btn-light btn-sm" id="btnColorAzul">🔵 Azul</button>
+                <button type="button" class="btn btn-light btn-sm" id="btnColorNegro">⚫ Negro</button>
+                <button type="button" class="btn btn-light btn-sm" id="btnActivarCheck">✔️ Check</button>
+                <span class="mx-2">/</span>
+                <button type="button" class="btn btn-warning btn-sm" id="btnLimpiar">🧹 Limpiar</button>
+                <button type="button" class="btn btn-info btn-sm" id="btnDeshacer">↩️ Deshacer</button>
+                <span class="mx-2">/</span>
+                <button type="button" class="btn btn-primary" id="btnGuardarDentigrama">💾 Aplicar Cambios al Dentigrama</button>
+            </div>
+            
+            <!-- Input oculto para la URL de Cloudinary -->
+            <input type="hidden" name="dentigrama_url" id="dentigrama_url_input" value="{{ paciente.dentigrama_url or '' }}">
+
+        </div>
+    </div>
+</div>
+
+
+    <!-- =========== SECCIÓN 5: IMÁGENES DEL PACIENTE (VERSIÓN FINAL PARA EDICIÓN) =========== -->
+    <div class="accordion-item">
+        <h2 class="accordion-header" id="headingImagenes">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseImagenes" aria-expanded="false" aria-controls="collapseImagenes">
+                <i data-lucide="images" class="accordion-icon"></i>
+                <strong>Imágenes del Paciente</strong>
+            </button>
+        </h2>
+        <div id="collapseImagenes" class="accordion-collapse collapse" aria-labelledby="headingImagenes" data-bs-parent="#accordionRegistroPaciente">
+            <div class="accordion-body">
+                <div class="row">
+
+                    <!-- === LÓGICA PARA IMAGEN 1 === -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Imagen 1</label>
+                        
+                        {# Si la variable 'paciente' existe y tiene una URL, la mostramos #}
+                        {% if paciente and paciente.imagen_1_url %}
+                            <div class="mb-2">
+                                <img src="{{ paciente.imagen_1_url }}" alt="Imagen 1 actual" class="img-fluid rounded border" style="max-height: 200px;">
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="eliminar_imagen_1" id="eliminar_imagen_1">
+                                <label class="form-check-label" for="eliminar_imagen_1">
+                                    Eliminar imagen 1 actual
+                                </label>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-light p-2 text-center" role="alert">
+                                No hay imagen subida.
+                            </div>
+                        {% endif %}
+                        
+                        <label for="imagen_1_url" class="form-label small text-muted mt-2">Subir nueva / Reemplazar</label>
+                        <input type="file" class="form-control" id="imagen_1_url" name="imagen_1_url" accept="image/*">
+                    </div>
+
+                    <!-- === LÓGICA PARA IMAGEN 2 === -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Imagen 2</label>
+                        
+                        {% if paciente and paciente.imagen_2_url %}
+                            <div class="mb-2">
+                                <img src="{{ paciente.imagen_2_url }}" alt="Imagen 2 actual" class="img-fluid rounded border" style="max-height: 200px;">
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="eliminar_imagen_2" id="eliminar_imagen_2">
+                                <label class="form-check-label" for="eliminar_imagen_2">
+                                    Eliminar imagen 2 actual
+                                </label>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-light p-2 text-center" role="alert">
+                                No hay imagen subida.
+                            </div>
+                        {% endif %}
+
+                        <label for="imagen_2_url" class="form-label small text-muted mt-2">Subir nueva / Reemplazar</label>
+                        <input type="file" class="form-control" id="imagen_2_url" name="imagen_2_url" accept="image/*">
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-<!-- Archivo: _accordion_registro_paciente.html -->
-
-<!-- =========== SECCIÓN 5: IMÁGENES DEL PACIENTE (VERSIÓN FINAL PARA EDICIÓN) =========== -->
-<div class="accordion-item">
-    <h2 class="accordion-header" id="headingImagenes">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseImagenes" aria-expanded="false" aria-controls="collapseImagenes">
-            <i data-lucide="images" class="accordion-icon"></i>
-            <strong>Imágenes del Paciente</strong>
-        </button>
-    </h2>
-    <div id="collapseImagenes" class="accordion-collapse collapse" aria-labelledby="headingImagenes" data-bs-parent="#accordionRegistroPaciente">
-        <div class="accordion-body">
-            <div class="row">
-
-                <!-- === LÓGICA PARA IMAGEN 1 === -->
-                <div class="col-md-6 mb-3">
-                    <label class="form-label fw-bold">Imagen 1</label>
-                    
-                    {# Si la variable 'paciente' existe y tiene una URL, la mostramos #}
-                    {% if paciente and paciente.imagen_1_url %}
-                        <div class="mb-2">
-                            <img src="{{ paciente.imagen_1_url }}" alt="Imagen 1 actual" class="img-fluid rounded border" style="max-height: 200px;">
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="eliminar_imagen_1" id="eliminar_imagen_1">
-                            <label class="form-check-label" for="eliminar_imagen_1">
-                                Eliminar imagen 1 actual
-                            </label>
-                        </div>
-                    {% else %}
-                        <div class="alert alert-light p-2 text-center" role="alert">
-                            No hay imagen subida.
-                        </div>
-                    {% endif %}
-                    
-                    <label for="imagen_1_url" class="form-label small text-muted mt-2">Subir nueva / Reemplazar</label>
-                    <input type="file" class="form-control" id="imagen_1_url" name="imagen_1_url" accept="image/*">
-                </div>
-
-                <!-- === LÓGICA PARA IMAGEN 2 === -->
-                <div class="col-md-6 mb-3">
-                    <label class="form-label fw-bold">Imagen 2</label>
-                    
-                    {% if paciente and paciente.imagen_2_url %}
-                        <div class="mb-2">
-                            <img src="{{ paciente.imagen_2_url }}" alt="Imagen 2 actual" class="img-fluid rounded border" style="max-height: 200px;">
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="eliminar_imagen_2" id="eliminar_imagen_2">
-                            <label class="form-check-label" for="eliminar_imagen_2">
-                                Eliminar imagen 2 actual
-                            </label>
-                        </div>
-                    {% else %}
-                        <div class="alert alert-light p-2 text-center" role="alert">
-                            No hay imagen subida.
-                        </div>
-                    {% endif %}
-
-                    <label for="imagen_2_url" class="form-label small text-muted mt-2">Subir nueva / Reemplazar</label>
-                    <input type="file" class="form-control" id="imagen_2_url" name="imagen_2_url" accept="image/*">
+    <!-- =========== NUEVA SECCIÓN: GESTIÓN DE EVOLUCIONES (SÓLO SI EL PACIENTE YA EXISTE) =========== -->
+    {% if paciente and paciente.id %} {# <-- ESTA ES LA CONDICIÓN CLAVE #}
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="headingEvolucionesGestion">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEvolucionesGestion" aria-expanded="false" aria-controls="collapseEvolucionesGestion">
+                    <i data-lucide="trending-up" class="accordion-icon"></i>
+                    <strong>Gestión de Evoluciones</strong>
+                </button>
+            </h2>
+            <div id="collapseEvolucionesGestion" class="accordion-collapse collapse" aria-labelledby="headingEvolucionesGestion" data-bs-parent="#accordionRegistroPaciente">
+                <div class="accordion-body">
+                    <h4 class="h6 mb-3">Historial de Evoluciones</h4>
+                    <div class="evolucion-list mb-4" style="max-height: 300px; overflow-y: auto; border: 1px solid #eee; padding: 10px; border-radius: 5px; background-color: #fcfcfc;">
+                        {% if paciente.evoluciones %}
+                            {% for evolucion in paciente.evoluciones | sort(attribute='fecha', reverse=True) %}
+                            <div class="evolucion-item border-bottom pb-3 mb-3 d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="evolucion-date fw-bold text-primary small mb-1">{{ evolucion.fecha.strftime('%d de %B, %Y %H:%M') }}</div>
+                                    <p class="evolucion-desc mb-0 text-muted">{{ evolucion.descripcion }}</p>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                                            data-bs-toggle="modal" data-bs-target="#editEvolutionModal"
+                                            data-evolution-id="{{ evolucion.id }}"
+                                            data-evolution-descripcion="{{ evolucion.descripcion }}">
+                                        Editar
+                                    </button>
+                                    <form action="{{ url_for('evoluciones.eliminar_evolucion', evolucion_id=evolucion.id) }}" method="post" onsubmit="return confirm('¿Estás seguro de que quieres eliminar esta evolución?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                                    </form>
+                                </div>
+                            </div>
+                            {% else %}
+                            <p class="text-muted">No hay evoluciones registradas para este paciente.</p>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">No hay evoluciones registradas para este paciente.</p>
+                        {% endif %}
+                    </div>
+                    {# Aquí NO se incluye el formulario para AÑADIR una nueva evolución #}
                 </div>
             </div>
+        </div> <!-- CIERRE DE LA NUEVA SECCIÓN DE GESTIÓN DE EVOLUCIONES -->
+    {% endif %} 
+
+</div> <!-- CIERRE FINAL DE accordionRegistroPaciente -->
+
+<!-- MODAL PARA EDITAR EVOLUCIÓN (se mantiene aquí, fuera de la condición del acordeón, para que siempre esté disponible en la página si se carga el JS) -->
+<div class="modal fade" id="editEvolutionModal" tabindex="-1" aria-labelledby="editEvolutionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="editEvolutionForm" method="post"> {# La acción se establecerá con JavaScript #}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editEvolutionModalLabel">Editar Evolución</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="evolution_id" id="modalEvolutionId">
+                    <div class="mb-3">
+                        <label for="modalEvolutionDescripcion" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="modalEvolutionDescripcion" name="descripcion" rows="5" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

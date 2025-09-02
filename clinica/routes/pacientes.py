@@ -12,7 +12,7 @@ from sqlalchemy import or_, func, case
 from ..extensions import db
 from ..models import Paciente, Cita, Evolucion, AuditLog
 from ..utils import allowed_file, convertir_a_fecha, extract_public_id_from_url
-
+from clinica.models import Paciente, Evolucion
 pacientes_bp = Blueprint('pacientes', __name__, url_prefix='/pacientes')
 
 
@@ -47,6 +47,7 @@ def lista_pacientes():
     return render_template('pacientes.html', pacientes=pacientes, buscar=search_term)
 
 
+
 @pacientes_bp.route('/<int:id>', methods=['GET', 'POST']) # Cambiado a una URL más RESTful
 @login_required # 1. Proteger la ruta, es fundamental
 def mostrar_paciente(id):
@@ -76,8 +77,37 @@ def mostrar_paciente(id):
 
         return redirect(url_for('pacientes.mostrar_paciente', id=paciente.id))
 
-    return render_template('mostrar_paciente.html', paciente=paciente)
+    # --- Lógica para el Dentigrama: Extraer el Public ID de los trazos ---
+    full_public_id_trazos = None
+    if paciente.dentigrama_url:
+        try:
+            # Obtener la parte del path de la URL después de "/upload/"
+            # Ejemplo: "v1756665344/dentigramas_overlay/f197113usxh6merhww.png"
+            parts = paciente.dentigrama_url.split('/upload/')
+            if len(parts) > 1:
+                # Obtener la parte que contiene la carpeta y el nombre del archivo
+                public_id_with_version_and_ext = parts[1].strip('/') # Eliminar barras al inicio/fin
+                
+                # Dividir por '/' para obtener las partes
+                path_components = public_id_with_version_and_ext.split('/')
+                
+                # Si la primera parte es una "versión" (ej. v1234567890), la ignoramos para el Public ID
+                if path_components[0].startswith('v') and len(path_components) > 1:
+                    actual_public_id_parts = path_components[1:]
+                else:
+                    actual_public_id_parts = path_components
+                
+                # Unir las partes restantes y quitar la extensión (ej. .png)
+                full_public_id_trazos = '/'.join(actual_public_id_parts).split('.')[0]
 
+        except Exception as e:
+            print(f"DENTIGRAMA ERROR (Backend): Error al extraer public ID de dentigrama_url: {e}")
+            full_public_id_trazos = None # Asegurar que sea None si hay un error
+    # --- Fin Lógica para el Dentigrama ---
+
+    return render_template('mostrar_paciente.html', 
+                           paciente=paciente,
+                           full_public_id_trazos=full_public_id_trazos) # <--- Pasamos la variable
 @pacientes_bp.route('/crear', methods=['GET', 'POST'])
 @login_required
 def crear_paciente():
