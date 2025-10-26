@@ -1,185 +1,421 @@
+/* clinica/static/css/perfil_paciente.css */
 
-    body {
-        background-color: #f0f2f5;
-        font-family: 'Roboto', sans-serif;
-    }
-
-    .container-custom {
-        max-width: 1600px; /* Ancho extendido para 4 columnas */
-        margin: 40px auto;
-        padding: 0 20px;
-    }
-
-    /* --- ENCABEZADO DEL PERFIL --- */
-    .profile-header {
-        background-color: #000;
-        color: white;
-        border-radius: 20px;
-        padding: 30px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 30px;
-    }
-    .profile-header .info h1 {
-        margin: 0 0 5px 0;
-        font-size: 28px;
-        font-weight: 600;
-    }
-    .profile-header .info p {
-        margin: 0;
-        opacity: 0.8;
-    }
-    .profile-header .actions {
-        display: flex;
-        gap: 12px;
-    }
-
-    /* --- BOTONES PERSONALIZADOS --- */
-    .btn-custom {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 10px 20px;
-        border-radius: 12px;
-        font-weight: 500;
-        font-size: 15px;
-        border: none;
-        cursor: pointer;
-        text-decoration: none;
-        transition: all 0.2s ease-in-out;
-    }
-    .btn-custom .btn-icon { margin-right: 8px; }
-
-    .btn-primary-custom { background-color: #111827; color: white; }
-    .btn-primary-custom:hover { background-color: #1D4ED8; transform: translateY(-2px); }
-    .btn-secondary-custom { background-color: #6c757d; color: white; }
-    .btn-secondary-custom:hover { background-color: #5a6268; }
-    .btn-success-custom { background-color: #16a34a; color: white; }
-    .btn-success-custom:hover { background-color: #15803d; }
-    .btn-info-custom { background-color: #0284c7; color: white; }
-    .btn-info-custom:hover { background-color: #0369a1; }
-
-    /* --- LAYOUT DE 4 COLUMNAS --- */
-    .profile-layout {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 25px;
-    }
-
-    /* --- TARJETA MODULAR --- */
-    .card-custom {
-        background-color: #ffffff;
-        border-radius: 20px;
-        padding: 25px;
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
-        margin-bottom: 25px; /* Espacio entre tarjetas en la misma columna */
-    }
-    .card-custom h3 {
-        font-size: 20px;
-        font-weight: 600;
-        margin: 0 0 20px 0;
-        padding-bottom: 15px;
-        border-bottom: 1px solid #e9ecef;
-        display: flex;
-        align-items: center;
-    }
-    .card-custom h3 .card-icon { margin-right: 12px; color: #4b5563; }
-
-    /* --- ESTILOS DE DATOS DENTRO DE LAS TARJETAS --- */
-    .data-grid {
-        display: grid;
-        grid-template-columns: 1fr; /* Por defecto, una columna para mejor distribución interna */
-        gap: 18px;
-    }
-    .data-item .label {
-        display: block;
-        font-weight: 500;
-        color: #6c757d;
-        font-size: 13px;
-        margin-bottom: 4px;
-    }
-    .data-item .value {
-        color: #111827;
-        font-weight: 500;
-        font-size: 15px;
-    }
-    .data-item .value.text-area {
-        white-space: pre-wrap;
-        font-size: 14px;
-        line-height: 1.6;
-        background-color: #f8f9fa;
-        padding: 12px;
-        border-radius: 8px;
-        display: block;
-        color: #343a40;
-    }
-
-    /* --- ESTILOS DE GALERÍA, EVOLUCIÓN, ETC. --- */
-    .gallery-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 15px;
-        text-align: center;
-    }
-    .gallery-item img {
-        width: 100%;
-        height: 120px;
-        object-fit: cover;
-        border-radius: 12px;
-        cursor: pointer;
-        transition: transform 0.2s;
-    }
-    .gallery-item img:hover { transform: scale(1.05); }
-    .gallery-item h5 { font-size: 14px; margin-top: 10px; font-weight: 500; }
-    
-    .evolucion-list .evolucion-item {
-        position: relative;
-        padding-left: 25px;
-        padding-bottom: 20px;
-        border-left: 2px solid #e9ecef;
-    }
-    .evolucion-list .evolucion-item:last-child { border-left: 2px solid transparent; padding-bottom: 0; }
-    .evolucion-list .evolucion-item::before {
-        content: ''; position: absolute; left: -7px; top: 5px; width: 12px; height: 12px;
-        border-radius: 50%; background-color: #6c757d; border: 2px solid #fff;
-    }
-    .evolucion-list .evolucion-item:first-child::before { background-color: #0d6efd; }
-    .evolucion-date { font-weight: 500; color: #343a40; font-size: 14px; margin-bottom: 5px; }
-    .evolucion-desc { color: #495057; font-size: 15px; }
-    .evolucion-form textarea { border-radius: 12px; border-color: #dee2e6; }
-    
-    .modal-content { border-radius: 20px; }
-    .modal-body img { border-radius: 12px; }
-
-    /* --- LÓGICA RESPONSIVE --- */
-    @media (max-width: 1400px) {
-        .profile-layout { grid-template-columns: repeat(2, 1fr); }
-    }
-    @media (max-width: 768px) {
-        .profile-layout { grid-template-columns: 1fr; }
-        .profile-header { flex-direction: column; gap: 20px; text-align: center; }
-    }
-
-/* Hacemos que el cuerpo del modal no tenga padding */
-#modalDentigrama .modal-body {
+body {
+    background-color: #f0f2f5;
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
     padding: 0;
 }
 
-/* El nuevo contenedor dentro del modal */
-.dentigrama-modal-content {
-    position: relative;
-    width: 800px;  /* Ancho fijo */
-    height: 413px; /* Alto fijo */
-    margin: auto;  /* Centrar */
+.container-custom {
+    max-width: 1600px; /* Ancho extendido para más columnas */
+    margin: 40px auto;
+    padding: 0 20px;
 }
 
-/* Las dos imágenes (fondo y trazos) dentro del contenedor */
+/* --- ENCABEZADO DEL PERFIL --- */
+.profile-header {
+    background-color: #000;
+    color: white;
+    border-radius: 20px;
+    padding: 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+.profile-header .info h1 {
+    margin: 0 0 5px 0;
+    font-size: 28px;
+    font-weight: 600;
+}
+.profile-header .info p {
+    margin: 0;
+    opacity: 0.8;
+}
+.profile-header .actions {
+    display: flex;
+    gap: 12px;
+}
+
+/* --- BOTONES PERSONALIZADOS --- */
+.btn-custom {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-weight: 500;
+    font-size: 15px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s ease-in-out;
+}
+.btn-custom .btn-icon { margin-right: 8px; }
+
+.btn-primary-custom { background-color: #111827; color: white; }
+.btn-primary-custom:hover { background-color: #1D4ED8; transform: translateY(-2px); }
+.btn-secondary-custom { background-color: #6c757d; color: white; }
+.btn-secondary-custom:hover { background-color: #5a6268; }
+.btn-success-custom { background-color: #16a34a; color: white; }
+.btn-success-custom:hover { background-color: #15803d; }
+.btn-info-custom { background-color: #0284c7; color: white; }
+.btn-info-custom:hover { background-color: #0369a1; }
+
+
+/* --- LAYOUT DE 3 COLUMNAS ORIGINAL (antes de intentar 4) --- */
+.profile-layout-new { /* Usamos el mismo nombre de clase, pero con layout original */
+    display: grid;
+    grid-template-columns: 1fr 1.5fr 1fr; /* Izquierda, Centro (más ancho), Derecha */
+    gap: 25px;
+}
+
+/* Las columnas individuales dentro del grid */
+.column-first, .column-second, .column-third { /* Nombres usados en HTML */
+    display: flex;
+    flex-direction: column; /* Las tarjetas se apilan verticalmente */
+    gap: 25px; /* Espacio entre tarjetas en la misma columna */
+}
+/* La column-fourth NO EXISTIRÍA en esta versión de CSS */
+
+
+/* --- TARJETA MODULAR --- */
+.card-custom {
+    background-color: #ffffff;
+    border-radius: 20px;
+    padding: 25px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+}
+.card-custom h3 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 20px 0;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+}
+.card-custom h3 .card-icon { margin-right: 12px; color: #4b5563; }
+
+/* --- ESTILOS DE DATOS DENTRO DE LAS TARJETAS --- */
+.data-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* 2 columnas adaptativas */
+    gap: 18px;
+}
+@media (max-width: 1200px) { 
+    .data-grid { grid-template-columns: 1fr; }
+}
+.data-item .label {
+    display: block;
+    font-weight: 500;
+    color: #6c757d;
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+.data-item .value {
+    color: #111827;
+    font-weight: 500;
+    font-size: 15px;
+    word-break: break-word; 
+}
+.data-item .value.text-area {
+    white-space: pre-wrap;
+    font-size: 14px;
+    line-height: 1.6;
+    background-color: #f8f9fa;
+    padding: 12px;
+    border-radius: 8px;
+    display: block;
+    color: #343a40;
+}
+.data-grid .data-item.full-width {
+    grid-column: 1 / -1; 
+}
+
+
+/* --- ESTILOS PARA EL OVERLAY DEL DENTIGRAMA EN LA VISTA PREVIA --- */
+.dentigrama-preview-overlay-container {
+    position: relative;
+    width: 100%; 
+    padding-bottom: 51.625%; 
+    height: 0;
+    overflow: hidden;
+    background-color: #f8f9fa; 
+    border-radius: 8px; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.dentigrama-preview-overlay-container .dentigrama-fondo-preview,
+.dentigrama-preview-overlay-container .dentigrama-trazos-preview {
+    position: absolute; 
+    top: 0; left: 0; width: 100%; height: 100%;
+    object-fit: contain; 
+}
+.dentigrama-preview-overlay-container .dentigrama-trazos-preview { z-index: 2; }
+.dentigrama-preview-overlay-container .dentigrama-fondo-preview { z-index: 1; }
+
+/* --- ESTILOS ESPECÍFICOS PARA LA SECCIÓN DE IMÁGENES --- */
+.gallery-grid-new {
+    display: grid;
+    grid-template-columns: 1fr; /* Por defecto, una columna para dentigrama */
+    gap: 15px;
+    text-align: center;
+}
+.gallery-item-new.full-width-grid { grid-column: 1 / -1; }
+.gallery-item-new {
+    display: flex; flex-direction: column; align-items: center; cursor: pointer;
+    transition: transform 0.2s; background-color: #f8f9fa; padding: 10px;
+    border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+.gallery-item-new:hover { transform: translateY(-3px); }
+.gallery-item-new img {
+    max-width: 100%; height: auto; object-fit: contain; border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+.gallery-item-new h5 { margin-top: 8px; font-size: 13px; font-weight: 500; color: #4b5563; }
+@media (min-width: 768px) {
+    .gallery-grid-new { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+    .gallery-item-new.full-width-grid { grid-column: 1 / -1; }
+}
+@media (min-width: 1200px) { .gallery-grid-new { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); } }
+
+
+/* --- ESTILOS DE EVOLUCIÓN (se mantienen) --- */
+.evolucion-list .evolucion-item {
+    position: relative; padding-left: 25px; padding-bottom: 20px; border-left: 2px solid #e9ecef;
+}
+.evolucion-list .evolucion-item:last-child { border-left: 2px solid transparent; padding-bottom: 0; }
+.evolucion-list .evolucion-item::before {
+    content: ''; position: absolute; left: -7px; top: 5px; width: 12px; height: 12px;
+    border-radius: 50%; background-color: #6c757d; border: 2px solid #fff;
+}
+.evolucion-list .evolucion-item:first-child::before { background-color: #0d6efd; }
+.evolucion-date { font-weight: 500; color: #343a40; font-size: 14px; margin-bottom: 5px; }
+.evolucion-desc { color: #495057; font-size: 15px; }
+.evolucion-form textarea { border-radius: 12px; border-color: #dee2e6; }
+
+/* --- ESTILOS DE MODALES DE IMAGENES (se mantienen) --- */
+.modal-content { border-radius: 20px; }
+.modal-body img { border-radius: 12px; }
+.dentigrama-modal-content {
+    position: relative; width: 100%; padding-bottom: 51.625%; height: 0;
+    overflow: hidden; background-color: #f8f9fa; border-radius: 8px; 
+}
 .dentigrama-modal-content .dentigrama-fondo,
 .dentigrama-modal-content .dentigrama-trazos {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    object-fit: contain; 
+}
+
+
+/* --- LÓGICA RESPONSIVE --- */
+@media (max-width: 767px) { 
+    .profile-layout-new { grid-template-columns: 1fr; }
+    .column-first, .column-second, .column-third { gap: 20px; } 
+    .profile-header { flex-direction: column; gap: 20px; text-align: center; padding: 20px; }
+    .profile-header .info h1 { font-size: 24px; }
+    .profile-header .actions { flex-direction: column; width: 100%; gap: 10px; }
+    .btn-custom { width: 100%; }
+}
+@media (min-width: 768px) and (max-width: 1023px) { /* 2 columnas en tabletas */
+    .profile-layout-new { grid-template-columns: repeat(2, 1fr); }
+    .column-first, .column-second, .column-third { gap: 20px; }
+    /* El dentigrama ocupa todo el ancho de su columna */
+    .gallery-item-new.full-width-grid { grid-column: 1 / -1; }
+}
+@media (min-width: 1024px) and (max-width: 1599px) { /* 3 columnas en desktops pequeños */
+    .profile-layout-new { grid-template-columns: repeat(3, 1fr); }
+    .column-first, .column-second, .column-third { gap: 20px; }
+    .gallery-item-new.full-width-grid { grid-column: 1 / -1; }
+}
+@media (min-width: 1600px) { /* 4 columnas en desktops grandes */
+    .profile-layout-new { grid-template-columns: repeat(4, 1fr); }
+    .column-first, .column-second, .column-third { gap: 20px; }
+}
+
+/* Responsive para data-grid: en pantallas más pequeñas, vuelve a una columna */
+@media (max-width: 768px) { 
+    .data-grid { grid-template-columns: 1fr; }
+}
+
+
+
+/* clinica/static/css/perfil_paciente.css */
+
+/* ... (tus estilos existentes) ... */
+
+/* --- NUEVOS ESTILOS PARA SECCIONES CON "MOSTRAR MÁS" --- */
+.collapsible-section-content {
+    transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+    overflow: hidden;
+}
+
+.collapsible-section-content.collapsed {
+    max-height: 80px; /* Altura fija para el contenedor de la sección colapsada */
+    position: relative; 
+    padding-bottom: 10px; 
+}
+
+/* El efecto de degradado para el recuadro colapsado */
+.collapsible-section-content.collapsed::after {
+    content: '';
     position: absolute;
-    top: 0;
+    bottom: 0;
     left: 0;
     width: 100%;
-    height: 100%;
+    height: 20px; 
+    background: linear-gradient(to top, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 100%);
+    pointer-events: none; 
+}
+
+/* --- ¡MODIFICACIÓN CLAVE AQUÍ! Controlar la visibilidad de los .value.text-area --- */
+/* Por defecto, los text-area son visibles. */
+.data-item .value.text-area {
+    /* Puedes darle un min-height para que siempre tenga un recuadro visible */
+    min-height: 40px; /* <--- AJUSTAR AQUÍ: Altura mínima para que se vea el recuadro del campo */
+    background-color: #f8f9fa; /* Fondo gris claro para el recuadro */
+    border-radius: 8px; /* Bordes redondeados */
+    padding: 12px; /* Padding interno */
+    display: block; /* Asegura que ocupa su propia línea */
+    /* Otros estilos... */
+    transition: all 0.3s ease-out; /* Para una transición suave */
+}
+
+/* Cuando la sección está colapsada, OCULTAMOS EL TEXTO, pero mantenemos el recuadro */
+.collapsible-section-content.collapsed .data-item .value.text-area {
+    color: transparent; /* Hace que el texto no sea visible */
+    user-select: none; /* Evita que el usuario seleccione el texto invisible */
+    padding: 0px 12px; /* <--- AJUSTAR AQUÍ: Quitar padding vertical si no hay texto */
+    min-height: 0; /* <--- AJUSTAR AQUÍ: Permitir que se comprima si no hay contenido */
+    max-height: 0; /* <--- AJUSTAR AQUÍ: Para que el recuadro se vea vacío pero colapsado si no hay contenido */
+    border: none; /* <--- AJUSTAR AQUÍ: Quitar borde si no quieres que se vea el recuadro */
+    background-color: transparent; /* <--- AJUSTAR AQUÍ: Si solo quieres que el label se vea */
+}
+
+/* Sin embargo, si quieres que el RECUADRO del campo de texto SIEMPRE se vea, pero VACÍO */
+/* y solo el label y el botón "Mostrar más" estén activos en la vista colapsada */
+.collapsible-section-content.collapsed .data-item .value.text-area {
+    max-height: 0; /* Oculta el contenido */
+    padding: 0; /* Sin padding */
+    visibility: hidden; /* Oculta el elemento, pero MANTIENE SU ESPACIO EN EL LAYOUT */
+    opacity: 0; /* Transición de opacidad */
+    margin-bottom: -10px; /* <--- AJUSTAR AQUÍ: Para que el label de abajo suba un poco */
+}
+/* Revertimos esto: Si el recuadro desaparece (display:none) los labels quedan sueltos. */
+/* Si queremos que los labels se muestren, pero el CONTENIDO del text-area no,
+   la mejor forma es que los textareas tengan una altura mínima y el texto sea transparente. */
+
+
+/* --- AJUSTE MÁS DIRECTO PARA VER EL RECUADRO VACÍO Y EL LABEL --- */
+.collapsible-section-content.collapsed .data-item .value.text-area {
+    max-height: 0; /* <--- Oculta el TEXTO. */
+    visibility: hidden; /* <--- Oculta el elemento, pero MANTIENE SU ESPACIO en el layout. */
+    opacity: 0; /* <--- Transición suave. */
+    padding: 0; /* <--- Eliminar padding para que no ocupe espacio visible si está vacío. */
+    margin: 0; /* <--- Eliminar margen. */
+    border: none; /* <--- Si no quieres que se vea el borde del recuadro del text-area. */
+    background-color: transparent; /* <--- Si no quieres color de fondo en el recuadro. */
+}
+/* Si quieres que el RECUADRO sí se vea (vacío) y con color de fondo, pero sin texto: */
+.collapsible-section-content .data-item .value.text-area {
+    min-height: 40px; /* <--- Altura mínima cuando no está colapsado y tiene contenido */
+    background-color: #f1f3f5; /* Color de fondo cuando está visible */
+    border-radius: 10px;
+    padding: 12px 15px;
+    color: #495057; /* Color del texto */
+    transition: all 0.3s ease-out; /* Transición para cambios de estado */
+}
+.collapsible-section-content.collapsed .data-item .value.text-area {
+    min-height: 40px; /* <--- Mantiene la altura mínima del RECUADRO aunque el texto no se vea */
+    color: transparent; /* Oculta el texto */
+    user-select: none;
+    background-color: #e9ecef; /* <--- Un color más claro cuando el campo está vacío/colapsado */
+    padding: 12px 15px; /* <--- Mantener padding para que el recuadro tenga tamaño */
+}
+
+/* El botón de "Mostrar más" */
+.section-read-more-wrapper {
+    text-align: center;
+    margin-top: -35px; /* <--- AJUSTAR AQUÍ: Ajustar para que el botón suba aún más sobre el recuadro del text-area */
+    z-index: 10; 
+    position: relative; 
+}
+/* ... (resto de tus estilos) ... */
+
+/* 1. Resetear los estilos por defecto del contenedor principal del acordeón de Bootstrap */
+.accordion {
+    --bs-accordion-border-width: 0 !important; 
+    --bs-accordion-border-radius: 0 !important; 
+    --bs-accordion-inner-border-radius: 0 !important;
+    background-color: transparent !important; 
+    padding: 0 !important;
+    margin: 0 !important;
+    /* QUITAMOS display:flex y gap para que margin-bottom de los items sea el único que actúe. */
+    /* border: 2px solid blue !important; /* Para ver el contorno del contenedor principal */
+}
+
+/* 2. Estilos para cada ITEM INDIVIDUAL del acordeón (que ahora es también una tarjeta) */
+.accordion-item.card-custom.mb-3 { 
+    border: 3px dashed red !important; /* ¡CRÍTICO! Un borde discontinuo para cada tarjeta */
+    border-radius: 20px !important; 
+    /* <-- ¡AJUSTE CLAVE AQUÍ: Box-shadow muy pronunciado y margin-bottom aún más grande! --> */
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0) !important; /* Quitar box-shadow para ver solo el borde */
+    /* box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2) !important; /* Sombra MUY visible para depurar */
+    margin-bottom: 50px !important; /* Aumentar drásticamente el espacio entre tarjetas */
+    overflow: hidden !important; 
+    background-color: #ffffff !important; 
+    width: 100%;
+    /* outline: 5px solid limegreen !important; /* Otro contorno para depurar */
+}
+/* Quitar el margin-bottom del ÚLTIMO accordion-item */
+.accordion-item.card-custom.mb-3:last-of-type {
+    margin-bottom: 0 !important;
+}
+
+
+/* 3. Estilos para el botón del encabezado del acordeón (parte superior de la tarjeta) */
+.accordion-button {
+    background-color: #ffffff !important; 
+    border-radius: 20px 20px 0 0 !important; 
+    padding: 25px !important; 
+    font-size: 20px;
+    font-weight: 600;
+    color: #111827 !important; 
+    border-bottom: 1px solid #e9ecef !important; 
+    box-shadow: none !important; 
+    position: relative; 
+    z-index: 2; 
+}
+
+/* 4. Estilos para el botón del encabezado cuando está colapsado */
+.accordion-button.collapsed {
+    border-radius: 20px !important; 
+    border-bottom: none !important; 
+}
+
+/* 5. Estilos para el cuerpo del acordeón (parte inferior de la tarjeta) */
+.accordion-body {
+    background-color: #ffffff !important; 
+    padding: 25px !important; 
+    border-bottom-left-radius: 20px !important; 
+    border-bottom-right-radius: 20px !important;
+    position: relative; 
+    z-index: 1;
+}
+
+/* 6. Estilos para la flecha del acordeón */
+.accordion-button::after {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23212529'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e") !important;
+    transform: rotate(0deg); 
+    transition: transform 0.2s ease-in-out;
+}
+.accordion-button:not(.collapsed)::after {
+    transform: rotate(180deg); 
+}
+
+/* 7. Iconos Lucide */
+.accordion-header .accordion-icon { 
+    margin-right: 12px; 
+    color: #4b5563; 
 }

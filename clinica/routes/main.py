@@ -4,8 +4,6 @@ from flask import (
     Blueprint, render_template, redirect, url_for, flash, request, current_app
 )
 from flask_login import login_user, logout_user, login_required, current_user
-
-# Importaciones del proyecto
 from ..models import db, Usuario, AuditLog # Asegúrate de que 'db' esté importado
 from ..extensions import db # Esta línea es redundante si ya importas db desde models, pero no hace daño
 from ..utils import get_index_panel_data

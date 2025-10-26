@@ -71,9 +71,17 @@
 
 /* 1. Definimos un tamaño inicial más pequeño */
 .accordion-body textarea.form-control {
-    min-height: 80px; /* Una altura mínima razonable */
-    height: 80px;     /* Altura inicial */
-    resize: vertical; /* <<<--- ESTA ES LA PROPIEDAD MÁGICA */
+    /* min-height: 80px; /* ELIMINA o COMENTA esta línea */
+    /* height: 80px;     /* ELIMINA o COMENTA esta línea */
+    
+    /* En su lugar, vamos a definir un min-height más adecuado
+       y permitir que el "rows" del HTML (ahora 1) controle la altura inicial. */
+    min-height: 2.5em; /* Una altura mínima más compacta, aprox. 1.5 líneas */
+                       /* Puedes probar con 2.2em o 2em si quieres que sea aún más compacto. */
+    height: auto;      /* Asegura que no tenga una altura fija y se ajuste al contenido/rows */
+    padding: 0.4rem 0.75rem; /* Ajusta el padding vertical para ser más compacto */
+    line-height: 1.4;        /* Ajusta la altura de línea */
+    resize: vertical; /* Mantener para que el usuario pueda redimensionar */
 }
 
 /* 2. Opcional: un estilo más sutil para la barra de redimensionamiento */
@@ -99,3 +107,4 @@ fieldset.border legend {
     width: 100%;
     border-bottom: 1px solid #f0f0f0;
 }
+

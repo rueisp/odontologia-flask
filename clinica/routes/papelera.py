@@ -155,17 +155,17 @@ def eliminar_permanentemente():
             # --- INICIO DE LA DEPURACIÓN ---
             print("=============================================")
             print(f"INICIANDO BORRADO PERMANENTE DEL PACIENTE ID: {objeto_a_eliminar.id}")
-            print(f"URL del Dentigrama: {objeto_a_eliminar.dentigrama_url}")
-            print(f"URL de Imagen 1: {objeto_a_eliminar.imagen_1_url}")
-            print(f"URL de Imagen 2: {objeto_a_eliminar.imagen_2_url}")
+            print(f"URL del Dentigrama: {objeto_a_eliminar.dentigrama_canvas}")
+            print(f"URL de Imagen 1: {objeto_a_eliminar.imagen_1}")
+            print(f"URL de Imagen 2: {objeto_a_eliminar.imagen_2}")
             print("---------------------------------------------")
             # --- FIN DE LA DEPURACIÓN ---
 
             # --- NUEVA LÓGICA: Eliminar imágenes de Cloudinary ---
             urls_a_borrar = [
-                objeto_a_eliminar.dentigrama_url,
-                objeto_a_eliminar.imagen_1_url,
-                objeto_a_eliminar.imagen_2_url
+                objeto_a_eliminar.dentigrama_canvas,
+                objeto_a_eliminar.imagen_1,
+                objeto_a_eliminar.imagen_2
             ]
 
             for url in urls_a_borrar:

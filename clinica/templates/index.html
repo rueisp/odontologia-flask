@@ -54,8 +54,11 @@
             <a href="{{ url_for('pacientes.lista_pacientes') }}" class="block mb-4 text-gray-700 hover:text-black">
                 <i data-lucide="users" class="w-5 h-5 text-black inline-block mr-2"></i> Pacientes
             </a>
-            <a href="{{ url_for('calendario.registrar_cita') }}" class="block mb-4 text-gray-700 hover:text-black">
-                <i data-lucide="calendar-plus" class="w-5 h-5 text-black inline-block mr-2"></i> Citas
+            <a href="{{ url_for('calendario.registrar_cita', paciente_id_param=None) }}" class="inline-block w-1/2 sm:w-auto">
+                <button id="btnNuevaCita"
+                        class="w-full sm:w-[140px] bg-gray-700 text-white px-4 py-2 rounded-xl hover:bg-gray-600 transition flex items-center justify-center gap-1 whitespace-nowrap text-sm">
+                    <i data-lucide="calendar-plus" class="w-4 h-4"></i><span>Cita</span>
+                </button>
             </a>
             <a href="{{ url_for('calendario.mostrar_calendario') }}" class="block mb-4 text-gray-700 hover:text-black">
                 <i data-lucide="calendar-days" class="w-5 h-5 text-black inline-block mr-2"></i> Calendario
@@ -98,7 +101,8 @@
                             <i data-lucide="user-plus" class="w-4 h-4"></i><span>Nuevo</span>
                         </button>
                     </a>
-                    <a href="{{ url_for('calendario.registrar_cita') }}" class="inline-block w-1/2 sm:w-auto">
+                    {# CAMBIO CLAVE AQUÍ: AHORA LLAMA A LA NUEVA RUTA SIN PACIENTE #}
+                    <a href="{{ url_for('calendario.registrar_cita', paciente_id_param=None) }}" class="inline-block w-1/2 sm:w-auto">
                         <button id="btnNuevaCita"
                                 class="w-full sm:w-[140px] bg-gray-700 text-white px-4 py-2 rounded-xl hover:bg-gray-600 transition flex items-center justify-center gap-1 whitespace-nowrap text-sm">
                             <i data-lucide="calendar-plus" class="w-4 h-4"></i><span>Cita</span>
@@ -348,14 +352,37 @@
                 </div>
                 {% endfor %}
             </div>
-            <div id="seccion-imagenes" class="hidden">
-                <p class="text-sm text-gray-500">Aquí se mostrarán las imágenes del paciente.</p>
+            <div id="seccion-imagenes" class="hidden space-y-4 p-4 bg-gray-50 rounded-lg">
+                <h4 class="font-semibold text-gray-800">Imágenes del Paciente</h4>
+                
+                <!-- Contenedor para la imagen de perfil (si la tienes en tu modelo y quieres mostrarla aquí) -->
+                <!-- <div id="imagenPerfilDisplayContainer" class="border p-2 rounded-md bg-white hidden">
+                    <p class="text-xs text-gray-500 mb-1">Imagen de Perfil:</p>
+                    <img id="imagenPerfilDisplay" class="max-w-full h-auto mx-auto" alt="Imagen de Perfil">
+                    <p id="noImagenPerfil" class="text-sm text-gray-500 text-center hidden">No hay imagen de perfil registrada.</p>
+                </div> -->
+
+                <div id="dentigramaDisplayContainer" class="border p-2 rounded-md bg-white hidden">
+                    <p class="text-xs text-gray-500 mb-1">Dentigrama:</p>
+                    <img id="dentigramaDisplay" class="max-w-full h-auto mx-auto" alt="Dentigrama del Paciente">
+                    <p id="noDentigrama" class="text-sm text-gray-500 text-center hidden">No hay dentigrama registrado.</p>
+                </div>
+                <div id="imagen1DisplayContainer" class="border p-2 rounded-md bg-white hidden">
+                    <p class="text-xs text-gray-500 mb-1">Imagen 1:</p>
+                    <img id="imagen1Display" class="max-w-full h-auto mx-auto" alt="Imagen Adicional 1">
+                    <p id="noImagen1" class="text-sm text-gray-500 text-center hidden">No hay Imagen 1 registrada.</p>
+                </div>
+                <div id="imagen2DisplayContainer" class="border p-2 rounded-md bg-white hidden">
+                    <p class="text-xs text-gray-500 mb-1">Imagen 2:</p>
+                    <img id="imagen2Display" class="max-w-full h-auto mx-auto" alt="Imagen Adicional 2">
+                    <p id="noImagen2" class="text-sm text-gray-500 text-center hidden">No hay Imagen 2 registrada.</p>
+                </div>
             </div>
             <div class="mt-6 flex flex-col sm:flex-row gap-3">
                 <div id="panel-controles" 
                     class="mt-6 flex flex-col sm:flex-row gap-3"
                     data-edit-url-base="{{ url_for('pacientes.editar_paciente', id=0) }}"
-                    data-citas-url-base="{{ url_for('citas_paciente.historial_citas', id=0) }}">
+                    data-citas-url-base="{{ url_for('calendario.historial_citas_paciente', paciente_id=0) }}"> {# Ajustado a tu ruta de historial de citas #}
 
                     <!-- ¡LOS BOTONES AHORA ESTÁN DENTRO! -->
                     
@@ -368,7 +395,7 @@
                         <i data-lucide="history" class="w-4 h-4"></i> Ver historial
                     </button>
                 </div>
-            </div>  
+            </div> 
         </div> <!-- Fin right-panel -->
 
     </div> <!-- Fin dashboard -->

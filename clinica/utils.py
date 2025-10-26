@@ -1,41 +1,33 @@
 # clinica/utils.py
+
 import os
 import calendar
 import locale
-from datetime import date, datetime
-from sqlalchemy import func, case
+from datetime import date, datetime, time 
+from sqlalchemy import func, case, or_ # Asegúrate de que 'or_' esté importado
 from sqlalchemy.orm import joinedload
 from .extensions import db
-from .models import Paciente, Cita
-from flask import current_app
+from .models import Paciente, Cita # Asegúrate de que Paciente y Cita estén importados
+from flask import current_app 
+from flask_login import current_user 
 
+import logging 
+logger = logging.getLogger(__name__) 
 
 nombres_meses = [calendar.month_name[i] for i in range(1, 13)]
 
-
-# Extensiones permitidas para imágenes
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-
 def eliminar_imagen(ruta_imagen_relativa):
-    """
-    Elimina de forma segura un archivo de la carpeta static.
-    La ruta debe ser relativa a la carpeta 'static', 
-    ej: 'img/pacientes/imagenes/archivo.jpg'
-    """
     if not ruta_imagen_relativa:
         return
-
     try:
-        # Construye la ruta absoluta usando la configuración de la app actual
         ruta_absoluta = os.path.join(current_app.static_folder, ruta_imagen_relativa)
-        
         if os.path.exists(ruta_absoluta):
             os.remove(ruta_absoluta)
-            # Usar el logger de Flask es mejor que usar print
             current_app.logger.info(f"Archivo eliminado exitosamente: {ruta_absoluta}")
         else:
             current_app.logger.warning(f"Se intentó eliminar un archivo que no existe: {ruta_absoluta}")
@@ -43,129 +35,112 @@ def eliminar_imagen(ruta_imagen_relativa):
         current_app.logger.error(f"Error crítico al eliminar imagen {ruta_imagen_relativa}: {e}", exc_info=True)
 
 def convertir_a_fecha(valor_str):
-    """Convierte un string en formato 'YYYY-MM-DD' a un objeto date."""
     if not valor_str or not isinstance(valor_str, str):
         return None
     try:
         return datetime.strptime(valor_str, '%Y-%m-%d').date()
     except (ValueError, TypeError):
-        # Devuelve None si el string está vacío o el formato es incorrecto
         return None        
 
+# --- FUNCIÓN get_index_panel_data (¡MODIFICADA PARA OUTER JOIN!) ---
 def get_index_panel_data():
     """Función para obtener los datos necesarios para el panel de inicio."""
     hoy = date.today()
     datos_panel = {}
-
-    # 1. Fecha actual formateada (TU CÓDIGO ACTUAL - SIN CAMBIOS AQUÍ)
+    
+    # 1. Fecha actual formateada
     fecha_formateada_buffer = None 
     locale_original_time = locale.getlocale(locale.LC_TIME)
     try:
-        locales_a_intentar_es = ['es_ES.UTF-8', 'es_ES', 'es', 'Spanish_Spain.1252', 'Spanish']
-        configurado_es = False
-        for loc_es in locales_a_intentar_es:
-            try:
-                locale.setlocale(locale.LC_TIME, loc_es)
-                fecha_formateada_buffer = hoy.strftime("%A, %d de %B de %Y").capitalize()
-                configurado_es = True
-                break
-            except locale.Error:
-                continue
-        if not configurado_es: 
-            locale.setlocale(locale.LC_TIME, '') 
-            fecha_formateada_buffer = hoy.strftime("%A, %d de %B de %Y").capitalize()
-    except Exception as e:
-        print(f"Error excepcional al formatear fecha_actual_formateada: {e}")
-        fecha_formateada_buffer = hoy.strftime("%A, %d %B %Y").capitalize()
+        # Simplificación de locales, asumiendo que 'es_ES.UTF-8' funciona o se usa el defecto
+        locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8') 
+        fecha_formateada_buffer = hoy.strftime("%A, %d de %B de %Y").capitalize()
+    except locale.Error:
+        logger.warning("Locale 'es_ES.UTF-8' no disponible. Usando locale por defecto para formatear fecha.")
+        locale.setlocale(locale.LC_TIME, '') 
+        fecha_formateada_buffer = hoy.strftime("%A, %d de %B de %Y").capitalize()
     finally:
+        # Siempre restaurar el locale original
         if locale_original_time != (None, None):
             try:
                 locale.setlocale(locale.LC_TIME, locale_original_time)
             except locale.Error:
-                print(f"Advertencia: No se pudo restaurar el locale original {locale_original_time} para LC_TIME.")
+                logger.warning(f"Advertencia: No se pudo restaurar el locale original {locale_original_time} para LC_TIME.")
     datos_panel['fecha_actual_formateada'] = fecha_formateada_buffer
 
+    # --- CONSULTA BASE PARA CITAS DEL DASHBOARD ---
+    # Usamos LEFT OUTER JOIN para incluir citas que NO tienen un paciente asociado (paciente_id es NULL)
+    base_query_citas = Cita.query.outerjoin(Paciente, Cita.paciente_id == Paciente.id).filter(
+        Cita.is_deleted == False # Siempre filtrar citas no borradas
+    )
+
+    if hasattr(current_user, 'is_admin') and not current_user.is_admin:
+        # Si no es admin, solo mostrar citas donde:
+        # 1. El paciente asociado le pertenece (Paciente.odontologo_id == current_user.id)
+        # 2. O la cita NO tiene paciente_id (Cita.paciente_id IS NULL)
+        base_query_citas = base_query_citas.filter(
+            or_(
+                Paciente.odontologo_id == current_user.id,
+                Cita.paciente_id == None 
+            )
+        )
+    # Nota: Si es admin, no necesitamos filtros adicionales sobre Paciente.odontologo_id o Paciente.is_deleted
+    # porque el outerjoin y Cita.is_deleted == False ya los incluyen.
+
+    
     # 2. Estadísticas: Citas de hoy
-    # Contar solo citas activas de pacientes activos
-    citas_hoy_count = db.session.query(func.count(Cita.id))\
-        .join(Paciente, Cita.paciente_id == Paciente.id)\
-        .filter(
-            Cita.fecha == hoy,
-            Cita.is_deleted == False,         # <<<--- FILTRO AÑADIDO --- >>>
-            Paciente.is_deleted == False      # <<<--- FILTRO AÑADIDO --- >>>
-        ).scalar() or 0
-    datos_panel['estadisticas'] = {'citas_hoy': citas_hoy_count}
+    # Usamos la consulta base y filtramos por fecha
+    citas_hoy_count = base_query_citas.filter(Cita.fecha == hoy).count() # Usar .count() directamente en el query
+    datos_panel['estadisticas'] = {'citas_hoy': citas_hoy_count or 0}
 
     # 3. Próxima cita
-    # Buscar solo citas activas de pacientes activos
     ahora = datetime.now()
-    proxima_cita_obj = Cita.query.options(joinedload(Cita.paciente))\
-        .join(Paciente, Cita.paciente_id == Paciente.id)\
-        .filter(
-            Cita.fecha >= hoy,
-            Cita.is_deleted == False,         # <<<--- FILTRO AÑADIDO --- >>>
-            Paciente.is_deleted == False,     # <<<--- FILTRO AÑADIDO --- >>>
-            case((Cita.fecha == hoy, Cita.hora > ahora.time()), else_=(Cita.fecha > hoy))
-        )\
-        .order_by(Cita.fecha, Cita.hora)\
-        .first()
+    proxima_cita_obj = base_query_citas.filter(
+        Cita.fecha >= hoy,
+        case((Cita.fecha == hoy, Cita.hora > ahora.time()), else_=(Cita.fecha > hoy))
+    ).options(joinedload(Cita.paciente))\
+     .order_by(Cita.fecha, Cita.hora)\
+     .first()
     
     proxima_cita_data = None
     if proxima_cita_obj:
-        # Formateo de fecha para proxima_cita (TU CÓDIGO ACTUAL - SIN CAMBIOS AQUÍ)
         fecha_cita_str_buffer = None
-        # locale_original_time ya fue guardado al inicio de la función
         try:
-            locales_a_intentar_es_cita = ['es_ES.UTF-8', 'es_ES', 'es', 'Spanish_Spain.1252', 'Spanish']
-            configurado_es_cita = False
-            for loc_cita in locales_a_intentar_es_cita:
-                try:
-                    locale.setlocale(locale.LC_TIME, loc_cita)
-                    fecha_cita_str_buffer = proxima_cita_obj.fecha.strftime("%d %b")
-                    configurado_es_cita = True
-                    break
-                except locale.Error:
-                    continue
-            if not configurado_es_cita:
-                locale.setlocale(locale.LC_TIME, '')
-                fecha_cita_str_buffer = proxima_cita_obj.fecha.strftime("%d %b")
-        except Exception as e_cita_fecha:
-            print(f"Error al formatear fecha_cita_str: {e_cita_fecha}")
-            fecha_cita_str_buffer = proxima_cita_obj.fecha.strftime("%d %b") 
+            locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8') 
+            fecha_cita_str_buffer = proxima_cita_obj.fecha.strftime("%d %b, %Y")
+        except locale.Error:
+            fecha_cita_str_buffer = proxima_cita_obj.fecha.strftime("%d %b, %Y")
         finally:
-            if locale_original_time != (None, None): 
+            if locale_original_time != (None, None):
                 try:
                     locale.setlocale(locale.LC_TIME, locale_original_time)
                 except locale.Error:
                     pass 
         
         hora_cita_str = proxima_cita_obj.hora.strftime("%I:%M %p")
+        
+        # Obtener nombre del paciente para la próxima cita
+        paciente_nombre_proxima_cita = "Paciente sin registrar"
+        if proxima_cita_obj.paciente and not proxima_cita_obj.paciente.is_deleted:
+            paciente_nombre_proxima_cita = f"{proxima_cita_obj.paciente.nombres} {proxima_cita_obj.paciente.apellidos}"
+        elif proxima_cita_obj.paciente_nombres_str and proxima_cita_obj.paciente_apellidos_str:
+            paciente_nombre_proxima_cita = f"{proxima_cita_obj.paciente_nombres_str} {proxima_cita_obj.paciente_apellidos_str}"
+        elif proxima_cita_obj.paciente_nombres_str:
+            paciente_nombre_proxima_cita = proxima_cita_obj.paciente_nombres_str
+
         proxima_cita_data = {
-            'fecha_formateada': f"{fecha_cita_str_buffer}, {hora_cita_str}",
-            'paciente_nombre': f"{proxima_cita_obj.paciente.nombres} {proxima_cita_obj.paciente.apellidos}",
-            'motivo': getattr(proxima_cita_obj, 'motivo', None) or "No especificado"
+            'fecha_formateada': f"{fecha_cita_str_buffer} a las {hora_cita_str}",
+            'paciente_nombre': paciente_nombre_proxima_cita,
+            'motivo': proxima_cita_obj.motivo or "No especificado"
         }
     datos_panel['proxima_cita'] = proxima_cita_data
 
-    # 4. Fecha actual corta (TU CÓDIGO ACTUAL - SIN CAMBIOS AQUÍ)
+    # 4. Fecha actual corta
     fecha_corta_buffer = None
-    # locale_original_time ya fue guardado
     try:
-        locales_a_intentar_es_corta = ['es_ES.UTF-8', 'es_ES', 'es', 'Spanish_Spain.1252', 'Spanish']
-        configurado_es_corta = False
-        for loc_es_corta in locales_a_intentar_es_corta:
-            try:
-                locale.setlocale(locale.LC_TIME, loc_es_corta)
-                fecha_corta_buffer = hoy.strftime("%d de %B").capitalize()
-                configurado_es_corta = True
-                break 
-            except locale.Error:
-                continue
-        if not configurado_es_corta:
-            locale.setlocale(locale.LC_TIME, '') 
-            fecha_corta_buffer = hoy.strftime("%d de %B").capitalize()
-    except Exception as e_corta:
-        print(f"Error al formatear fecha_actual_corta: {e_corta}")
+        locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8') 
+        fecha_corta_buffer = hoy.strftime("%d de %B").capitalize()
+    except locale.Error:
         fecha_corta_buffer = hoy.strftime("%d %B").capitalize() 
     finally:
         if locale_original_time != (None, None):
@@ -176,70 +151,77 @@ def get_index_panel_data():
     datos_panel['fecha_actual_corta'] = fecha_corta_buffer
 
     # 5. Lista de citas de hoy
-    # Mostrar solo citas activas de pacientes activos
-    citas_de_hoy_lista = Cita.query.options(joinedload(Cita.paciente))\
-        .join(Paciente, Cita.paciente_id == Paciente.id)\
-        .filter(
-            Cita.fecha == hoy,
-            Cita.is_deleted == False,         # <<<--- FILTRO AÑADIDO --- >>>
-            Paciente.is_deleted == False      # <<<--- FILTRO AÑADIDO --- >>>
-        )\
-        .order_by(Cita.hora)\
-        .all()
+    citas_de_hoy_lista_query = base_query_citas.filter(Cita.fecha == hoy)
+    citas_de_hoy_lista = citas_de_hoy_lista_query.options(joinedload(Cita.paciente))\
+                                                .order_by(Cita.hora)\
+                                                .all()
     
     citas_hoy_procesadas = []
     for cita_item in citas_de_hoy_lista:
+        paciente_nombre_completo = "Paciente sin registrar"
+        if cita_item.paciente and not cita_item.paciente.is_deleted:
+            paciente_nombre_completo = f"{cita_item.paciente.nombres} {cita_item.paciente.apellidos}"
+        elif cita_item.paciente_nombres_str and cita_item.paciente_apellidos_str:
+            paciente_nombre_completo = f"{cita_item.paciente_nombres_str} {cita_item.paciente_apellidos_str}"
+        elif cita_item.paciente_nombres_str:
+            paciente_nombre_completo = cita_item.paciente_nombres_str
+
         citas_hoy_procesadas.append({
             'id': cita_item.id,
             'hora_formateada': cita_item.hora.strftime("%I:%M %p"), 
-            'paciente_nombre_completo': f"{cita_item.paciente.nombres} {cita_item.paciente.apellidos}",
-            'motivo': getattr(cita_item, 'motivo', None) or "No especificado",
-            'doctor': getattr(cita_item.paciente, 'doctor', getattr(cita_item, 'doctor', None)), # Tomar doctor del paciente si existe, sino de la cita
-            'estado': getattr(cita_item, 'estado', 'pendiente')
+            'paciente_nombre_completo': paciente_nombre_completo,
+            'motivo': cita_item.motivo,
+            'doctor': cita_item.doctor,
+            'estado': cita_item.estado,
         })
     datos_panel['citas_del_dia'] = citas_hoy_procesadas
     
     return datos_panel
 
-def convertir_a_fecha(valor):
-    try:
-        return datetime.strptime(valor, '%Y-%m-%d').date()
-    except (ValueError, TypeError):
-        return None
-    
-    
-# --- PEGA ESTA NUEVA FUNCIÓN AL FINAL DE TU ARCHIVO utils.py ---
 
+
+# --- VERSIÓN MEJORADA DE extract_public_id_from_url ---
 def extract_public_id_from_url(url):
     """
     Extrae el public_id de una URL de Cloudinary de forma robusta.
+    Ejemplos de URLs de Cloudinary:
+    https://res.cloudinary.com/mi-cloud/image/upload/v1678901234/folder/subfolder/public_id.png
+    https://res.cloudinary.com/mi-cloud/image/upload/folder/subfolder/public_id.png
     """
-    if not isinstance(url, str):
+    if not isinstance(url, str) or not url: # Comprobar que es string y no vacío
         return None
     try:
-        # Divide la URL por '/upload/' para aislar la parte relevante
+        # Dividir la URL por la parte '/upload/' para obtener lo que viene después
         parts = url.split('/upload/')
         if len(parts) < 2:
-            return None # Si '/upload/' no está, no es una URL de Cloudinary válida
+            logger.warning(f"URL de Cloudinary inválida (no contiene '/upload/'): {url}")
+            return None
 
-        # Lo que nos interesa es lo que viene después: v12345/folder/name.png
-        path_part = parts[1]
-        
-        # Opcional pero recomendado: quitar la parte de la versión (ej. 'v1234567/')
-        # para que sea más limpio, aunque Cloudinary funciona con ella.
-        if path_part.startswith('v') and path_part.split('/')[0][1:].isdigit():
-            path_part = '/'.join(path_part.split('/')[1:])
+        path_with_version_and_ext = parts[1] # Esto podría ser "v1234567890/folder/public_id.png" o "folder/public_id.png"
 
-        # Finalmente, quitamos la extensión del archivo (.png, .jpg, etc.)
-        public_id = path_part.rsplit('.', 1)[0]
+        # Eliminar el componente de versión (ej. v1234567890) si existe
+        path_components = path_with_version_and_ext.split('/')
+        if path_components[0].startswith('v') and path_components[0][1:].isdigit():
+            # Si el primer componente es una versión numérica, lo saltamos
+            public_id_parts = path_components[1:]
+        else:
+            public_id_parts = path_components
         
+        # Unir las partes restantes y quitar la extensión del archivo
+        full_public_id_with_ext = '/'.join(public_id_parts)
+        public_id = os.path.splitext(full_public_id_with_ext)[0] # os.path.splitext es robusto para quitar extensiones
+
+        # Cloudinary espera el public_id incluyendo las carpetas
+        # Por ejemplo, si la URL es ".../dentigramas_pacientes/mi_dentigrama.png"
+        # el public_id debería ser "dentigramas_pacientes/mi_dentigrama"
+        
+        # Asegúrate de que el public_id no esté vacío después del procesamiento
+        if not public_id:
+            logger.warning(f"Public ID extraído está vacío de la URL: {url}")
+            return None
+
         return public_id
         
-    except (ValueError, IndexError):
-        # Captura cualquier error si el formato de la URL es inesperado
-        current_app.logger.warning(f"No se pudo extraer el public_id de la URL: {url}")
-        return None    
-
-
-
-        
+    except (ValueError, IndexError, TypeError) as e:
+        logger.warning(f"Error al extraer el public_id de la URL '{url}'. Error: {e}", exc_info=True)
+        return None

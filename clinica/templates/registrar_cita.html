@@ -2,183 +2,178 @@
 
 {% block title %}Registrar Cita{% endblock %}
 
+{% block head_extra %}
+    {# Estilos específicos para el log de actividad, puedes moverlos a tu CSS principal si prefieres #}
+    <style>
+        .action-type-badge {
+            font-size: 0.75em; /* 12px */
+            padding: 0.25em 0.6em; /* Ajusta el padding para que sea más rectangular */
+            border-radius: 0.375rem; /* rounded-md de Tailwind */
+            color: white;
+            margin-right: 0.5em;
+            line-height: 1; /* Asegura que el texto no haga el badge muy alto */
+            display: inline-block; /* Para que el margin-right funcione bien */
+        }
+        .badge-delete { background-color: #EF4444; } /* Tailwind red-500 */
+        .badge-edit { background-color: #F59E0B; color: #1F2937 !important; } /* Tailwind amber-500, texto oscuro */
+        .badge-create { background-color: #10B981; } /* Tailwind emerald-500 */
+        .badge-default { background-color: #6B7280; } /* Tailwind gray-500 */
+
+        /* Estilo para la cabecera de la tarjeta de actividad */
+        .activity-log-card-header {
+            background-color: #000000; /* Tailwind gray-800 o similar a tu bg-black */
+            color: white;
+        }
+
+        /* --- ESTILO CONTENEDOR PRINCIPAL --- */
+        .form-container {
+            background-color: #ffffff;
+            border-radius: 30px;
+            padding: 30px;
+            max-width: 600px;
+            margin: 0 auto 40px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            box-sizing: border-box;
+        }
+
+        /* --- ESTILO ENCABEZADO OSCURO (DENTRO) --- */
+        .page-header-dark {
+            background-color: #000;
+            color: #ffffff;
+            padding: 40px 30px;
+            border-radius: 30px;
+            margin: 0 0 20px 0;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .page-header-dark h2 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .page-header-dark h2 i[data-lucide] {
+            stroke-width: 2;
+        }
+        /* --- FIN ESTILO ENCABEZADO --- */
+
+        /* --- ESTILO GRUPOS DE INPUT --- */
+        .input-group-custom {
+            display: flex;
+            align-items: center;
+            background-color: #f1f3f5;
+            border-radius: 10px;
+            margin-bottom: 5px;
+            padding: 0;
+            border: 0px solid #f1f3f5;
+            transition: border-color 0.2s ease-in-out;
+            box-sizing: border-box;
+        }
+        .input-group-custom:focus-within {
+             border-color: #ced4da;
+             background-color: #e9ecef;
+        }
+
+        /* Etiqueta dentro del grupo */
+        .input-group-label {
+            flex-shrink: 0;
+            padding: 12px 15px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #343a40;
+            white-space: nowrap;
+            min-width: 130px;
+            box-sizing: border-box;
+        }
+
+        /* Input/Textarea dentro del grupo */
+        .form-control-embedded {
+            flex-grow: 1;
+            border: none;
+            background-color: transparent;
+            padding: 12px 15px;
+            font-size: 16px;
+            color: #495057;
+            outline: none;
+            width: 100%;
+            box-sizing: border-box;
+            line-height: 1.5;
+        }
+
+        /* Textarea */
+        .input-group-custom textarea.form-control-embedded {
+            min-height: 80px;
+        }
+
+        /* Asterisco Requerido */
+        .input-group-label .required-asterisk {
+            color: #dc3545;
+            margin-left: 4px;
+            font-weight: bold;
+        }
+        /* --- FIN ESTILO INPUT --- */
+
+        /* Fieldset sin estilo visible */
+        fieldset { border: none; padding: 0; margin: 0 0 15px 0; }
+        fieldset legend { display: none; }
+
+        /* Texto de ayuda */
+        small {
+            font-size: 12px;
+            color: #6c757d;
+            display: block;
+            margin-top: -10px;
+            margin-bottom: 15px;
+            padding-left: 5px;
+        }
+        .d-block { display: block; }
+        .mb-3 { margin-bottom: 1rem; }
+     /* --- ESTILOS DE BOTONES (MODIFICADO) --- */
+
+        .button-row {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 25px;
+        }
+
+        .btn {
+            border-radius: 12px;
+            padding: 10px 20px;
+            font-size: 15px;
+            font-weight: 500;
+            transition: background-color 0.2s ease, box-shadow 0.2s ease;
+            width: auto; 
+            min-width: 266px; 
+            text-align: center;
+            border: none;
+            cursor: pointer;
+            box-sizing: border-box;
+            text-decoration: none; 
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+         .button-row .btn {
+            flex-grow: 1; 
+            margin: 0 px; 
+        }
+        .button-row .btn:first-child { margin-left: 0; }
+        .button-row .btn:last-child { margin-right: 0; } 
+
+
+        .btn-primary { background-color: #0d6efd; color: white; }
+        .btn-primary:hover { background-color: #0b5ed7; }
+        .btn-secondary { background-color: #6c757d; color: white; }
+        .btn-secondary:hover { background-color: #5a6268; }
+    </style>
+{% endblock %}
+
 {% block content %}
-<style>
-    body {
-        background-color: #f8f9fa;
-        font-family: 'Roboto', sans-serif;
-        padding-top: 20px;
-        margin: 0;
-    }
-
-    /* --- ESTILO CONTENEDOR PRINCIPAL --- */
-    .form-container {
-        background-color: #ffffff;
-        border-radius: 30px;
-        padding: 30px;
-        max-width: 600px;
-        margin: 0 auto 40px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-        box-sizing: border-box;
-    }
-
-    /* --- ESTILO ENCABEZADO OSCURO (DENTRO) --- */
-    .page-header-dark {
-        background-color: #000;
-        color: #ffffff;
-        /* === AJUSTE DE ALTURA === */
-        /* Modifica el primer valor (padding vertical) para cambiar la altura */
-        padding: 40px 30px; /* Ejemplo: aumentado de 18px a 20px */
-        border-radius: 30px;
-        margin: 0 0 20px 0;
-        box-sizing: border-box;
-        text-align: center;
-    }
-
-    .page-header-dark h2 {
-        margin: 0;
-        font-size: 22px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    /* Estilo para el icono Lucide en el header */
-    /* (Asegúrate que Lucide Icons esté inicializado en tu JS) */
-    .page-header-dark h2 i[data-lucide] {
-        /* La clase 'mr-2' ya da margen, si necesitas más, ajústalo aquí o en la clase */
-        /* margin-right: 10px; */
-        /* w-5 h-5 ya definen tamaño, puedes ajustarlo si no es suficiente */
-        /* width: 20px; height: 20px; */
-        /* El color lo hereda del h2 (blanco), no necesita 'text-black' */
-        stroke-width: 2; /* Grosor típico para Lucide */
-    }
-    /* --- FIN ESTILO ENCABEZADO --- */
-
-    /* --- ESTILO GRUPOS DE INPUT --- */
-    .input-group-custom {
-        display: flex;
-        align-items: center;
-        background-color: #f1f3f5;
-        border-radius: 10px;
-        margin-bottom: 5px;
-        padding: 0;
-        border: 0px solid #f1f3f5;
-        transition: border-color 0.2s ease-in-out;
-        box-sizing: border-box;
-    }
-    .input-group-custom:focus-within {
-         border-color: #ced4da;
-         background-color: #e9ecef;
-    }
-
-    /* Etiqueta dentro del grupo */
-    .input-group-label {
-        flex-shrink: 0;
-        padding: 12px 15px;
-        font-size: 14px;
-        font-weight: 500;
-        color: #343a40;
-        white-space: nowrap;
-        /* === AJUSTE ANCHO ETIQUETA (Estrechar campo de texto) === */
-        /* Añade o modifica 'min-width' para cambiar el ancho de la etiqueta */
-        /* Un valor mayor aquí hará más estrecho el campo de texto */
-        min-width: 130px; /* Ejemplo: define un ancho mínimo para la etiqueta */
-        /* width: 130px; */ /* Alternativa: define un ancho fijo */
-        box-sizing: border-box; /* Incluye padding en el ancho */
-    }
-
-    /* Input/Textarea dentro del grupo */
-    .form-control-embedded {
-        flex-grow: 1;
-        border: none;
-        background-color: transparent;
-        padding: 12px 15px;
-        font-size: 16px;
-        color: #495057;
-        outline: none;
-        width: 100%;
-        box-sizing: border-box;
-        line-height: 1.5;
-    }
-
-    /* Textarea */
-    .input-group-custom textarea.form-control-embedded {
-        min-height: 80px;
-    }
-
-    /* Asterisco Requerido */
-    .input-group-label .required-asterisk {
-        color: #dc3545;
-        margin-left: 4px;
-        font-weight: bold;
-    }
-    /* --- FIN ESTILO INPUT --- */
-
-    /* Fieldset sin estilo visible */
-    fieldset { border: none; padding: 0; margin: 0 0 15px 0; }
-    fieldset legend { display: none; }
-
-    /* Texto de ayuda */
-    small {
-        font-size: 12px;
-        color: #6c757d;
-        display: block;
-        margin-top: -10px;
-        margin-bottom: 15px;
-        padding-left: 5px;
-    }
-    .d-block { display: block; }
-    .mb-3 { margin-bottom: 1rem; }
- /* --- ESTILOS DE BOTONES (MODIFICADO) --- */
-
-    /* Contenedor para la fila de botones */
-    .button-row {
-        display: flex; /* Activa Flexbox */
-        justify-content: space-between; /* Distribuye espacio entre botones */
-        /* O usa 'gap' para espacio fijo: */
-        /* justify-content: flex-start; */ /* Alinea al inicio */
-        /* gap: 15px; */ /* Espacio entre botones */
-        margin-top: 25px; /* Espacio arriba de la fila de botones */
-    }
-
-    .btn {
-        border-radius: 12px;
-        padding: 10px 20px; /* Padding ajustado ligeramente para botones lado a lado */
-        font-size: 15px; /* Tamaño fuente ajustado ligeramente */
-        font-weight: 500;
-        transition: background-color 0.2s ease, box-shadow 0.2s ease;
-        /* display: block; */ /* <<< ELIMINADO >>> */
-        /* width: 100%; */ /* <<< ELIMINADO >>> */
-        width: auto; /* <<< AÑADIDO: Ancho automático según contenido y padding >>> */
-        /* Opcional: definir un ancho mínimo o fijo si se prefiere */
-         min-width: 266px; 
-        text-align: center;
-        border: none;
-        cursor: pointer;
-        /* margin-top: 10px; */ /* <<< ELIMINADO: El margen superior lo controla .button-row >>> */
-        box-sizing: border-box;
-        text-decoration: none; /* Asegura que el enlace <a> no tenga subrayado */
-        display: inline-flex; /* Para alinear bien icono + texto si los tuvieras */
-        align-items: center;
-        justify-content: center;
-    }
-
-    /* Opcional: Hacer que los botones se repartan el espacio */
-     .button-row .btn {
-        flex-grow: 1; /* Hace que ambos botones intenten ocupar el espacio disponible*/
-        margin: 0 px; /* Pequeño margen lateral entre ellos*/
-    }
-    .button-row .btn:first-child { margin-left: 0; }
-    .button-row .btn:last-child { margin-right: 0; } 
-
-
-    .btn-primary { background-color: #0d6efd; color: white; }
-    .btn-primary:hover { background-color: #0b5ed7; }
-    .btn-secondary { background-color: #6c757d; color: white; }
-    .btn-secondary:hover { background-color: #5a6268; }
-</style>
 
 <!-- Contenedor Principal Blanco -->
 <div class="form-container">
@@ -186,111 +181,187 @@
     <!-- Encabezado Oscuro (Dentro del contenedor blanco) -->
     <div class="page-header-dark">
         <h2>
-             <!-- Icono Lucide (Asegúrate de inicializar Lucide Icons via JS) -->
-            <i data-lucide="calendar-plus" class="w-5 h-5 inline-block mr-2"></i> <!-- Quitamos text-black -->
+            <i data-lucide="calendar-plus" class="w-5 h-5 inline-block mr-2"></i>
             Registrar Nueva Cita
         </h2>
     </div>
 
+    <!-- Mensajes Flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div id="flash-message-container" class="mt-3">
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    {% endwith %}
+
     <!-- Formulario -->
     <form method="POST"
           action="{{ url_for('calendario.registrar_cita',
-                             paciente_id_param=form_values.paciente_preseleccionado_id if form_values and form_values.paciente_preseleccionado_id else None,
-                             next=form_values.next_url if form_values and form_values.next_url else request.args.get('next')) }}">
+                             paciente_id_param=form_values.get('paciente_preseleccionado_id') if form_values else None,
+                             next=form_values.get('next_url') if form_values else request.args.get('next')) }}">
 
         {# Campo oculto 'next' #}
-        {% if form_values and form_values.next_url %}
-            <input type="hidden" name="next" value="{{ form_values.next_url }}">
-        {% elif request.args.get('next') %}
-            <input type="hidden" name="next" value="{{ request.args.get('next') }}">
-        {% endif %}
+        <input type="hidden" name="next" value="{{ form_values.get('next_url', request.args.get('next', '')) }}">
+
 
         <!-- Sección Datos del Paciente -->
-        {% if form_values.paciente_preseleccionado_id %}
-            <div class="input-group-custom">
-                <span class="input-group-label">Paciente:</span>
-                <input type="text" class="form-control-embedded"
-                       value="{{ form_values.paciente_preseleccionado_nombre }}" disabled>
+        <fieldset>
+            {% if form_values.get('paciente_preseleccionado_id') %}
+                <div class="input-group-custom">
+                    <span class="input-group-label">Paciente:</span>
+                    <input type="text" class="form-control-embedded"
+                           value="{{ form_values.get('paciente_preseleccionado_nombre') }}" disabled>
+                </div>
+                 <small>Paciente preseleccionado. Para cambiar, cancela y selecciona otro paciente.</small>
+                {# Si hay paciente preseleccionado, también necesitamos pasar su ID para que el backend lo use #}
+                <input type="hidden" name="paciente_id_seleccionado_duplicado" value="{{ form_values.get('paciente_preseleccionado_id') }}">
+            {% else %}
+                {# Si no hay paciente preseleccionado, mostrar los campos para buscar o crear #}
+                <div class="input-group-custom">
+                    <span class="input-group-label">Seleccionar Existente:</span>
+                    <select class="form-control-embedded" id="paciente_id_existente" name="paciente_id">
+                        <option value="">Buscar o Crear Nuevo</option>
+                        {% for paciente in pacientes %}
+                            <option value="{{ paciente.id }}" {% if form_values.get('paciente_id') | int == paciente.id %}selected{% endif %}>
+                                {{ paciente.nombres }} {{ paciente.apellidos }} ({{ paciente.documento or 'N/A' }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <small class="d-block mb-3">O rellena los campos siguientes para crear un Nuevo Paciente:</small>
+
+                <div class="input-group-custom">
+                    <span class="input-group-label">Nombres:<span class="required-asterisk">*</span></span>
+                    <input type="text" class="form-control-embedded" id="paciente_nombres" name="paciente_nombres"
+                           value="{{ form_values.get('paciente_nombres_val', '') }}"
+                           placeholder="Ej: Ana María" required>
+                </div>
+                <div class="input-group-custom">
+                    <span class="input-group-label">Apellidos:<span class="required-asterisk">*</span></span>
+                    <input type="text" class="form-control-embedded" id="paciente_apellidos" name="paciente_apellidos"
+                           value="{{ form_values.get('paciente_apellidos_val', '') }}"
+                           placeholder="Ej: Pérez Gómez" required>
+                </div>
+                <div class="input-group-custom">
+                    <span class="input-group-label">Edad:</span>
+                    <input type="number" class="form-control-embedded" id="paciente_edad" name="paciente_edad"
+                           value="{{ form_values.get('paciente_edad_val', '') }}"
+                           placeholder="Ej: 30" min="0">
+                </div>
+                <div class="input-group-custom">
+                    <span class="input-group-label">Documento:</span>
+                    <input type="text" class="form-control-embedded" id="paciente_documento" name="paciente_documento"
+                           value="{{ form_values.get('paciente_documento_val', '') }}"
+                           placeholder="Ej: 12345678">
+                </div>
+                <div class="input-group-custom">
+                    <span class="input-group-label">Teléfono:<span class="required-asterisk">*</span></span>
+                    <input type="tel" class="form-control-embedded" id="paciente_telefono" name="paciente_telefono"
+                           value="{{ form_values.get('paciente_telefono_val', '') }}"
+                           placeholder="Ej: 3001234567" required>
+                </div>
+            {% endif %}
+
+            {# Sección para mostrar pacientes duplicados y permitir selección #}
+            {% if form_values.get('mostrar_seccion_duplicados') %}
+            <div class="alert alert-warning mt-4">
+                <p>Se encontraron múltiples pacientes con el mismo nombre. Por favor, seleccione el correcto o confirme la creación de uno nuevo.</p>
+                <div class="mb-3">
+                    <label for="paciente_id_seleccionado_duplicado" class="form-label">Seleccionar paciente existente:</label>
+                    <select class="form-select" id="paciente_id_seleccionado_duplicado" name="paciente_id_seleccionado_duplicado">
+                        {% for p in form_values.posibles_pacientes_encontrados %}
+                            <option value="{{ p.id }}">{{ p.nombres }} {{ p.apellidos }} ({{ p.documento or 'N/A' }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
-             <small>Paciente preseleccionado. Para cambiar, cancela y selecciona otro paciente.</small>
-        {% else %}
-            <div class="input-group-custom">
-                <span class="input-group-label">Nombres:<span class="required-asterisk">*</span></span>
-                <input type="text" class="form-control-embedded" id="paciente_nombres" name="paciente_nombres"
-                       value="{{ form_values.paciente_nombres_val if form_values and form_values.paciente_nombres_val else '' }}"
-                       placeholder="Ej: Ana María" required>
-            </div>
-            <div class="input-group-custom">
-                <span class="input-group-label">Apellidos:<span class="required-asterisk">*</span></span>
-                <input type="text" class="form-control-embedded" id="paciente_apellidos" name="paciente_apellidos"
-                       value="{{ form_values.paciente_apellidos_val if form_values and form_values.paciente_apellidos_val else '' }}"
-                       placeholder="Ej: Pérez Gómez" required>
-            </div>
-            <div class="input-group-custom">
-                <span class="input-group-label">Edad:</span>
-                <input type="number" class="form-control-embedded" id="paciente_edad" name="paciente_edad"
-                       value="{{ form_values.paciente_edad_val if form_values and form_values.paciente_edad_val is not none else '' }}"
-                       placeholder="Ej: 30" min="0">
-            </div>
-            <div class="input-group-custom">
-                <span class="input-group-label">Documento:</span>
-                <input type="text" class="form-control-embedded" id="paciente_documento" name="paciente_documento"
-                       value="{{ form_values.paciente_documento_val if form_values and form_values.paciente_documento_val else '' }}"
-                       placeholder="Ej: 12345678">
-            </div>
-            <div class="input-group-custom">
-                <span class="input-group-label">Teléfono:<span class="required-asterisk">*</span></span>
-                <input type="tel" class="form-control-embedded" id="paciente_telefono" name="paciente_telefono"
-                       value="{{ form_values.paciente_telefono_val if form_values and form_values.paciente_telefono_val else '' }}"
-                       placeholder="Ej: 3001234567" required>
-            </div>
-            <small>Teléfono obligatorio si es un paciente nuevo.</small>
-            <small class="d-block mb-3">Si el paciente ya existe con este nombre/apellido, se asociará la cita. Si no, se creará uno nuevo.</small>
-        {% endif %}
-        <!-- Fin Sección Datos del Paciente -->
+            {% endif %}
+        </fieldset>
 
         <!-- Sección Datos de la Cita -->
         <fieldset>
             <div class="input-group-custom">
                 <span class="input-group-label">Fecha:<span class="required-asterisk">*</span></span>
                 <input type="date" class="form-control-embedded" name="fecha" id="fecha"
-                       value="{{ form_values.fecha_val if form_values and form_values.fecha_val else request.args.get('fecha', '') }}" required>
+                       value="{{ form_values.get('fecha_val', request.args.get('fecha', '')) }}" required>
             </div>
             <div class="input-group-custom">
                 <span class="input-group-label">Hora:<span class="required-asterisk">*</span></span>
                 <input type="time" class="form-control-embedded" name="hora" id="hora"
-                       value="{{ form_values.hora_val if form_values and form_values.hora_val else '' }}" required>
+                       value="{{ form_values.get('hora_val', '') }}" required>
             </div>
             <div class="input-group-custom">
                 <span class="input-group-label">Doctor:<span class="required-asterisk">*</span></span>
                 <input type="text" class="form-control-embedded" name="doctor" id="doctor"
-                       value="{{ form_values.doctor_val if form_values and form_values.doctor_val else '' }}"
+                       value="{{ form_values.get('doctor_val', '') }}"
                        placeholder="Nombre del Doctor/Especialista" required>
             </div>
             <div class="input-group-custom">
                 <span class="input-group-label">Motivo:</span>
                 <input type="text" class="form-control-embedded" name="motivo" id="motivo"
-                       value="{{ form_values.motivo_val if form_values and form_values.motivo_val else '' }}"
+                       value="{{ form_values.get('motivo_val', '') }}"
                        placeholder="Ej: Consulta general, Revisión, etc.">
             </div>
             <div class="input-group-custom">
                 <span class="input-group-label">Observaciones:</span>
                 <textarea class="form-control-embedded" name="observaciones" id="observaciones" rows="3"
-                          placeholder="Notas adicionales sobre la cita">{{ form_values.observaciones_val if form_values and form_values.observaciones_val else '' }}</textarea>
+                          placeholder="Notas adicionales sobre la cita">{{ form_values.get('observaciones_val', '') }}</textarea>
             </div>
         </fieldset>
         <!-- Fin Sección Datos de la Cita -->
 
 
         <!-- Botones -->
-        <div class="d-grid gap-2"> <!-- Opcional: para que los botones ocupen todo el ancho y tengan un gap uniforme si están en la misma "celda" de un grid -->
-            <button type="submit" class="btn btn-primary w-100 mb-2">Guardar Cita</button> <!-- Añadido w-100 y mb-2 -->
-            <a href="{{ (form_values.next_url if form_values and form_values.next_url else request.args.get('next')) or url_for('calendario.mostrar_calendario') }}"
-            class="btn btn-secondary w-100">Cancelar</a> <!-- Añadido w-100 -->
+        <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary w-100 mb-2">Guardar Cita</button>
+            <a href="{{ form_values.get('next_url', request.args.get('next', url_for('calendario.mostrar_calendario'))) }}"
+            class="btn btn-secondary w-100">Cancelar</a>
         </div>
     </form>
 </div>
+{% endblock %}
 
+{% block scripts %}
+    {{ super() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            lucide.createIcons(); // Inicializar Lucide Icons
 
+            // Lógica para deshabilitar/habilitar campos de creación de paciente
+            const pacienteIdExistenteSelect = document.getElementById('paciente_id_existente');
+            const camposNuevoPaciente = [
+                document.getElementById('paciente_nombres'),
+                document.getElementById('paciente_apellidos'),
+                document.getElementById('paciente_documento'),
+                document.getElementById('paciente_telefono'),
+                document.getElementById('paciente_edad')
+            ];
 
+            if (pacienteIdExistenteSelect) {
+                function toggleCamposNuevoPaciente() {
+                    const isPacienteExistenteSelected = pacienteIdExistenteSelect.value !== '';
+                    camposNuevoPaciente.forEach(campo => {
+                        if (campo) { // Asegurarse de que el campo existe
+                            campo.disabled = isPacienteExistenteSelected;
+                            if (isPacienteExistenteSelected) {
+                                campo.removeAttribute('required'); // No requerido si se selecciona uno existente
+                            } else {
+                                if (campo.id === 'paciente_nombres' || campo.id === 'paciente_apellidos' || campo.id === 'paciente_telefono') {
+                                    campo.setAttribute('required', 'required'); // Requerido si se crea uno nuevo
+                                }
+                            }
+                        }
+                    });
+                }
+                pacienteIdExistenteSelect.addEventListener('change', toggleCamposNuevoPaciente);
+                toggleCamposNuevoPaciente(); // Llamar al cargar para establecer el estado inicial
+            }
+        });
+    </script>
 {% endblock %}

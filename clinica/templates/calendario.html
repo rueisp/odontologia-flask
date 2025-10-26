@@ -1,62 +1,10 @@
 {% extends "base.html" %}
+
 {% block title %}Calendario de Citas{% endblock %}
 
 {% block head_extra %}
-<style>
-    /* Estilos base para el calendario. Puedes moverlos a un archivo CSS si prefieres. */
-    .calendar-container {
-        /* Tailwind: max-w-4xl mx-auto p-4 sm:p-6 bg-gray-50 rounded-lg shadow-lg */
-        /* max-width: 900px; ya no es necesario aquí, se controla con clases TW */
-    }
-
-    .calendar-header h2 {
-        /* Tailwind: text-xl sm:text-2xl font-bold text-gray-800 */
-    }
-
-    /* El calendar-grid usa clases de Tailwind directamente */
-    /* .calendar-grid {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 1px;
-        background-color: #e5e7eb;
-        border: 1px solid #e5e7eb;
-    } */
-
-    .day {
-        /* min-height será controlado por clases de Tailwind responsivas */
-        /* Tailwind: bg-white p-1 sm:p-2 flex flex-col relative transition-colors duration-150 */
-        /* border ya está en las clases */
-    }
-
-    .day.empty-day {
-        /* Tailwind: bg-gray-100 cursor-default */
-    }
-
-    .day.today .day-number { /* Cambiado para aplicar solo al número */
-        /* Tailwind: bg-blue-500 text-white rounded-full */
-    }
-
-    /* Popups (sin cambios significativos en la estructura, solo asegurar que el JS los posicione bien) */
-    .appointments-popup {
-        display: none;
-        position: absolute;
-        background-color: white;
-        border: 1px solid #ccc;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-        padding: 10px;
-        z-index: 20; /* Más alto que la barra inferior si es necesario */
-        min-width: 200px; /* Ajusta según necesidad */
-        max-width: 280px;
-        border-radius: 4px;
-    }
-    .appointment-detail {
-        /* Tailwind: text-xs mb-1 p-1 border-b last:border-b-0 */
-    }
-    .text-xxs {
-        font-size: 0.65rem;
-        line-height: 0.85rem;
-    }
-</style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/calendar.css') }}">
+    {# La importación de Lucide Icons CDN debería estar en base.html o en el block scripts. #}
 {% endblock %}
 
 {% block content %}
@@ -81,15 +29,14 @@
                         <option value="{{ a }}" {% if a == anio %}selected{% endif %}>{{ a }}</option>
                     {% endfor %}
                 </select>
-                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white text-xs sm:text-sm font-medium py-1.5 px-2 sm:px-3 rounded shadow-sm transition duration-200">Ir</button>
+                <button type="submit" class="btn bg-blue-500 hover:bg-blue-600 text-white text-xs sm:text-sm font-medium py-1.5 px-2 sm:px-3 rounded shadow-sm transition duration-200">Ir</button>
             </form>
-             <a href="{{ url_for('calendario.registrar_cita', next=request.full_path) }}" class="bg-gray-500 hover:bg-gray-600 text-white text-xs sm:text-sm font-medium py-1.5 px-3 rounded shadow-sm transition duration-200 order-2 sm:order-3 whitespace-nowrap">
+             <a href="{{ url_for('calendario.registrar_cita') }}" class="bg-gray-500 hover:bg-gray-600 text-white text-xs sm:text-sm font-medium py-1.5 px-3 rounded shadow-sm transition duration-200 order-2 sm:order-3 whitespace-nowrap">
                 + Nueva Cita
             </a>
         </div>
     </div>
 
-    <!-- Contenedor para el grid del calendario que puede tener scroll horizontal si es necesario -->
     <div class="overflow-x-auto shadow-sm rounded">
         <div class="grid grid-cols-7 text-center text-xs sm:text-sm font-semibold text-gray-600 bg-gray-100 py-2">
             <div>Dom</div>
@@ -129,7 +76,9 @@
                             <div class="appointment-indicator text-xxs sm:text-xs text-gray-600 mt-0.5 sm:mt-1">
                                 {{ dia.citas|length }} cita{{ 's' if dia.citas|length != 1 else '' }}
                             </div>
-                            <button class="toggle-appointments-popup text-xxs sm:text-xs text-blue-600 hover:underline mt-1 sm:mt-auto" data-day-id="{{ dia.fecha.strftime('%Y-%m-%d') }}">
+                            <button class="toggle-appointments-popup text-xxs sm:text-xs text-blue-600 hover:underline mt-1 sm:mt-auto" data-bs-toggle="modal" data-bs-target="#modalCitas" 
+                                data-fecha="{{ dia.fecha.strftime('%Y-%m-%d') }}"
+                                data-citas="{{ dia.citas|tojson|e }}"> {# `|e` escapa el JSON para atributos HTML #}
                                 Ver citas
                             </button>
                         {% else %}
@@ -139,35 +88,6 @@
                         {% endif %}
                     </div>
                     
-                    <!-- El popup con las citas (sin cambios en su estructura interna aquí) -->
-                    {% if dia.citas %}
-                    <div class="appointments-popup" id="popup-{{ dia.fecha.strftime('%Y-%m-%d') }}">
-                        <h4 class="text-xs sm:text-sm font-semibold mb-1 sm:mb-2">Citas del {{ dia.fecha.day }}/{{ dia.fecha.month }}:</h4>
-                        {% for cita in dia.citas %}
-                            <div class="appointment-detail text-xs mb-1 p-1 border-b last:border-b-0">
-                                <div>
-                                    <strong>{{ cita.hora.strftime('%H:%M') }}</strong> -
-                                    {{ cita.paciente.nombres }} {{ cita.paciente.apellidos }}
-                                    <span class="text-gray-500 block text-xxs">Dr/a. {{ cita.doctor }}</span>
-                                </div>
-                                <div class="appointment-actions mt-1 flex gap-2" style="font-size: 0.9em;">
-                                    <a href="{{ url_for('calendario.editar_cita', cita_id=cita.id, next=request.full_path) }}"
-                                       class="text-blue-600 hover:underline">
-                                        Editar
-                                    </a>
-                                    <form action="{{ url_for('calendario.eliminar_cita', cita_id=cita.id) }}" method="POST" class="inline-block">
-                                        <input type="hidden" name="next" value="{{ request.full_path }}">
-                                        <button type="submit" class="text-red-500 hover:underline" onclick="return confirm('¿Eliminar esta cita?')">
-                                            Eliminar
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-                        {% endfor %}
-                        <button class="close-popup text-xs text-red-600 hover:underline mt-2 w-full text-center bg-gray-100 hover:bg-gray-200 p-1 rounded">Cerrar</button>
-                    </div>
-                    {% endif %}
-
                 {% else %}
                     {# Celda vacía para días fuera del mes #}
                 {% endif %}
@@ -177,10 +97,106 @@
     </div>
 </div>
 
-{# Asegúrate que lucide.createIcons() se llame si es necesario, base.html ya debería hacerlo #}
-<script src="{{ url_for('static', filename='js/calendar_popups.js') }}"></script>
-{# Si calendar_popups.js usa document.addEventListener('DOMContentLoaded', ...), debería funcionar bien. #}
-{# Si estás cargando el calendario (o partes de él) vía AJAX (como un calendar_fragment.html),
-   necesitarás reinicializar los popups y los íconos lucide para el nuevo contenido. #}
+{# Modal para mostrar detalles de las citas de un día #}
+<div class="modal fade" id="modalCitas" tabindex="-1" aria-labelledby="modalCitasLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalCitasLabel">Citas del día</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="citas-lista-modal">
+                    {# Aquí se cargarán las citas con JavaScript #}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
 
-{% endblock %}
+{% endblock %} {# <-- ESTE CIERRA {% block content %} #}
+
+{% block scripts %}
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script> 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            lucide.createIcons(); // Inicializar Lucide Icons
+
+            // --- ¡MODIFICACIÓN CLAVE AQUÍ: Simplificar la obtención de fullPathFromJinja! ---
+            // Ya no necesitas construirla con Jinja, viene directamente de la variable del template
+            const fullPathFromJinja = "{{ current_full_path }}"; 
+            
+            const modalCitas = document.getElementById('modalCitas');
+            if (modalCitas) {
+                modalCitas.addEventListener('show.bs.modal', function (event) {
+                    const button = event.relatedTarget; 
+                    const fechaStr = button.getAttribute('data-fecha');
+                    const citasJson = button.getAttribute('data-citas');
+
+                    console.log("DEBUG MODAL: Botón clickeado para fecha:", fechaStr);
+                    console.log("DEBUG MODAL: JSON de citas (raw):", citasJson);
+
+                    let citas = [];
+                    try {
+                        citas = JSON.parse(citasJson); 
+                        console.log("DEBUG MODAL: Citas parseadas:", citas);
+                    } catch (e) {
+                        console.error("ERROR MODAL: Fallo al parsear JSON de citas:", e, citasJson);
+                        const citasListaModal = modalCitas.querySelector('#citas-lista-modal');
+                        if (citasListaModal) citasListaModal.innerHTML = '<p class="text-danger">Error al cargar los detalles de la cita.</p>';
+                        return; // Salir si el JSON es inválido
+                    }
+
+                    const modalTitle = modalCitas.querySelector('#modalCitasLabel');
+                    modalTitle.textContent = `Citas del día ${new Date(fechaStr).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+
+                    const citasListaModal = modalCitas.querySelector('#citas-lista-modal');
+                    if (citasListaModal) citasListaModal.innerHTML = ''; 
+                    else { console.error("ERROR MODAL: No se encontró el elemento #citas-lista-modal"); return; }
+
+
+                    if (citas.length > 0) {
+                        citas.sort((a, b) => { 
+                            if (a.hora < b.hora) return -1;
+                            if (a.hora > b.hora) return 1;
+                            return 0;
+                        });                        
+                        citas.forEach(cita => {
+                            const citaDiv = document.createElement('div');
+                            citaDiv.className = 'cita-item-modal mb-2 p-2 border rounded';
+                            
+                            const pacienteNombre = cita.paciente_nombre_completo || 'Paciente sin registrar';
+                            const pacienteTelefono = cita.paciente_telefono_str || 'No especificado'; 
+
+                            // --- ¡MODIFICACIÓN CLAVE AQUÍ: Usar las URLs directamente de cita! ---
+                            const editUrl = cita.edit_url; // ¡Ya viene lista de Python!
+                            const deleteUrl = cita.delete_url; // ¡Ya viene lista de Python!
+                            const nextUrlHidden = cita.next_url_encoded; // ¡Ya viene lista de Python!
+                            // --- FIN MODIFICACIÓN CLAVE ---
+
+                            citaDiv.innerHTML = `
+                                <p class="mb-1"><strong>${cita.hora}</strong> - ${pacienteNombre}</p>
+                                <p class="mb-1">Teléfono: ${pacienteTelefono}</p>
+                                <p class="text-muted mb-1">Motivo: ${cita.motivo || 'No especificado'}</p>
+                                <p class="text-muted mb-0">Doctor: ${cita.doctor || 'N/A'}</p>
+                                <div class="mt-2 text-end">
+                                    <a href="${ editUrl }" class="btn btn-sm btn-outline-primary">Editar</a>
+                                    <form action="${ deleteUrl }" method="post" class="d-inline" onsubmit="return confirm('¿Estás seguro de que quieres eliminar esta cita?');">
+                                        <input type="hidden" name="next" value="${ nextUrlHidden }">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                                    </form>
+                                </div>
+                            `;
+                            citasListaModal.appendChild(citaDiv);
+                        });
+                    } else {
+                        citasListaModal.innerHTML = '<p class="text-muted">No hay citas para este día.</p>';
+                    }
+                });
+            }
+        });
+    </script>
+{% endblock %} {# <-- ESTE CIERRA {% block scripts %} #}

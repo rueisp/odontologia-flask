@@ -1,36 +1,80 @@
-<!-- Archivo: _componentes_paciente.html (Versión Mejorada) -->
+{# clinica/templates/_componentes_paciente.html (FINAL, SIN LÓGICA DE FECHA EN JINJA) #}
 
-{% macro render_campo(label, name, paciente, editable=True, type='text') %}
+{% macro render_campo(label, field_name, paciente=None, editable=True, type='text', readonly=false, required=false, pattern=None, title=None) %}
     {% if editable %}
-        <!-- MODO EDICIÓN -->
+        <!-- MODO EDICIÓN (para registrar_paciente.html y editar_paciente.html) -->
         <div class="col-md-3">
-            <label for="{{ name }}" class="form-label">{{ label }}</label>
-            {# 👇 ESTA LÍNEA ES MÁS INTELIGENTE AHORA 👇 #}
-            <input type="{{ type }}" class="form-control" id="{{ name }}" name="{{ name }}" value="{{ request.form[name] or paciente[name] or '' }}">
+            <label for="{{ field_name }}" class="form-label">
+                {{ label }}
+                {% if required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            <input
+                type="{{ type }}"
+                class="form-control"
+                id="{{ field_name }}"
+                name="{{ field_name }}"
+                value="{% if request.form[field_name] is not none and request.form[field_name] != '' %}
+                           {{ request.form[field_name] }}
+                       {% elif paciente %}
+                           {# Usamos get_attr. El valor de fecha YA DEBE VENIR FORMATEADO COMO CADENA desde Python. #}
+                           {{ get_attr(paciente, field_name, '') }} 
+                       {% endif %}"
+                {% if readonly %}readonly{% endif %}
+                {% if required %}required{% endif %}
+                {% if pattern %}pattern="{{ pattern }}"{% endif %}
+                {% if title %}title="{{ title }}"{% endif %}
+            >
         </div>
     {% else %}
-        <!-- MODO SOLO LECTURA -->
+        <!-- MODO SOLO LECTURA (para mostrar_paciente.html) -->
         <div class="data-item">
             <span class="label">{{ label }}</span>
-            <span class="value">{{ paciente[name] or 'N/A' }}</span>
+            <span class="value">
+                {% if paciente %}
+                    {# Aquí paciente es un diccionario y el valor ya está formateado desde Python #}
+                    {# NO SE HACE NINGUNA COMPROBACIÓN DE FECHA NI STRFTIME EN JINJA #}
+                    {{ paciente.get(field_name, 'N/A') }} 
+                {% else %}
+                    N/A
+                {% endif %}
+            </span>
         </div>
     {% endif %}
 {% endmacro %}
 
 
-{% macro render_campo_textarea(label, name, paciente, editable=True) %}
+{% macro render_campo_textarea(label, field_name, paciente=None, editable=True, rows=1, readonly=false, required=false) %}
     {% if editable %}
         <!-- MODO EDICIÓN -->
         <div class="col-md-6 mb-3">
-            <label for="{{ name }}" class="form-label">{{ label }}</label>
-            {# 👇 ESTA LÍNEA ES MÁS INTELIGENTE AHORA 👇 #}
-            <textarea class="form-control" id="{{ name }}" name="{{ name }}" rows="2">{{ request.form[name] or paciente[name] or '' }}</textarea>
+            <label for="{{ field_name }}" class="form-label">
+                {{ label }}
+                {% if required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            <textarea
+                class="form-control"
+                id="{{ field_name }}"
+                name="{{ field_name }}"
+                rows="{{ rows }}"
+                {% if readonly %}readonly{% endif %}
+                {% if required %}required{% endif %}
+            >{% if request.form[field_name] is not none and request.form[field_name] != '' %}
+                {{ request.form[field_name] }}
+             {% elif paciente %}
+                {{ get_attr(paciente, field_name, '') }}
+             {% endif %}</textarea>
         </div>
     {% else %}
         <!-- MODO SOLO LECTURA -->
         <div class="data-item">
             <span class="label">{{ label }}</span>
-            <span class="value text-area">{{ paciente[name] or 'No especificado' }}</span>
+            <span class="value text-area">
+                {% if paciente %}
+                    {{ paciente.get(field_name, 'No especificado') }}
+                {% else %}
+                    No especificado
+                {% endif %}
+            </span>
         </div>
     {% endif %}
 {% endmacro %}

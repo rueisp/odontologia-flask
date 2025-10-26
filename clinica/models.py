@@ -10,14 +10,14 @@ class Paciente(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombres = db.Column(db.String(100), nullable=False)
     apellidos = db.Column(db.String(100), nullable=False)
-    tipo_documento = db.Column(db.String(20), nullable=True) # Permitir NULL
-    documento = db.Column(db.String(20), unique=True, nullable=True) # Permitir NULL, pero si existe debe ser único
+    tipo_documento = db.Column(db.String(50), nullable=True) # Permitir NULL
+    documento = db.Column(db.String(50), unique=True, nullable=True) # Permitir NULL, pero si existe debe ser único
     fecha_nacimiento = db.Column(db.Date, nullable=True) # Permitir NULL
     edad = db.Column(db.Integer, nullable=True)
     email = db.Column(db.String(100), nullable=True)
-    telefono = db.Column(db.String(20), nullable=False) # Asumimos que teléfono es obligatorio
-    genero = db.Column(db.String(20), nullable=True)
-    estado_civil = db.Column(db.String(20), nullable=True)
+    telefono = db.Column(db.String(50), nullable=False) # Asumimos que teléfono es obligatorio
+    genero = db.Column(db.String(50), nullable=True)
+    estado_civil = db.Column(db.String(50), nullable=True)
     direccion = db.Column(db.String(200), nullable=True)
     barrio = db.Column(db.String(100), nullable=True)
     municipio = db.Column(db.String(100), nullable=True)
@@ -27,7 +27,7 @@ class Paciente(db.Model):
     ocupacion = db.Column(db.String(100), nullable=True)
     referido_por = db.Column(db.String(100), nullable=True)
     nombre_responsable = db.Column(db.String(100), nullable=True)
-    telefono_responsable = db.Column(db.String(20), nullable=True)
+    telefono_responsable = db.Column(db.String(50), nullable=True)
     parentesco = db.Column(db.String(50), nullable=True)
     motivo_consulta = db.Column(db.Text, nullable=True)
     enfermedad_actual = db.Column(db.Text, nullable=True)
@@ -44,12 +44,12 @@ class Paciente(db.Model):
     ultima_visita_odontologo = db.Column(db.Text, nullable=True)
     plan_tratamiento = db.Column(db.Text, nullable=True)
     observaciones = db.Column(db.Text, nullable=True)
-    imagen_1_url = db.Column(db.String(200), nullable=True)
-    imagen_2_url = db.Column(db.String(200), nullable=True)
-    dentigrama_url = db.Column(db.String(255), nullable=True)
+    imagen_1 = db.Column(db.String(200), nullable=True)
+    imagen_2 = db.Column(db.String(200), nullable=True)
+    dentigrama_canvas = db.Column(db.String(255), nullable=True)
     odontologo_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
     odontologo = db.relationship('Usuario', back_populates='pacientes')
-
+    imagen_perfil_url = db.Column(db.String(255), nullable=True) # Nuevo campo para la URL de la imagen de perfil
     # --- CAMPOS PARA SOFT DELETE ---
     is_deleted = db.Column(db.Boolean, default=False, nullable=False, index=True)
     deleted_at = db.Column(db.DateTime, nullable=True)
@@ -77,27 +77,31 @@ class Evolucion(db.Model):
     # --- FIN CAMPOS SOFT DELETE ---
     
 class Cita(db.Model):
-    __tablename__ = 'cita' # Buena práctica
+    __tablename__ = 'cita'
 
     id = db.Column(db.Integer, primary_key=True)
-    paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=False)
+    # --- ¡RESTABLECIDA LA LÍNEA paciente_id! Y es nullable=True ---
+    paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=True) 
+
+    # --- ¡MODIFICACIÓN FINAL AQUÍ! ---
+    paciente_nombres_str = db.Column(db.String(100), nullable=False, default='Paciente sin registrar') 
+    paciente_apellidos_str = db.Column(db.String(100), nullable=False, default='') 
+    # --- FIN MODIFICACIÓN FINAL ---
+    paciente_telefono_str = db.Column(db.String(50), nullable=True, default='') # Asumimos que puede ser opcional
+
     fecha = db.Column(db.Date, nullable=False)
     hora = db.Column(db.Time, nullable=False)
     motivo = db.Column(db.String(255), nullable=True)
     doctor = db.Column(db.String(100), nullable=False)
     observaciones = db.Column(db.Text, nullable=True)
-    estado = db.Column(db.String(20), default='pendiente', nullable=False) # Considera un Enum aquí para los estados
+    estado = db.Column(db.String(20), default='pendiente', nullable=False)
 
-    # --- CAMPOS PARA SOFT DELETE ---
+    # --- CAMPOS PARA SOFT DELETE (mantener) ---
     is_deleted = db.Column(db.Boolean, default=False, nullable=False, index=True)
     deleted_at = db.Column(db.DateTime, nullable=True)
     # --- FIN CAMPOS SOFT DELETE ---
 
-    # Ajustar el backref para evitar conflictos si Paciente ya tiene una colección 'citas'.
-    # Si 'citas' en Paciente ya está definido por este backref y funciona, mantenlo.
-    # Si tienes otra relación en Paciente llamada 'citas', necesitarás cambiar uno de los nombres.
-    paciente = db.relationship('Paciente', backref=db.backref('citas', lazy='dynamic')) # cascade removido
-
+    paciente = db.relationship('Paciente', backref=db.backref('citas', lazy='dynamic'))
 
 class Usuario(UserMixin, db.Model):
     __tablename__ = 'usuarios'

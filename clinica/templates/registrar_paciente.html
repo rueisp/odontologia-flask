@@ -1,144 +1,178 @@
-<!-- 👇 CAMBIO 1: HEREDAMOS TODA LA ESTRUCTURA DE base.html -->
 {% extends 'base.html' %}
 
-<!-- Opcional: Cambiamos el título de la pestaña del navegador -->
 {% block title %}Registrar Paciente{% endblock %}
 
+{% block head_extra %}
+    {# Si tienes CSS específico para el dentigrama que no está en avatar_upload.css #}
+    {# <link rel="stylesheet" href="{{ url_for('static', filename='css/dentigrama_styles.css') }}"> #}
+{% endblock %}
 
-<!-- 👇 CAMBIO 2: TODO NUESTRO CONTENIDO VA DENTRO DEL BLOQUE 'content' -->
 {% block content %}
 <div class="container mt-5">
     <h2 class="text-center">Registrar Paciente</h2>
 
-    <!-- Mensajes Flash -->
     {% with messages = get_flashed_messages() %}
         {% if messages %}
         <div id="flash-message" data-message="{{ messages[0] }}"></div>
         {% endif %}
     {% endwith %}
 
-    <form action="{{ url_for('pacientes.crear_paciente') }}" method="post" enctype="multipart/form-data" id="formRegistrarPaciente">
+    <form action="{{ url_for('pacientes.crear_paciente') }}" method="post" enctype="multipart/form-data" id="patientMainForm">
         
-        <!-- ============================================== -->
-        <!-- PARTE 1: DATOS PERSONALES (SIEMPRE VISIBLE) -->
-        <!-- ============================================== -->
-        <fieldset class="border p-3 mb-3 shadow-sm rounded-3">
-            <legend class="w-auto">Datos Personales</legend>
-        
-            <div class="row mb-3">
-                <div class="col-md-3">
-                    <label for="nombres" class="form-label">Nombres <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="nombres" name="nombres" required>
-                </div>
-                <div class="col-md-3">
-                    <label for="apellidos" class="form-label">Apellidos <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="apellidos" name="apellidos" required>
-                </div>
-                <div class="col-md-3">
-                    <label for="tipo_documento" class="form-label">Tipo de Documento <span class="text-danger">*</span></label>
-                    <select class="form-control" id="tipo_documento" name="tipo_documento" required>
-                        <option value="">Seleccione</option>
-                        <option value="CC">Cédula de Ciudadanía</option>
-                        <option value="TI">Tarjeta de Identidad</option>
-                        <option value="RC">Registro Civil</option>
-                        <option value="CE">Cédula de Extranjería</option>
-                        <option value="PA">Pasaporte</option>
-                        <option value="PPT">Permiso de Protección</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="documento" class="form-label">Documento <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="documento" name="documento">
-                </div>
-            </div>
-        
-            <div class="row mb-3">
-                <div class="col-md-3">
-                    <label for="fecha_nacimiento" class="form-label">Fecha de Nacimiento <span class="text-danger">*</span></label>
-                    <input type="date" class="form-control" id="fecha_nacimiento" name="fecha_nacimiento" required>
-                </div>
-                <div class="col-md-3">
-                    <label for="edad" class="form-label">Edad <span class="text-danger">*</span></label>
-                    <input type="number" class="form-control" id="edad" name="edad" required readonly>
-                </div>
-                <div class="col-md-3">
-                    <label for="email" class="form-label">Email</label>
-                    <input type="email" class="form-control" id="email" name="email">
-                </div>
-                <div class="col-md-3">
-                    <label for="telefono" class="form-label">Teléfono <span class="text-danger">*</span></label>
-                    <input type="text" pattern="\d{7,15}" title="Solo números, entre 7 y 15 dígitos" class="form-control" id="telefono" name="telefono" required>
-                </div>
-            </div>
-            <div class="row mb-3">
-                <div class="col-md-3">
-                    <label for="genero" class="form-label">Género</label>
-                    <select class="form-control" id="genero" name="genero">
-                        <option value="">Seleccione</option>
-                        <option value="Masculino">Masculino</option>
-                        <option value="Femenino">Femenino</option>
-                        <option value="Otro">Otro</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="estado_civil" class="form-label">Estado Civil</label>
-                    <select class="form-control" id="estado_civil" name="estado_civil">
-                        <option value="">Seleccione</option>
-                        <option value="Soltero/a">Soltero/a</option>
-                        <option value="Casado/a">Casado/a</option>
-                        <option value="Unión Libre">Unión Libre</option>
-                        <option value="Separado/a">Separado/a</option>
-                        <option value="Viudo/a">Viudo/a</option>
-                    </select>
-                </div>
-            </div>
-        </fieldset>
-        
-        <!-- 👇 CAMBIO 3: AQUÍ ENLAZAMOS CON EL ARCHIVO DEL ACORDEÓN -->
-        {% include '_accordion_registro_paciente.html' %}
+        {# Ahora _accordion_registro_paciente.html contendrá TODOS los items del acordeón,
+           incluyendo la sección de Datos Personales que antes estaba en un fieldset. #}
+        {% include '_accordion_registro_paciente.html' with context %} 
         
         <div class="mt-5 mb-5 d-flex gap-3 justify-content-center">
-            <button type="submit" class="btn btn-dark">Guardar</button>
+            <button type="submit" class="btn btn-dark" id="mainSaveButton">Guardar</button>
             <a href="{{ url_for('pacientes.lista_pacientes') }}" class="btn btn-secondary">Volver</a>
         </div>
     </form>
 </div>
+
+{# Modal para Ampliar Imagen de Perfil (si quieres que también funcione aquí) #}
+{# Asegúrate de que este modal esté presente si el script avatar_upload.js lo usa #}
+<div class="modal fade" id="avatarZoomModal" tabindex="-1" aria-labelledby="avatarZoomModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="avatarZoomModalLabel">Imagen de Perfil</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="zoomedAvatarImage" src="" class="img-fluid rounded" alt="Imagen de Perfil Ampliada">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
-
-<!-- 👇 CAMBIO 4: MOVEMOS LOS SCRIPTS A SU PROPIO BLOQUE -->
 {% block scripts %}
-    <!-- Script para mostrar el mensaje flash como alert -->
-    <script>
-        const flashDiv = document.getElementById("flash-message");
-        if (flashDiv) {
-            const mensaje = flashDiv.getAttribute("data-message");
-            if (mensaje) {
-                alert(mensaje);
-            }
-        }
-    </script>
-    <script>
-    const fechaNacimientoInput = document.getElementById('fecha_nacimiento');
-    const edadInput = document.getElementById('edad');
+    <!-- ... tu script de flash messages ... -->
 
-    if (fechaNacimientoInput) {
-        fechaNacimientoInput.addEventListener('change', function () {
-            const fechaNacimiento = new Date(this.value);
-            const hoy = new Date();
-
-            let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
-            const mes = hoy.getMonth() - fechaNacimiento.getMonth();
-
-            if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNacimiento.getDate())) {
-                edad--;
-            }
-
-            edadInput.value = edad;
-        });
-    }
-    </script>
-
-    <!-- Cargamos el script específico del dentigrama -->
     <script src="{{ url_for('static', filename='js/editor_dentigrama.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/avatar_upload.js') }}"></script> 
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("MAIN PAGE SCRIPT: DOMContentLoaded fired from registrar_paciente.html."); 
+            
+            // --- Lógica para el cálculo de la edad (se mantiene igual) ---
+            const fechaNacimientoInput = document.getElementById('fecha_nacimiento');
+            const edadInput = document.getElementById('edad');
+
+            if (fechaNacimientoInput && edadInput) { 
+                fechaNacimientoInput.addEventListener('change', function () {
+                    const fechaNacimiento = new Date(this.value);
+                    const hoy = new Date();
+
+                    let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
+                    const mes = hoy.getMonth() - fechaNacimiento.getMonth();
+
+                    if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNacimiento.getDate())) {
+                        edad--;
+                    }
+                    edadInput.value = edad;
+                    console.log("EDAD SCRIPT DEBUG: Edad calculada:", edad);
+                });
+                if (fechaNacimientoInput.value) {
+                     fechaNacimientoInput.dispatchEvent(new Event('change'));
+                }
+            } else {
+                console.warn("EDAD SCRIPT WARNING: No se encontraron los inputs de Fecha de Nacimiento o Edad. ID's esperados: 'fecha_nacimiento', 'edad'.");
+            }
+            // --- FIN Lógica para el cálculo de la edad ---
+
+            // --- Lógica del formulario principal de paciente ---
+            const mainForm = document.getElementById('patientMainForm');
+            const mainSaveButton = document.getElementById('mainSaveButton'); 
+            const dentigramaUrlInput = document.getElementById('dentigrama_url_input');
+
+            if (mainForm && mainSaveButton) {
+                console.log("MAIN PAGE SCRIPT: patientMainForm and mainSaveButton found.");
+                
+                const mainSaveButtonHandler = async function(event) { 
+                    event.preventDefault(); 
+                    console.log("MAIN PAGE SCRIPT: Save button CLICK event detected. Starting save process.");
+
+                    mainSaveButton.disabled = true;
+                    mainSaveButton.textContent = 'Guardando Paciente...';
+                    
+                    try {
+                        let finalDentigramUrl = dentigramaUrlInput.value; 
+                        console.log("MAIN PAGE SCRIPT: Final Dentigram URL antes del envío del formulario:", finalDentigramUrl);
+
+                        const formData = new FormData(mainForm); 
+                        formData.set('dentigrama_canvas', finalDentigramUrl || ''); 
+
+                        console.log("MAIN PAGE SCRIPT: About to submit main form via fetch with dentigrama_canvas:", formData.get('dentigrama_canvas'));
+                        
+                        // *** MODIFICACIÓN CLAVE AQUÍ: AÑADIR LA CABECERA X-Requested-With ***
+                        const response = await fetch(mainForm.action, {
+                            method: mainForm.method, 
+                            body: formData,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest' // Indica que es una solicitud AJAX
+                            }
+                        });
+                        // ********************************************************************
+
+                        if (!response.ok) {
+                            // Si la respuesta no es OK (ej. 400, 409, 500), intenta leer el error como JSON
+                            // Aseguramos que se intente leer como JSON incluso si la respuesta no es 2xx
+                            const errorData = await response.json(); // Intentará leer JSON
+                            throw new Error(`Error HTTP: ${response.status} - ${errorData.error || 'Error desconocido del servidor.'}`);
+                        }
+
+                        // Esperamos JSON del backend
+                        const result = await response.json(); 
+                        console.log("MAIN PAGE SCRIPT: Server responded:", result);
+
+                        if (result.success) {
+                            alert(result.message || "Paciente guardado exitosamente. Redirigiendo...");
+                            window.location.href = result.redirect_url; 
+                        } else {
+                            // Esto podría ocurrir si Flask devuelve un 200 OK pero con success: false (ej. validación compleja)
+                            throw new Error(result.error || "Error desconocido al guardar el paciente.");
+                        }
+
+                    } catch (error) {
+                        console.error("MAIN PAGE SCRIPT ERROR: Error al guardar el paciente:", error);
+                        alert("Hubo un error al guardar el paciente: " + error.message);
+                    } finally {
+                        mainSaveButton.disabled = false;
+                        mainSaveButton.textContent = 'Guardar';
+                    }
+                }; 
+                
+                mainSaveButton.removeEventListener('click', mainSaveButtonHandler);
+                mainSaveButton.addEventListener('click', mainSaveButtonHandler);
+                console.log("MAIN PAGE SCRIPT: Listener para 'mainSaveButton' adjuntado/re-adjuntado.");
+
+            } else { 
+                console.error("MAIN PAGE SCRIPT ERROR: No se encontró el formulario principal con ID 'patientMainForm' o el botón 'mainSaveButton'.");
+            }
+            // --- FIN Lógica del formulario principal de paciente ---
+
+            // --- Lógica para inicializar el dentigrama cuando su acordeón se abre (se mantiene igual) ---
+            const dentigramaCollapseElement = document.getElementById('collapseDentigrama');
+            if (dentigramaCollapseElement) {
+                dentigramaCollapseElement.addEventListener('shown.bs.collapse', function () {
+                    console.log("MAIN PAGE SCRIPT: Acordeón del dentigrama abierto. Reinicializando dentigrama...");
+                    if (typeof window.initializeDentigram === 'function') {
+                        window.initializeDentigram(); 
+                    } else {
+                        console.error("MAIN PAGE SCRIPT ERROR: window.initializeDentigram no está disponible globalmente.");
+                    }
+                });
+            } else {
+                console.warn("MAIN PAGE SCRIPT WARNING: No se encontró el elemento del acordeón del dentigrama con ID 'collapseDentigrama'.");
+            }
+            // --- FIN Lógica de inicialización del dentigrama ---
+
+        }); 
+    </script>
 {% endblock %}

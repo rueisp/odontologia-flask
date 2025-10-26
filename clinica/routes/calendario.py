@@ -1,51 +1,75 @@
-# routes/calendario.py
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app # MODIFICACIÓN: Añadido current_app
-from datetime import date, datetime, timedelta 
+# clinica/routes/calendario.py
+
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app 
+from datetime import date, datetime, time, timedelta 
 import calendar
-from ..models import db, Cita, Paciente, AuditLog
+from ..models import db, Cita, Paciente, AuditLog 
 from sqlalchemy.orm import joinedload
-from sqlalchemy import extract, func, exc as sqlalchemy_exc
+from sqlalchemy import or_, extract, func, exc as sqlalchemy_exc
 from urllib.parse import urlparse, urljoin 
 import uuid 
 import os
-from shutil import copyfile
 from flask_login import current_user, login_required
 from uuid import uuid4 
-
+from ..utils import convertir_a_fecha 
+from urllib.parse import quote_plus # <-- ¡AÑADIR ESTA IMPORTACIÓN! Para URL encoding
 
 calendario_bp = Blueprint('calendario', __name__, url_prefix='/calendario')
 
-# --- Nombres de los meses (si no está global en app.py) ---
+# --- Nombres de los meses (se mantiene) ---
 NOMBRES_MESES_ESP = [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
 ]
 
-# --- Función de utilidad para URL segura (si no está global) ---
+# --- Función de utilidad para URL segura (se mantiene) ---
 def is_safe_url(target):
     ref_url = urlparse(request.host_url)
     test_url = urlparse(urljoin(request.host_url, target))
     return test_url.scheme in ('http', 'https') and \
            ref_url.netloc == test_url.netloc
 
-# --- Función para construir los días del mes ---
+
 def construir_dias_del_mes(anio, mes, citas_del_mes_obj):
     dias_calendario = []
     primer_dia_obj = date(anio, mes, 1)
     total_dias_en_mes = calendar.monthrange(anio, mes)[1]
     dia_hoy = date.today()
-    dia_semana_inicio = (primer_dia_obj.weekday() + 1) % 7  # Domingo como 0
+    dia_semana_inicio = (primer_dia_obj.weekday() + 1) % 7  
 
     for _ in range(dia_semana_inicio):
         dias_calendario.append({'fecha': None, 'hoy': False, 'citas': []})
 
     for dia_num in range(1, total_dias_en_mes + 1):
         fecha_actual_dia = date(anio, mes, dia_num)
-        citas_en_dia_actual = [c for c in citas_del_mes_obj if c.fecha == fecha_actual_dia]
+        # --- ¡MODIFICACIÓN CLAVE AQUÍ! Acceder a la fecha como un elemento de diccionario ---
+        citas_en_dia_actual = [c for c in citas_del_mes_obj if date.fromisoformat(c['fecha']) == fecha_actual_dia]
+        # NOTA: asumo que c['fecha'] es una cadena 'YYYY-MM-DD' como la formateamos en mostrar_calendario
+        # Si no, deberíamos usar datetime.strptime(c['fecha'], '%Y-%m-%d').date()
+        # Pero date.fromisoformat es más directo si el formato es estándar ISO.
+
+        # --- PREPARAR LAS CITAS CON LA INFORMACIÓN DEL PACIENTE Y HORA/FECHA FORMATEADA ---
+        citas_preparadas = []
+        for cita_dict in citas_en_dia_actual: # Renombrado a cita_dict para mayor claridad
+            # Todos estos valores ya vienen del diccionario 'cita_dict'
+            citas_preparadas.append({
+                'id': cita_dict['id'],
+                'fecha': cita_dict['fecha'], 
+                'hora': cita_dict['hora'],
+                'motivo': cita_dict['motivo'],
+                'doctor': cita_dict['doctor'],
+                'observaciones': cita_dict['observaciones'],
+                'estado': cita_dict['estado'],
+                'paciente_id': cita_dict['paciente_id'],
+                'paciente_nombre_completo': cita_dict['paciente_nombre_completo'],
+                'paciente_telefono_str': cita_dict['paciente_telefono_str']
+            })
+        # --- FIN PREPARACIÓN DE CITAS ---
+
         dias_calendario.append({
-            'fecha': fecha_actual_dia,
+            'fecha': fecha_actual_dia, # La fecha del día puede seguir siendo un objeto date aquí
             'hoy': fecha_actual_dia == dia_hoy,
-            'citas': citas_en_dia_actual
+            'citas': citas_preparadas 
         })
 
     total_celdas_actual = len(dias_calendario)
@@ -54,10 +78,9 @@ def construir_dias_del_mes(anio, mes, citas_del_mes_obj):
         dias_calendario.append({'fecha': None, 'hoy': False, 'citas': []})
     return dias_calendario
 
-# En routes/calendario.py
 
 @calendario_bp.route('/') 
-@login_required # Es fundamental proteger esta vista
+@login_required 
 def mostrar_calendario():
     anio_actual = request.args.get('anio', default=date.today().year, type=int)
     mes_actual = request.args.get('mes', default=date.today().month, type=int)
@@ -69,28 +92,55 @@ def mostrar_calendario():
         anio_actual = date.today().year
         mes_actual = date.today().month
 
-    # --- INICIO DE LA MODIFICACIÓN DE LA CONSULTA ---
-    
-    # 1. Construimos la consulta base con las condiciones que se aplican a TODOS
-    query_citas = Cita.query.join(Paciente, Cita.paciente_id == Paciente.id).filter(
-        Cita.is_deleted == False,
-        Paciente.is_deleted == False,
+    query_citas = Cita.query.outerjoin(Paciente, Cita.paciente_id == Paciente.id).options(joinedload(Cita.paciente)).filter(
+        Cita.is_deleted == False, 
         extract('year', Cita.fecha) == anio_actual,
         extract('month', Cita.fecha) == mes_actual
     )
 
-    # 2. Si el usuario NO es un administrador, añadimos el filtro de propietario
-    #    Esto asegura que solo vea las citas de SUS pacientes.
     if not current_user.is_admin:
-        query_citas = query_citas.filter(Paciente.odontologo_id == current_user.id)
-        
-    # 3. Ejecutamos la consulta final con las optimizaciones y el ordenamiento
-    citas_del_mes = query_citas.options(joinedload(Cita.paciente)).order_by(Cita.fecha, Cita.hora).all()
+        query_citas = query_citas.filter(
+            or_(
+                Paciente.odontologo_id == current_user.id,
+                Cita.paciente_id == None 
+            )
+        )
+    else:
+        query_citas = query_citas.filter(or_(Paciente.is_deleted == False, Cita.paciente_id == None))
 
-    # --- FIN DE LA MODIFICACIÓN ---
+    citas_del_mes = query_citas.order_by(Cita.fecha, Cita.hora).all()
 
-    # El resto de la función se mantiene exactamente igual
-    dias_render = construir_dias_del_mes(anio_actual, mes_actual, citas_del_mes)
+    # --- ¡MODIFICACIÓN CLAVE FINAL AQUÍ: Asegurar que request.full_path se pasa! ---
+    current_full_path_for_template = request.full_path # Capturar request.full_path una sola vez
+    
+    citas_para_construir = []
+    for cita_obj in citas_del_mes:
+        paciente_nombre_completo = "Paciente sin registrar"
+        if cita_obj.paciente and not cita_obj.paciente.is_deleted:
+            paciente_nombre_completo = f"{cita_obj.paciente.nombres} {cita_obj.paciente.apellidos}"
+        elif cita_obj.paciente_nombres_str and cita_obj.paciente_apellidos_str:
+            paciente_nombre_completo = f"{cita_obj.paciente_nombres_str} {cita_obj.paciente_apellidos_str}"
+        elif cita_obj.paciente_nombres_str:
+            paciente_nombre_completo = cita_obj.paciente_nombres_str
+
+        citas_para_construir.append({
+            'id': cita_obj.id,
+            'fecha': cita_obj.fecha.strftime('%Y-%m-%d'),
+            'hora': cita_obj.hora.strftime('%H:%M'),
+            'motivo': cita_obj.motivo,
+            'doctor': cita_obj.doctor,
+            'observaciones': cita_obj.observaciones,
+            'estado': cita_obj.estado,
+            'paciente_id': cita_obj.paciente_id,
+            'paciente_nombre_completo': paciente_nombre_completo,
+            'paciente_telefono_str': cita_obj.paciente_telefono_str,
+            # ¡Las URLs se construyen AQUÍ, en Python, con el ID real de la cita!
+            # Y el `next` ya se codifica aquí en Python
+            'edit_url': url_for('calendario.editar_cita', cita_id=cita_obj.id, next=current_full_path_for_template),
+            'delete_url': url_for('calendario.eliminar_cita', cita_id=cita_obj.id),
+            'next_url_encoded': quote_plus(current_full_path_for_template) # Codificar aquí directamente
+        })
+    dias_render = construir_dias_del_mes(anio_actual, mes_actual, citas_para_construir) # ¡Pasamos las citas_para_construir!
     nombre_mes_actual_display = NOMBRES_MESES_ESP[mes_actual-1]
 
     return render_template('calendario.html',
@@ -100,277 +150,120 @@ def mostrar_calendario():
                            nombre_mes_display=nombre_mes_actual_display,
                            dias=dias_render,
                            anio_hoy=date.today().year,
-                           mes_hoy=date.today().month)
+                           mes_hoy=date.today().month,
+                           current_full_path=current_full_path_for_template) # <--- ¡AHORA PASAMOS LA VARIABLE CORRECTA!
     
-
-# --- VERSIÓN FINAL Y SIMPLIFICADA: registrar_cita ---
-@calendario_bp.route('/registrar_cita', defaults={'paciente_id_param': None}, methods=['GET', 'POST'])
-@calendario_bp.route('/registrar_cita/paciente/<int:paciente_id_param>', methods=['GET', 'POST'])
-def registrar_cita(paciente_id_param):
-    # (El código para GET y la inicialización de form_values se mantiene igual)
+    
+# --- FUNCIÓN DEFINITIVA: registrar_cita (¡Sin dependencia de Paciente existente!) ---
+@calendario_bp.route('/registrar_cita', methods=['GET', 'POST']) # <--- ¡Una sola ruta sin paciente_id_param!
+@login_required 
+def registrar_cita(): # <--- ¡Ya no toma paciente_id_param como argumento!
     next_url_get = request.args.get('next')
     fecha_preseleccionada_str = request.args.get('fecha') if request.method == 'GET' else None
-    paciente_obj_preseleccionado = None
-
-    if paciente_id_param:
-        paciente_obj_preseleccionado = Paciente.query.filter_by(id=paciente_id_param, is_deleted=False).first()
-        if not paciente_obj_preseleccionado:
-            flash("Paciente preseleccionado no encontrado o está en la papelera.", "error")
-            return redirect(next_url_get or url_for('.mostrar_calendario'))
-
+    
+    # Preparamos los valores del formulario para el template
     form_values = {
         'paciente_nombres_val': '', 'paciente_apellidos_val': '', 'paciente_edad_val': '',
         'paciente_documento_val': '', 'paciente_telefono_val': '',
         'fecha_val': fecha_preseleccionada_str or '', 'hora_val': '',
         'doctor_val': '', 'motivo_val': '', 'observaciones_val': '',
         'next_url': next_url_get or '',
-        'paciente_preseleccionado_id': paciente_obj_preseleccionado.id if paciente_obj_preseleccionado else None,
-        'paciente_preseleccionado_nombre': f"{paciente_obj_preseleccionado.nombres} {paciente_obj_preseleccionado.apellidos}" if paciente_obj_preseleccionado else None,
-        'posibles_pacientes_encontrados': [],
-        'mostrar_seccion_duplicados': False
     }
 
     if request.method == 'POST':
-        # --- Recolección y validación de datos (sin cambios) ---
-        current_next_url = request.form.get('next') or next_url_get or ''
-        # ... (resto de la recolección de datos que ya tienes) ...
-        nombres_pac_form = request.form.get('paciente_nombres', '').strip()
-        apellidos_pac_form = request.form.get('paciente_apellidos', '').strip()
-        edad_pac_str = request.form.get('paciente_edad', '').strip()
-        documento_pac_form = request.form.get('paciente_documento', '').strip() or None
-        telefono_pac_form = request.form.get('paciente_telefono', '').strip()
-        fecha_str = request.form.get('fecha')
-        hora_str = request.form.get('hora')
-        doctor_form = request.form.get('doctor', '').strip()
-        motivo_form = request.form.get('motivo', '').strip()
-        observaciones_form = request.form.get('observaciones', '').strip()
-
-        form_values.update({
-            'paciente_nombres_val': nombres_pac_form, 'paciente_apellidos_val': apellidos_pac_form,
-            'paciente_edad_val': edad_pac_str, 'paciente_documento_val': documento_pac_form,
-            'paciente_telefono_val': telefono_pac_form,
-            'fecha_val': fecha_str, 'hora_val': hora_str, 'doctor_val': doctor_form,
-            'motivo_val': motivo_form, 'observaciones_val': observaciones_form
-        })
-
-        if not (fecha_str and hora_str and doctor_form):
-            flash("La fecha, hora y doctor son campos obligatorios para la cita.", "error")
-            return render_template('registrar_cita.html', form_values=form_values)
         try:
-            fecha_obj = datetime.strptime(fecha_str, "%Y-%m-%d").date()
-            hora_obj = datetime.strptime(hora_str, "%H:%M").time()
-        except ValueError:
-            flash("Formato de fecha u hora inválido.", "error")
-            return render_template('registrar_cita.html', form_values=form_values)
-        
-        paciente_para_la_cita = None
-        paciente_fue_creado_ahora = False
+            current_next_url = request.form.get('next') or next_url_get or ''
+            nombres_pac_form = request.form.get('paciente_nombres', '').strip()
+            apellidos_pac_form = request.form.get('paciente_apellidos', '').strip()
+            edad_pac_str = request.form.get('paciente_edad', '').strip()
+            documento_pac_form = request.form.get('paciente_documento', '').strip() or None
+            telefono_pac_form = request.form.get('paciente_telefono', '').strip()
+            fecha_str = request.form.get('fecha')
+            hora_str = request.form.get('hora')
+            doctor_form = request.form.get('doctor', '').strip()
+            motivo_form = request.form.get('motivo', '').strip()
+            observaciones_form = request.form.get('observaciones', '').strip()
 
-        if paciente_obj_preseleccionado:
-            paciente_para_la_cita = paciente_obj_preseleccionado
-        elif request.form.get('paciente_id_seleccionado_duplicado'):
-            paciente_id_elegido = request.form.get('paciente_id_seleccionado_duplicado', type=int)
-            paciente_para_la_cita = Paciente.query.filter_by(id=paciente_id_elegido, is_deleted=False).first()
-            if not paciente_para_la_cita:
-                flash("El paciente seleccionado de la lista ya no es válido.", "error")
-                return render_template('registrar_cita.html', form_values=form_values)
-        else:
-            if not (nombres_pac_form and apellidos_pac_form):
-                flash("Los nombres y apellidos del paciente son obligatorios.", "error")
-                return render_template('registrar_cita.html', form_values=form_values)
-            if documento_pac_form:
-                paciente_para_la_cita = Paciente.query.filter_by(documento=documento_pac_form, is_deleted=False).first()
-            if not paciente_para_la_cita:
-                # ... (lógica de buscar por nombre que ya tienes) ...
-                # CÓDIGO CORREGIDO
-                coincidencias_por_nombre = Paciente.query.filter(
-                    func.lower(Paciente.nombres) == func.lower(nombres_pac_form),
-                    func.lower(Paciente.apellidos) == func.lower(apellidos_pac_form),
-                    Paciente.is_deleted == False
-                ).all()
-                if len(coincidencias_por_nombre) == 1:
-                    paciente_para_la_cita = coincidencias_por_nombre[0]
-                # --- CÓDIGO CORREGIDO ---
-                elif len(coincidencias_por_nombre) > 1:
-                    # Se encontraron varios, se detiene el proceso y se le pide al usuario que elija.
-                    flash("Se encontraron varios pacientes con el mismo nombre. Por favor, seleccione el correcto o confirme la creación de uno nuevo.", "warning")
-                    form_values['posibles_pacientes_encontrados'] = coincidencias_por_nombre
-                    form_values['mostrar_seccion_duplicados'] = True
-                    return render_template('registrar_cita.html', form_values=form_values)
-                
-            if not paciente_para_la_cita:
-                # --- PUNTO DE INSERCIÓN DEL NUEVO CÓDIGO ---
-                if documento_pac_form and Paciente.query.filter_by(documento=documento_pac_form, is_deleted=False).first():
-                    flash(f"Error: Se intentó crear un nuevo paciente, pero el documento '{documento_pac_form}' ya pertenece a otro registro.", "danger")
-                    return render_template('registrar_cita.html', form_values=form_values)
-                if not telefono_pac_form:
-                    flash("El teléfono es obligatorio para registrar un nuevo paciente.", "error")
-                    return render_template('registrar_cita.html', form_values=form_values)
-                
-                edad_pac_actual = int(edad_pac_str) if edad_pac_str.isdigit() else None
-                
-                # --- INICIO DE LA LÓGICA DE COPIA DEL DENTIGRAMA AÑADIDA ---
-                dentigrama_db_path = None
-                try:
-                    nombre_archivo_base = "dentigrama1.png" # <<<--- ¡VERIFICA ESTE NOMBRE!
-                    ruta_origen_base_abs = os.path.join(current_app.static_folder, 'img', nombre_archivo_base)
-                    
-                    print(f"DEBUG: Intentando copiar desde: {ruta_origen_base_abs}")
-                    if not os.path.exists(ruta_origen_base_abs):
-                        raise FileNotFoundError(f"El archivo de dentigrama base no se encontró: {ruta_origen_base_abs}")
+            form_values.update({
+                'paciente_nombres_val': nombres_pac_form, 'paciente_apellidos_val': apellidos_pac_form,
+                'paciente_edad_val': edad_pac_str, 'paciente_documento_val': documento_pac_form,
+                'paciente_telefono_val': telefono_pac_form,
+                'fecha_val': fecha_str, 'hora_val': hora_str, 'doctor_val': doctor_form,
+                'motivo_val': motivo_form, 'observaciones_val': observaciones_form
+            })
 
-                    filename_dentigrama_paciente = f"{uuid4().hex}_{nombre_archivo_base}"
-                    ruta_destino_copia_abs = os.path.join(current_app.config['UPLOAD_FOLDER_DENTIGRAMAS'], filename_dentigrama_paciente)
-                    
-                    with open(ruta_origen_base_abs, 'rb') as f_origen, open(ruta_destino_copia_abs, 'wb') as f_destino:
-                        f_destino.write(f_origen.read())
-                    
-                    dentigrama_db_path = os.path.join("img", "pacientes", "dentigramas", filename_dentigrama_paciente).replace("\\", "/")
-                    print(f"DEBUG (desde cita): ¡ÉXITO! Se creó el archivo de dentigrama en: {ruta_destino_copia_abs}")
-                
-                except Exception as e_copy:
-                    flash("ADVERTENCIA: No se pudo asignar el dentigrama base al nuevo paciente.", "warning")
-                    current_app.logger.error(f"Error CRÍTICO al copiar dentigrama base desde cita: {e_copy}", exc_info=True)
-                    dentigrama_db_path = None
-                # --- FIN DE LA LÓGICA DE COPIA ---
-
-                paciente_para_la_cita = Paciente(
-                    nombres=nombres_pac_form,
-                    apellidos=apellidos_pac_form,
-                    edad=edad_pac_actual,
-                    documento=documento_pac_form,
-                    telefono=telefono_pac_form,
-                    odontologo=current_user,
-                    dentigrama_url=dentigrama_url,
-                )
-                db.session.add(paciente_para_la_cita)
-                paciente_fue_creado_ahora = True
-                flash(f"Se creará un nuevo paciente: {nombres_pac_form} {apellidos_pac_form}.", "info")
-
-                # ... (resto del código sin cambios) ...
-        # ... código anterior ...
-
-        # Esta condición ahora se evalúa DESPUÉS de haber buscado por documento Y por nombre
-        if not paciente_para_la_cita: # <-- Tu línea 236
-            # --- INICIO DEL BLOQUE INDENTADO ---
-            
-            # Todas estas líneas deben estar un nivel a la derecha
-            if documento_pac_form and Paciente.query.filter_by(documento=documento_pac_form, is_deleted=False).first():
-                flash(f"Error: Se intentó crear un nuevo paciente, pero el documento '{documento_pac_form}' ya pertenece a otro registro.", "danger")
+            # --- Validaciones de la Cita (Campos Obligatorios) ---
+            if not (nombres_pac_form and apellidos_pac_form and fecha_str and hora_str and doctor_form):
+                flash("Nombres, Apellidos del paciente, Fecha, Hora y Doctor son campos obligatorios para la cita.", "error")
                 return render_template('registrar_cita.html', form_values=form_values)
             
-            if not telefono_pac_form:
-                flash("El teléfono es obligatorio para registrar un nuevo paciente.", "error")
-                return render_template('registrar_cita.html', form_values=form_values)
-            
-            edad_pac_actual = int(edad_pac_str) if edad_pac_str.isdigit() else None
-            
-            # --- LÓGICA DE COPIA DEL DENTIGRAMA (también indentada) ---
-            dentigrama_db_path = None
             try:
-                nombre_archivo_base = "dentigrama1.png"
-                ruta_origen_base_abs = os.path.join(current_app.static_folder, 'img', nombre_archivo_base)
-                
-                print(f"DEBUG: Intentando copiar desde: {ruta_origen_base_abs}")
-                if not os.path.exists(ruta_origen_base_abs):
-                    raise FileNotFoundError(f"El archivo de dentigrama base no se encontró: {ruta_origen_base_abs}")
-                
-                # ... (resto de la lógica de copia) ...
-                
-                dentigrama_db_path = os.path.join("img", "pacientes", "dentigramas", filename_dentigrama_paciente).replace("\\", "/")
-                print(f"DEBUG (desde cita): ¡ÉXITO! Se creó el archivo de dentigrama en: {ruta_destino_copia_abs}")
+                fecha_obj = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+                hora_obj = datetime.strptime(hora_str, "%H:%M").time()
+            except ValueError:
+                flash("Formato de fecha u hora inválido.", "error")
+                return render_template('registrar_cita.html', form_values=form_values)
             
-            except Exception as e_copy:
-                # ... (manejo de la excepción, también indentado) ...
-                dentigrama_db_path = None
-                
-            # --- Creación del objeto Paciente (también indentada) ---
-            paciente_para_la_cita = Paciente(
-                nombres=nombres_pac_form,
-                apellidos=apellidos_pac_form,
-                edad=edad_pac_actual,
-                documento=documento_pac_form,
-                telefono=telefono_pac_form,
-                odontologo=current_user,
-                dentigrama_url=dentigrama_url,
-            )
-            
-            db.session.add(paciente_para_la_cita)
-            paciente_fue_creado_ahora = True
-            flash(f"Se creará un nuevo paciente: {nombres_pac_form} {apellidos_pac_form}.", "info")
 
-            # --- FIN DEL BLOQUE INDENTADO ---
-
-        # Esta parte ya va fuera del if not paciente_para_la_cita
-        if not paciente_para_la_cita:
-            flash("No se pudo determinar el paciente para la cita. Por favor, intente de nuevo.", "danger")
-            return render_template('registrar_cita.html', form_values=form_values)
-
-        # ... (resto de la función) ...
-            # ...
-        
-# ... código anterior ...
-
-        # PASO 3: Crear la cita y guardar en la base de datos.
-        try:
-            # En este punto, `paciente_para_la_cita` es un objeto válido, ya sea existente o nuevo (y añadido a la sesión).
             nueva_cita = Cita(
+                # paciente_id = None, # Ya es nullable=True, así que si no se asigna, será NULL
+                # --- ¡AQUÍ SE ASIGNAN LOS CAMPOS DEL PACIENTE AL OBJETO CITA! ---
+                paciente_nombres_str=nombres_pac_form, 
+                paciente_apellidos_str=apellidos_pac_form,
+                paciente_telefono_str=telefono_pac_form, # <--- ¡Añadido!
+                # --- FIN ASIGNACIÓN DE CAMPOS DEL PACIENTE ---
                 fecha=fecha_obj,
                 hora=hora_obj,
                 doctor=doctor_form,
                 motivo=motivo_form or None,
                 observaciones=observaciones_form or None,
-                paciente=paciente_para_la_cita # Relación clave
             )
+            # --- FIN MODIFICACIÓN CLAVE ---
+            
             db.session.add(nueva_cita)
-            db.session.commit() # Esto guardará tanto el paciente nuevo (si lo hay) como la nueva cita.
+            db.session.commit() 
 
             flash("Cita registrada correctamente.", "success")
             
-            # Lógica de redirección
-            redirect_url = form_values.get('next_url')
+            redirect_url = current_next_url 
             if redirect_url and is_safe_url(redirect_url):
                 return redirect(redirect_url)
             return redirect(url_for('.mostrar_calendario', anio=fecha_obj.year, mes=fecha_obj.month))
 
-        except sqlalchemy_exc.IntegrityError as e_int:
-            db.session.rollback()
-            current_app.logger.error(f"Error de Integridad INESPERADO al guardar cita/paciente: {e_int}", exc_info=True)
-            flash(f"Error al guardar: Hubo un conflicto de datos únicos en el último momento. Por favor, intente de nuevo.", "danger")
-            return render_template('registrar_cita.html', form_values=form_values)
-
-        # --- BLOQUE A CORREGIR ---
-        except Exception as e: # <-- Tu línea 302
-            # Este es el código indentado que faltaba
+        except Exception as e: 
             db.session.rollback()
             flash(f"Ocurrió un error inesperado al guardar la cita: {str(e)}", "error")
             current_app.logger.error(f"Error detallado al guardar cita: {e}", exc_info=True)
             return render_template('registrar_cita.html', form_values=form_values)
-        # --- FIN DE LA CORRECCIÓN ---
-    return render_template('registrar_cita.html', form_values=form_values)
 
-# --- MODIFICADA: editar_cita ---
+    return render_template('registrar_cita.html', 
+                           form_values=form_values, 
+                           pacientes=Paciente.query.filter_by(is_deleted=False).order_by(Paciente.apellidos).all()) # Si necesitas la lista de pacientes, pásala
+
+
+# --- FUNCIÓN EDITAR CITA ---
 @calendario_bp.route('/editar_cita/<int:cita_id>', methods=['GET', 'POST'])
+@login_required 
 def editar_cita(cita_id):
     cita_obj = Cita.query.options(joinedload(Cita.paciente)).get_or_404(cita_id)
 
-    if not current_user.is_admin and cita_obj.paciente.odontologo_id != current_user.id:
+    if not current_user.is_admin and cita_obj.paciente and cita_obj.paciente.odontologo_id != current_user.id:
         flash("Acceso denegado. No tienes permiso para editar esta cita.", "danger")
-        return redirect(url_for('.mostrar_calendario')) # Usamos .mostrar_calendario porque estamos en el mismo blueprint
-
-    pacientes_para_dropdown_query = Paciente.query.filter_by(is_deleted=False)
-    if not current_user.is_admin:
-        pacientes_para_dropdown_query = pacientes_para_dropdown_query.filter_by(odontologo_id=current_user.id)
+        return redirect(url_for('.mostrar_calendario')) 
     
-    todos_los_pacientes = pacientes_para_dropdown_query.order_by(Paciente.apellidos, Paciente.nombres).all()
+    # Si la cita no tiene paciente_id, cita_obj.paciente será None.
+    # Necesitamos proteger el acceso a cita_obj.paciente.odontologo_id si es None.
+    # La condición anterior `cita_obj.paciente and ...` ya lo hace.
 
+    query_pacientes_para_dropdown = Paciente.query.filter_by(is_deleted=False)
+    if not current_user.is_admin:
+        query_pacientes_para_dropdown = query_pacientes_para_dropdown.filter_by(odontologo_id=current_user.id)
+    todos_los_pacientes = query_pacientes_para_dropdown.order_by(Paciente.apellidos, Paciente.nombres).all()
     
     next_url_get = request.args.get('next')
     
-    todos_los_pacientes = Paciente.query.order_by(Paciente.apellidos, Paciente.nombres).all()
-
     form_data_edit = {
-        'selected_paciente_id': str(cita_obj.paciente_id), 
+        'selected_paciente_id': str(cita_obj.paciente_id) if cita_obj.paciente_id else '', # Asegurarse de que sea string o vacío
         'fecha_val': cita_obj.fecha.strftime('%Y-%m-%d'),
         'hora_val': cita_obj.hora.strftime('%H:%M'),
         'doctor_val': cita_obj.doctor,
@@ -383,40 +276,36 @@ def editar_cita(cita_id):
         current_next_url = request.form.get('next') or next_url_get
         form_data_edit['next_url'] = current_next_url 
 
-        paciente_id_form = request.form.get('paciente_id', type=int)
+        paciente_id_form = request.form.get('paciente_id') # No forzar a int todavía
         fecha_str = request.form.get('fecha')
         hora_str = request.form.get('hora')
         doctor_form = request.form.get('doctor')
         motivo_form = request.form.get('motivo')
         observaciones_form = request.form.get('observaciones')
         
-                # --- VERIFICACIÓN DE SEGURIDAD ADICIONAL EN POST ---
-        # 4. Asegurarse de que el paciente al que se asigna la cita también
-        #    pertenece al doctor (o que el usuario es admin).
-        if not current_user.is_admin:
-            paciente_destino = Paciente.query.filter_by(id=paciente_id_form, odontologo_id=current_user.id).first()
+        # --- VERIFICACIÓN DE SEGURIDAD ADICIONAL EN POST ---
+        if paciente_id_form and not current_user.is_admin: # Solo verificar si se proporcionó un paciente_id
+            paciente_destino = Paciente.query.filter_by(id=int(paciente_id_form), odontologo_id=current_user.id, is_deleted=False).first()
             if not paciente_destino:
-                flash("Error: Se intentó asignar la cita a un paciente que no te pertenece.", "danger")
+                flash("Error: Se intentó asignar la cita a un paciente que no te pertenece o no existe.", "danger")
                 return render_template('editar_cita.html', cita=cita_obj, pacientes=todos_los_pacientes, form_data=form_data_edit)
         # --- FIN VERIFICACIÓN POST ---
         
-        
-
         form_data_edit.update({
             'selected_paciente_id': paciente_id_form, 'fecha_val': fecha_str, 'hora_val': hora_str,
             'doctor_val': doctor_form, 'motivo_val': motivo_form, 'observaciones_val': observaciones_form
         })
 
-        if not (paciente_id_form and fecha_str and hora_str and doctor_form):
-            flash("Paciente, fecha, hora y doctor son campos obligatorios.", "error")
+        if not (fecha_str and hora_str and doctor_form): # paciente_id_form ya no es obligatorio
+            flash("Fecha, hora y doctor son campos obligatorios.", "error")
             return render_template('editar_cita.html', cita=cita_obj, pacientes=todos_los_pacientes, form_data=form_data_edit)
 
         try:
-            cita_obj.paciente_id = int(paciente_id_form)
+            cita_obj.paciente_id = int(paciente_id_form) if paciente_id_form else None # Aceptar None
             cita_obj.fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
             cita_obj.hora = datetime.strptime(hora_str, "%H:%M").time()
         except ValueError:
-            flash("Formato de ID de paciente, fecha u hora inválido.", "error")
+            flash("Formato de fecha u hora inválido.", "error")
             return render_template('editar_cita.html', cita=cita_obj, pacientes=todos_los_pacientes, form_data=form_data_edit)
 
         cita_obj.doctor = doctor_form
@@ -429,7 +318,7 @@ def editar_cita(cita_id):
         except Exception as e:
             db.session.rollback()
             flash(f"Error al actualizar la cita: {e}", "error")
-            current_app.logger.error(f"Error detallado al editar cita: {e}", exc_info=True) # MODIFICACIÓN: Añadido exc_info=True
+            current_app.logger.error(f"Error detallado al editar cita: {e}", exc_info=True)
             return render_template('editar_cita.html', cita=cita_obj, pacientes=todos_los_pacientes, form_data=form_data_edit)
 
         if form_data_edit['next_url'] and is_safe_url(form_data_edit['next_url']):
@@ -439,12 +328,48 @@ def editar_cita(cita_id):
     return render_template('editar_cita.html', cita=cita_obj, pacientes=todos_los_pacientes, form_data=form_data_edit)
 
 
-# --- MODIFICADA: eliminar_cita con Auditoría ---
+# --- NUEVA RUTA: Historial de Citas por Paciente ---
+@calendario_bp.route('/historial_citas_paciente/<int:paciente_id>', methods=['GET'])
+@login_required
+def historial_citas_paciente(paciente_id):
+    # 1. Verificar si el paciente existe y si el usuario tiene permisos
+    paciente = Paciente.query.filter_by(id=paciente_id, is_deleted=False).first_or_404()
 
+    if not current_user.is_admin and paciente.odontologo_id != current_user.id:
+        flash("Acceso denegado. No tienes permiso para ver el historial de este paciente.", "danger")
+        return redirect(url_for('pacientes.lista_pacientes'))
+
+    # 2. Obtener todas las citas (no eliminadas) para este paciente, ordenadas por fecha y hora
+    citas = Cita.query.filter(
+        Cita.paciente_id == paciente_id,
+        Cita.is_deleted == False
+    ).order_by(Cita.fecha.desc(), Cita.hora.desc()).all()
+
+    # 3. Preparar los datos de las citas para el template
+    citas_procesadas = []
+    for cita_obj in citas:
+        # Aquí puedes formatear cualquier dato adicional que necesites en el template
+        citas_procesadas.append({
+            'id': cita_obj.id,
+            'fecha': cita_obj.fecha.strftime('%d/%m/%Y'),
+            'hora': cita_obj.hora.strftime('%H:%M'),
+            'motivo': cita_obj.motivo or 'No especificado',
+            'doctor': cita_obj.doctor or 'N/A',
+            'observaciones': cita_obj.observaciones or '',
+            'estado': cita_obj.estado or 'Pendiente',
+            'edit_url': url_for('calendario.editar_cita', cita_id=cita_obj.id, next=request.full_path),
+            'delete_url': url_for('calendario.eliminar_cita', cita_id=cita_obj.id, next=request.full_path),
+        })
+
+    return render_template('historial_citas_paciente.html', 
+                           paciente=paciente, 
+                           citas=citas_procesadas)
+
+
+# --- FUNCIÓN ELIMINAR CITA ---
 @calendario_bp.route('/eliminar_cita/<int:cita_id>', methods=['POST'])
-@login_required # Buena práctica proteger acciones de eliminación
+@login_required 
 def eliminar_cita(cita_id):
-    # Cargar la cita y el paciente asociado para tener información completa para el log
     cita_a_mover_papelera = Cita.query.options(joinedload(Cita.paciente)).get_or_404(cita_id)
     
     if not current_user.is_admin and cita_a_mover_papelera.paciente.odontologo_id != current_user.id:
@@ -453,16 +378,13 @@ def eliminar_cita(cita_id):
     
     if cita_a_mover_papelera.is_deleted:
         flash('Esta cita ya se encuentra en la papelera.', 'info')
-        # Redirigir a donde sea apropiado, quizás a la vista del paciente o al calendario
         next_url_fallback = url_for('.mostrar_calendario', 
                                     anio=cita_a_mover_papelera.fecha.year, 
                                     mes=cita_a_mover_papelera.fecha.month)
         if cita_a_mover_papelera.paciente_id:
-            # Ajusta 'pacientes.mostrar_paciente' al nombre correcto de tu blueprint/ruta
             next_url_fallback = url_for('pacientes.mostrar_paciente', id=cita_a_mover_papelera.paciente_id) 
         return redirect(request.form.get('next') or next_url_fallback)
 
-    # Guardar información para el log ANTES de modificar el objeto cita
     paciente_nombre_log = "Desconocido"
     if cita_a_mover_papelera.paciente: 
         paciente_nombre_log = f"{cita_a_mover_papelera.paciente.nombres} {cita_a_mover_papelera.paciente.apellidos}"
@@ -476,26 +398,20 @@ def eliminar_cita(cita_id):
     cita_id_para_log = cita_a_mover_papelera.id
     
     next_url = request.form.get('next') 
-    # Guardar el año y mes para la redirección de fallback ANTES de cualquier commit, 
-    # ya que el objeto podría desvincularse si la sesión expira.
     anio_cita_fallback = cita_a_mover_papelera.fecha.year
     mes_cita_fallback = cita_a_mover_papelera.fecha.month
     paciente_id_fallback = cita_a_mover_papelera.paciente_id
 
 
     try:
-        # --- SOFT DELETE CITA ---
         cita_a_mover_papelera.is_deleted = True
         cita_a_mover_papelera.deleted_at = datetime.utcnow()
-        # --- FIN SOFT DELETE CITA ---
 
-        # Crear el registro de auditoría
         audit_entry = AuditLog(
-            action_type="SOFT_DELETE_CITA", # Nuevo tipo de acción
+            action_type="SOFT_DELETE_CITA", 
             description=f"Cita movida a la papelera: {log_descripcion_detalle}",
             target_model="Cita",
             target_id=cita_id_para_log,
-            # Opcional: related_target_model="Paciente", related_target_id=cita_a_mover_papelera.paciente_id
         )
         
         if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
@@ -505,7 +421,6 @@ def eliminar_cita(cita_id):
             audit_entry.user_username = "Sistema/Desconocido"
 
         db.session.add(audit_entry) 
-        # NO db.session.delete(cita_a_mover_papelera)
         
         db.session.commit() 
         
@@ -516,36 +431,39 @@ def eliminar_cita(cita_id):
         flash(f"Error al mover la cita a la papelera: {str(e)}", "error")
         current_app.logger.error(f"Error detallado al mover cita ID {cita_id} a la papelera o registrar auditoría: {e}", exc_info=True)
 
-    # Lógica de redirección
     if next_url and is_safe_url(next_url):
         return redirect(next_url)
     
-    # Fallback a la vista del paciente si existe, sino al calendario
     if paciente_id_fallback:
         try:
-            # AJUSTA 'pacientes.mostrar_paciente' al nombre de tu blueprint de pacientes y la ruta
             return redirect(url_for('pacientes.mostrar_paciente', id=paciente_id_fallback))
-        except Exception: # BuildError si la ruta no existe o el blueprint no está bien nombrado
+        except Exception: 
             current_app.logger.warning(f"No se pudo redirigir a la vista del paciente {paciente_id_fallback}, yendo al calendario.")
-            pass # Continuar al fallback del calendario
+            pass 
             
     return redirect(url_for('.mostrar_calendario', anio=anio_cita_fallback, mes=mes_cita_fallback))
 
 
-# --- NUEVA RUTA: Actualizar Estado de la Cita ---
+# --- FUNCIÓN ACTUALIZAR ESTADO CITA ---
 @calendario_bp.route('/cita/actualizar_estado/<int:cita_id>', methods=['POST'])
+@login_required 
 def actualizar_estado_cita(cita_id):
     cita = Cita.query.get(cita_id)
 
     if not cita:
         return jsonify({'success': False, 'message': 'Cita no encontrada.'}), 404
+    
+    if not current_user.is_admin:
+        if cita.paciente and cita.paciente.odontologo_id != current_user.id:
+            current_app.logger.warning(f"Intento de actualizar cita {cita_id} de paciente {cita.paciente_id} por usuario no autorizado {current_user.id}.")
+            return jsonify({'success': False, 'message': 'No tienes permiso para actualizar el estado de esta cita.'}), 403 
 
     data = request.get_json()
     if not data or 'estado' not in data:
         return jsonify({'success': False, 'message': 'No se proporcionó el nuevo estado.'}), 400
 
     nuevo_estado = data.get('estado')
-    estados_validos = ['pendiente', 'completada', 'cancelada', 'confirmada', 'reprogramada', 'no_asistio'] # MODIFICACIÓN: Ampliar estados si es necesario
+    estados_validos = ['pendiente', 'completada', 'cancelada', 'confirmada', 'reprogramada', 'no_asistio']
 
     if nuevo_estado not in estados_validos:
         return jsonify({'success': False, 'message': f"Estado '{nuevo_estado}' no válido."}), 400
@@ -562,5 +480,5 @@ def actualizar_estado_cita(cita_id):
         })
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Error al actualizar estado de cita ID {cita_id} a '{nuevo_estado}': {e}", exc_info=True) # MODIFICACIÓN: Añadido exc_info=True
+        current_app.logger.error(f"Error al actualizar estado de cita ID {cita_id} a '{nuevo_estado}': {e}", exc_info=True)
         return jsonify({'success': False, 'message': 'Ocurrió un error al actualizar el estado de la cita.'}), 500

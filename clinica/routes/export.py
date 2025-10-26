@@ -9,15 +9,17 @@ import os
 from datetime import datetime
 from docx import Document
 from docx.shared import Inches, Pt
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING 
+import re # ¡IMPORTADO para la función limpiar_texto_para_word!
 
 # --- Importaciones de tus Modelos ---
 from ..models import db, Paciente, Evolucion
 
 # --- Creación del Blueprint ---
+# ¡IMPORTANTE! Esta línea DEBE ir antes de cualquier @export_bp.route
 export_bp = Blueprint('export', __name__)
 
-# --- Exportar a Excel (Tu código original) ---
+# --- Exportar a Excel ---
 @export_bp.route('/exportar_excel/<int:id>')
 def exportar_excel(id):
     paciente = Paciente.query.get_or_404(id)
@@ -35,25 +37,24 @@ def exportar_excel(id):
     return send_file(output, download_name=f"Paciente_{paciente.id}.xlsx", as_attachment=True)
 
 
-# --- Exportar a Word (VERSIÓN FINAL CON FORMATO Y LÓGICA DE IMAGEN CORRECTA) ---
+# --- Exportar a Word ---
 @export_bp.route('/exportar_word/<int:id>')
 def exportar_word(id):
     paciente = Paciente.query.get_or_404(id)
     doc = Document()
 
-    # Estilo de fuente por defecto
+    # Estilo de fuente por defecto para el documento
     style = doc.styles['Normal']
     font = style.font
     font.name = 'Arial'
-    font.size = Pt(8)
+    font.size = Pt(8) # Tamaño de fuente base para todo el documento
 
-    # --- 2. ENCABEZADO CON FECHA, TÍTULO Y SUBTÍTULO ---
+    # --- ENCABEZADO CON FECHA, TÍTULO Y SUBTÍTULO ---
     
-    # --- ▼▼▼ CAMBIO 1: AÑADIR FECHA DE EMISIÓN ▼▼▼ ---
+    # Fecha de Emisión
     fecha_actual = datetime.now().strftime('%d/%m/%Y')
     p_fecha = doc.add_paragraph(f'Fecha de Emisión: {fecha_actual}')
     p_fecha.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    # Hacemos que la fecha tenga un tamaño de fuente más pequeño
     for run in p_fecha.runs:
         run.font.size = Pt(7)
         run.italic = True
@@ -62,15 +63,13 @@ def exportar_word(id):
     titulo = doc.add_heading('Historia Clínica Odontológica', level=1)
     titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
     
-    # --- ▼▼▼ CAMBIO 2: ESTILO PERSONALIZADO PARA EL CONSULTORIO ▼▼▼ ---
+    # Estilo personalizado para el consultorio
     subtitulo = doc.add_paragraph()
     subtitulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    # Añadimos el texto en un 'run' para poder aplicarle estilos específicos
     run_consultorio = subtitulo.add_run('Odontologia Dr. Rueis Pitre')
-    # Personalizamos la fuente del consultorio
     font_consultorio = run_consultorio.font
-    font_consultorio.name = 'Calibri'  # Puedes cambiar a 'Times New Roman', etc.
-    font_consultorio.size = Pt(10)     # Tamaño de fuente 10
+    font_consultorio.name = 'Calibri'
+    font_consultorio.size = Pt(10)
     font_consultorio.italic = True
     font_consultorio.bold = True
     
@@ -78,41 +77,45 @@ def exportar_word(id):
 
     # Tabla de Datos de Filiación
     doc.add_heading('1. Datos de Filiación', level=2)
-    campos_filiacion = [ ("Nombres", paciente.nombres), ("Apellidos", paciente.apellidos), ("Tipo de Documento", paciente.tipo_documento), ("Documento", paciente.documento), ("Fecha de Nacimiento", paciente.fecha_nacimiento), ("Edad", paciente.edad), ("Email", paciente.email), ("Teléfono", paciente.telefono), ("Género", paciente.genero), ("Estado Civil", paciente.estado_civil), ("Dirección", paciente.direccion), ("Ocupación", paciente.ocupacion), ("Aseguradora", paciente.aseguradora), ("Tipo de Vinculación", paciente.tipo_vinculacion) ]
-    crear_tabla_formato(doc, campos_filiacion, una_columna=False)
+    campos_filiacion = [
+        ("Nombres", paciente.nombres), ("Apellidos", paciente.apellidos),
+        ("Tipo Doc.", paciente.tipo_documento), ("Documento", paciente.documento),
+        ("Fecha Nac.", paciente.fecha_nacimiento.strftime('%d/%m/%Y') if paciente.fecha_nacimiento else 'N/A'),
+        ("Edad", paciente.edad),
+        ("Email", paciente.email), ("Teléfono", paciente.telefono),
+        ("Género", paciente.genero), ("Estado Civil", paciente.estado_civil),
+        ("Dirección", paciente.direccion), ("Ocupación", paciente.ocupacion),
+        ("Aseguradora", paciente.aseguradora), ("Tipo Vinculación", paciente.tipo_vinculacion)
+    ]
+    crear_tabla_formato(doc, campos_filiacion, una_columna=False, label_font_size=Pt(7), value_font_size=Pt(7), vertical_align_top=True)
     doc.add_paragraph()
 
     # Tabla de Anamnesis y Antecedentes
     doc.add_heading('2. Anamnesis y Antecedentes', level=2)
-    campos_anamnesis = [ ("Motivo de Consulta", paciente.motivo_consulta), ("Enfermedad Actual", paciente.enfermedad_actual), ("Antecedentes Personales", paciente.antecedentes_personales), ("Antecedentes Familiares", paciente.antecedentes_familiares), ("Antecedentes Quirúrgicos", paciente.antecedentes_quirurgicos), ("Antecedentes Hemorrágicos", paciente.antecedentes_hemorragicos), ("Farmacológicos", paciente.farmacologicos), ("Reacción a Medicamentos", paciente.reaccion_medicamentos), ("Alergias", paciente.alergias), ("Hábitos", paciente.habitos), ("Cepillado", paciente.cepillado), ("Examen Físico", paciente.examen_fisico), ("Última Visita al Odontólogo", paciente.ultima_visita_odontologo), ("Plan de Tratamiento", paciente.plan_tratamiento), ]
-    crear_tabla_formato(doc, campos_anamnesis, una_columna=True)
+    campos_anamnesis = [
+        ("Motivo de Consulta", limpiar_texto_para_word(paciente.motivo_consulta)),
+        ("Enfermedad Actual", limpiar_texto_para_word(paciente.enfermedad_actual)),
+        ("Antec. Personales", limpiar_texto_para_word(paciente.antecedentes_personales)),
+        ("Antec. Familiares", limpiar_texto_para_word(paciente.antecedentes_familiares)),
+        ("Antec. Quirúrgicos", limpiar_texto_para_word(paciente.antecedentes_quirurgicos)),
+        ("Antec. Hemorrágicos", limpiar_texto_para_word(paciente.antecedentes_hemorragicos)),
+        ("Farmacológicos", limpiar_texto_para_word(paciente.farmacologicos)),
+        ("Reacción a Med.", limpiar_texto_para_word(paciente.reaccion_medicamentos)),
+        ("Alergias", limpiar_texto_para_word(paciente.alergias)),
+        ("Hábitos", limpiar_texto_para_word(paciente.habitos)),
+        ("Cepillado", limpiar_texto_para_word(paciente.cepillado)),
+        ("Examen Físico", limpiar_texto_para_word(paciente.examen_fisico)),
+        ("Última Visita Od.", limpiar_texto_para_word(paciente.ultima_visita_odontologo)),
+        ("Plan de Tratamiento", limpiar_texto_para_word(paciente.plan_tratamiento)),
+        ("Observaciones", limpiar_texto_para_word(paciente.observaciones)) 
+    ]
+    crear_tabla_formato(doc, campos_anamnesis, una_columna=False, label_font_size=Pt(7), value_font_size=Pt(7), vertical_align_top=True)
     doc.add_paragraph()
 
-    # --- 3. ANEXOS GRÁFICOS (VERSIÓN MEJORADA CON TABLA) ---
-    doc.add_heading('3. Anexos Gráficos', level=2)
-    
-    # Creamos una tabla de 2 columnas para las imágenes anexas
-    tabla_imagenes = doc.add_table(rows=1, cols=2)
-    tabla_imagenes.style = 'Table Grid'
-    
-    # Celda para Imagen 1
-    celda_img1 = tabla_imagenes.cell(0, 0)
-    add_image_to_cell(celda_img1, paciente.imagen_1, "Imagen Anexa 1", width=3.0)
-
-    # Celda para Imagen 2
-    celda_img2 = tabla_imagenes.cell(0, 1)
-    add_image_to_cell(celda_img2, paciente.imagen_2, "Imagen Anexa 2", width=3.0)
-    
-    doc.add_paragraph() # Espacio
-    
-    # El dentigrama se añade debajo, ocupando todo el ancho
-    doc.add_paragraph("Dentigrama:").bold = True
-    add_image_to_doc(doc, paciente.dentigrama_canvas, width=6.0) # Ya no necesita etiqueta
-    doc.add_paragraph()
-    
+    # --- Se elimina la sección "3. Anexos Gráficos" y su contenido ---
     
     # Tabla de Evoluciones
-    doc.add_heading('4. Evolución del Paciente', level=2)
+    doc.add_heading('3. Evolución del Paciente', level=2) 
     tabla_evos = doc.add_table(rows=1, cols=2)
     tabla_evos.style = 'Table Grid'
     tabla_evos.columns[0].width = Inches(1.25)
@@ -133,67 +136,111 @@ def exportar_word(id):
     return send_file(output, download_name=download_filename, as_attachment=True)
 
 
-# --- FUNCIONES AUXILIARES (DEFINITIVAS) ---
+# --- FUNCIONES AUXILIARES ---
 
-def crear_tabla_formato(doc, campos, una_columna=False):
+def limpiar_texto_para_word(texto):
+    """
+    Limpia un texto para su inserción compacta en Word.
+    - Elimina saltos de línea redundantes.
+    - Reemplaza múltiples espacios en blanco por uno solo.
+    - Recorta espacios al inicio y al final.
+    """
+    if texto is None:
+        return ""
+    
+    texto = str(texto) 
+    texto = texto.replace('\r\n', ' ').replace('\n', ' ')
+    texto = re.sub(r'\s+', ' ', texto)
+    return texto.strip()
+
+
+def crear_tabla_formato(doc, campos, una_columna=False, label_font_size=None, value_font_size=None, vertical_align_top=False):
     """Crea una tabla con etiquetas en negrita y valores para los campos proporcionados."""
     cols = 2 if una_columna else 4
     tabla = doc.add_table(rows=0, cols=cols)
     tabla.style = 'Table Grid'
     
+    # Configurar anchos de columna para mejor diseño
+    if una_columna: 
+        tabla.columns[0].width = Inches(1.8) 
+        tabla.columns[1].width = Inches(4.7) 
+    else: # Formato 2x2 para Datos de Filiación y Anamnesis
+        tabla.columns[0].width = Inches(1.2)  # Etiqueta izquierda
+        tabla.columns[1].width = Inches(2.1)  # Valor izquierda
+        tabla.columns[2].width = Inches(1.2)  # Etiqueta derecha
+        tabla.columns[3].width = Inches(2.1)  # Valor derecha
+
+    # Ajustar la altura mínima de las filas y alineación vertical
+    from docx.enum.table import WD_ROW_HEIGHT_RULE, WD_ALIGN_VERTICAL
+    # tabla.rows[0].height_rule = WD_ROW_HEIGHT_RULE.AT_LEAST # Esto se aplica a las filas, no a la tabla
+                                                            # Y se necesita una fila para aplicarlo.
     paso = 1 if una_columna else 2
     for i in range(0, len(campos), paso):
         row_cells = tabla.add_row().cells
         
+        # Aplicar alineación vertical a la fila recién creada
+        if vertical_align_top:
+            for cell in row_cells:
+                cell.vertical_alignment = WD_ALIGN_VERTICAL.TOP
+        
         # Campo de la izquierda
         label_izq, value_izq = campos[i]
         p_label_izq = row_cells[0].paragraphs[0]
-        p_label_izq.add_run(f"{label_izq}:").bold = True
-        row_cells[1].text = str(value_izq) if value_izq is not None else 'N/A'
+        run_label_izq = p_label_izq.add_run(f"{label_izq}:")
+        run_label_izq.bold = True
+        if label_font_size:
+            run_label_izq.font.size = label_font_size
+        
+        p_value_izq = row_cells[1].paragraphs[0]
+        run_value_izq = p_value_izq.add_run(str(value_izq) if value_izq is not None else 'N/A')
+        if value_font_size:
+            run_value_izq.font.size = value_font_size
+        p_value_izq.paragraph_format.space_before = Pt(0)
+        p_value_izq.paragraph_format.space_after = Pt(0)
+        p_value_izq.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+        p_value_izq.alignment = WD_ALIGN_PARAGRAPH.LEFT
         
         # Campo de la derecha (si aplica)
         if not una_columna and i + 1 < len(campos):
             label_der, value_der = campos[i + 1]
             p_label_der = row_cells[2].paragraphs[0]
-            p_label_der.add_run(f"{label_der}:").bold = True
-            row_cells[3].text = str(value_der) if value_der is not None else 'N/A'
+            run_label_der = p_label_der.add_run(f"{label_der}:")
+            run_label_der.bold = True
+            if label_font_size:
+                run_label_der.font.size = label_font_size
+            
+            p_value_der = row_cells[3].paragraphs[0]
+            run_value_der = p_value_der.add_run(str(value_der) if value_der is not None else 'N/A')
+            if value_font_size:
+                run_value_der.font.size = value_font_size
+            p_value_der.paragraph_format.space_before = Pt(0)
+            p_value_der.paragraph_format.space_after = Pt(0)
+            p_value_der.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+            p_value_der.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
-# --- FUNCIÓN AUXILIAR MODIFICADA ---
-# Reemplaza tu add_image_to_doc por esta nueva versión
+
+# --- FUNCIÓN AUXILIAR add_image_to_doc ---
 def add_image_to_doc(doc, ruta_relativa_db, width=3.0):
-    """Añade una imagen directamente al documento."""
-    if not ruta_relativa_db:
-        doc.add_paragraph("(No disponible)")
-        return
-    ruta_absoluta = os.path.join(current_app.root_path, 'static', ruta_relativa_db)
-    if os.path.exists(ruta_absoluta):
-        try:
-            doc.add_picture(ruta_absoluta, width=Inches(width))
-        except Exception as e:
-            doc.add_paragraph(f"(Error: {e})")
-    else:
-        doc.add_paragraph("(Archivo no encontrado)")
+    """Añade una imagen directamente al documento si es una ruta local. Ignora URLs externas."""
+    if ruta_relativa_db and not ruta_relativa_db.startswith(('http://', 'https://')):
+        ruta_absoluta = os.path.join(current_app.root_path, 'static', ruta_relativa_db)
+        if os.path.exists(ruta_absoluta):
+            try:
+                doc.add_picture(ruta_absoluta, width=Inches(width))
+            except Exception as e:
+                doc.add_paragraph(f"(Error al insertar imagen desde local: {e})")
 
-# --- NUEVA FUNCIÓN AUXILIAR ---
-# Añade esta nueva función a tu archivo
+# --- FUNCIÓN AUXILIAR add_image_to_cell ---
 def add_image_to_cell(cell, ruta_relativa_db, label, width=3.0):
-    """Añade una etiqueta y una imagen dentro de una celda de tabla."""
-    # Limpiamos el párrafo por defecto de la celda
+    """Añade una etiqueta y una imagen dentro de una celda de tabla si es una ruta local. Ignora URLs externas."""
     cell.text = ''
     p = cell.add_paragraph()
     p.add_run(f"{label}:").bold = True
     
-    if not ruta_relativa_db:
-        cell.add_paragraph("(No disponible)")
-        return
-    
-    ruta_absoluta = os.path.join(current_app.root_path, 'static', ruta_relativa_db)
-
-    if os.path.exists(ruta_absoluta):
-        try:
-            # Añadimos la imagen en un nuevo párrafo para mejor control
-            cell.add_paragraph().add_run().add_picture(ruta_absoluta, width=Inches(width))
-        except Exception as e:
-            cell.add_paragraph(f"(Error: {e})")
-    else:
-        cell.add_paragraph("(Archivo no encontrado)")
+    if ruta_relativa_db and not ruta_relativa_db.startswith(('http://', 'https://')):
+        ruta_absoluta = os.path.join(current_app.root_path, 'static', ruta_relativa_db)
+        if os.path.exists(ruta_absoluta):
+            try:
+                cell.add_paragraph().add_run().add_picture(ruta_absoluta, width=Inches(width))
+            except Exception as e:
+                cell.add_paragraph(f"(Error al insertar imagen desde local en celda: {e})")

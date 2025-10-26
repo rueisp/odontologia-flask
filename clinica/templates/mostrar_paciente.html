@@ -6,8 +6,9 @@
 
 {% block head_extra %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/perfil_paciente.css') }}">
+    {# Si tienes estilos específicos para el avatar en mostrar_paciente, agrégalos aquí #}
+    {# <link rel="stylesheet" href="{{ url_for('static', filename='css/avatar_display.css') }}"> #}
 {% endblock %}
-
 
 {% block content %}
 <div class="container-custom">
@@ -23,23 +24,36 @@
         </div>
     </div>
 
-    <div class="profile-layout">
+    <!-- Layout principal: ahora con 4 columnas principales para mejor distribución -->
+    <div class="profile-layout-new"> 
         
         <!-- ======================================================= -->
-        <!-- COLUMNA 1: INFO PERSONAL Y ADMINISTRATIVA -->
+        <!-- COLUMNA 1: Datos Personales, Dirección, Responsable -->
         <!-- ======================================================= -->
-        <div class="column">
+        <div class="column-first">
             <div class="card-custom">
                 <h3><i data-lucide="user-circle" class="card-icon"></i>Datos Personales</h3>
+                {# --- INICIO: AÑADIDO PARA MOSTRAR IMAGEN DE PERFIL --- #}
+                <div class="text-center mb-3">
+                    <img id="profile-picture-preview-display"
+                         src="{{ paciente.imagen_perfil_url or url_for('static', filename='img/placeholder_avatar.png') }}"
+                         alt="Imagen de Perfil"
+                         class="rounded-circle border border-2 shadow"
+                         style="width: 120px; height: 120px; object-fit: cover; cursor: pointer;">
+                </div>
+                {# --- FIN: AÑADIDO PARA MOSTRAR IMAGEN DE PERFIL --- #}
                 <div class="data-grid">
-                    <div class="data-item"><span class="label">Documento</span><span class="value">{{ paciente.tipo_documento or '' }} {{ paciente.documento or 'N/A' }}</span></div>
+                    <div class="data-item"><span class="label">Documento</span><span class="value">{{ paciente.tipo_documento }} {{ paciente.documento }}</span></div>
                     <div class="data-item"><span class="label">Teléfono</span><span class="value">{{ paciente.telefono }}</span></div>
-                    <div class="data-item"><span class="label">Email</span><span class="value">{{ paciente.email or 'N/A' }}</span></div>
-                    <div class="data-item"><span class="label">Fecha de Nacimiento</span><span class="value">{{ paciente.fecha_nacimiento.strftime('%d/%m/%Y') if paciente.fecha_nacimiento else 'N/A' }}</span></div>
-                    <div class="data-item"><span class="label">Edad</span><span class="value">{{ paciente.edad or 'N/A' }} años</span></div>
-                    <div class="data-item"><span class="label">Género</span><span class="value">{{ paciente.genero or 'N/A' }}</span></div>
-                    <div class="data-item"><span class="label">Estado Civil</span><span class="value">{{ paciente.estado_civil or 'N/A' }}</span></div>
-                    <div class="data-item"><span class="label">Ocupación</span><span class="value">{{ paciente.ocupacion or 'N/A' }}</span></div>
+                    <div class="data-item"><span class="label">Email</span><span class="value">{{ paciente.email }}</span></div>
+                    <div class="data-item">
+                        <span class="label">Fecha de Nacimiento</span>
+                        <span class="value">{{ paciente.fecha_nacimiento }}</span>
+                    </div>
+                    <div class="data-item"><span class="label">Edad</span><span class="value">{{ paciente.edad }}</span></div>
+                    <div class="data-item"><span class="label">Género</span><span class="value">{{ paciente.genero }}</span></div>
+                    <div class="data-item"><span class="label">Estado Civil</span><span class="value">{{ paciente.estado_civil }}</span></div>
+                    <div class="data-item"><span class="label">Ocupación</span><span class="value">{{ paciente.ocupacion }}</span></div>
                 </div>
             </div>
             <div class="card-custom">
@@ -64,90 +78,199 @@
             </div>
         </div>
 
-        <!-- ======================================================= -->
-        <!-- COLUMNA 2: HISTORIA CLÍNICA -->
-        <!-- ======================================================= -->
-        <div class="column"> {# <-- ESTE DIV FALTABA #}
-            <div class="card-custom">
-                <h3><i data-lucide="file-text" class="card-icon"></i>Antecedentes Personales</h3>
-                <div class="data-grid">
-                    {{ render_campo_textarea('Motivo de Consulta', 'motivo_consulta', paciente, editable=False) }}
-                    {{ render_campo_textarea('Enfermedad Actual', 'enfermedad_actual', paciente, editable=False) }}
-                    {{ render_campo_textarea('Antecedentes Personales', 'antecedentes_personales', paciente, editable=False) }}
-                    {{ render_campo_textarea('Antecedentes Familiares', 'antecedentes_familiares', paciente, editable=False) }}
-                    {{ render_campo_textarea('Antecedentes Quirúrgicos', 'antecedentes_quirurgicos', paciente, editable=False) }}
-                    {{ render_campo_textarea('Antecedentes Hemorrágicos', 'antecedentes_hemorragicos', paciente, editable=False) }}
-                    {{ render_campo_textarea('Farmacológicos', 'farmacologicos', paciente, editable=False) }}
-                    {{ render_campo_textarea('Reacción a Medicamentos', 'reaccion_medicamentos', paciente, editable=False) }}
-                    {{ render_campo_textarea('Alergias', 'alergias', paciente, editable=False) }}
-                    {{ render_campo_textarea('Hábitos', 'habitos', paciente, editable=False) }}
-                    {{ render_campo_textarea('Higiene Oral (Cepillado)', 'cepillado', paciente, editable=False) }}
-                    {{ render_campo_textarea('Examen Físico', 'examen_fisico', paciente, editable=False) }}
-                    {{ render_campo_textarea('Última Visita al Odontólogo', 'ultima_visita_odontologo', paciente, editable=False) }}
-                </div>
-            </div>
-        </div>
 
-        <!-- ======================================================= -->
-        <!-- COLUMNA 3: IMÁGENES Y PLANIFICACIÓN -->
-        <!-- ======================================================= -->
-        <div class="column">
-            <!-- Card para el Dentigrama (VISTA PREVIA) -->
-            {% if paciente.dentigrama_url %}
+        <!-- COLUMNA 2: Motivo de Consulta y Antecedentes/Alergias -->
+        <div class="column-second">
+            
             <div class="card-custom">
-                <h3><i data-lucide="image" class="card-icon"></i>Dentigrama</h3>
-                <div class="dentigrama-container" style="position: relative; cursor: pointer; max-width: 100%;" data-bs-toggle="modal" data-bs-target="#modalDentigrama" title="Haz clic para ampliar">
-                    <div style="background-image: url('{{ url_for('static', filename='img/plantilla_dentigrama.png') }}'); background-size: contain; background-repeat: no-repeat; background-position: center;">
-                        <div style="padding-top: 50%;"></div>
-                        <img src="{{ paciente.dentigrama_url }}" alt="Dentigrama del paciente" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+                <h3><i data-lucide="message-square" class="card-icon"></i>Motivo de Consulta</h3>
+                <div class="collapsible-section-content collapsed" id="motivo_consulta_section">
+                    <div class="data-grid">
+                        <div class="data-item full-width">
+                            <span class="label">Motivo de Consulta</span>
+                            <span class="value text-area">{{ paciente.motivo_consulta }}</span>
+                        </div>
+                        <div class="data-item full-width">
+                            <span class="label">Enfermedad Actual</span>
+                            <span class="value text-area">{{ paciente.enfermedad_actual }}</span>
+                        </div>
                     </div>
                 </div>
-            </div>
-            {% endif %}
-
-            <!-- Card para las Imágenes Adicionales -->
-            {% if paciente.imagen_1_url or paciente.imagen_2_url %}
-            <div class="card-custom">
-                <h3><i data-lucide="images" class="card-icon"></i>Imágenes Adicionales</h3>
-                <div class="gallery-grid">
-                    {% if paciente.imagen_1_url %}
-                    <div class="gallery-item" data-bs-toggle="modal" data-bs-target="#modalImagen1"><img src="{{ paciente.imagen_1_url }}" alt="Imagen 1"><h5>Imagen 1</h5></div>
-                    {% endif %}
-                    {% if paciente.imagen_2_url %}
-                    <div class="gallery-item" data-bs-toggle="modal" data-bs-target="#modalImagen2"><img src="{{ paciente.imagen_2_url }}" alt="Imagen 2"><h5>Imagen 2</h5></div>
+                <div class="section-read-more-wrapper">
+                    {# Si hay CUALQUIER texto en estos campos, muestra el botón #}
+                    {% if paciente.motivo_consulta or paciente.enfermedad_actual %} 
+                        <button class="toggle-read-more-btn" data-target="motivo_consulta_section">Mostrar más</button>
                     {% endif %}
                 </div>
             </div>
-            {% endif %}
 
-            <!-- Card para Plan de Tratamiento -->
             <div class="card-custom">
-                <h3><i data-lucide="clipboard-list" class="card-icon"></i>Plan de Tratamiento</h3>
-                <div class="data-grid">
-                    {{ render_campo_textarea('Plan de Tratamiento', 'plan_tratamiento', paciente, editable=False) }}
+                <h3><i data-lucide="clipboard" class="card-icon"></i>Antecedentes y Alergias</h3>
+                <div class="collapsible-section-content collapsed" id="antecedentes_alergias_section">
+                    <div class="data-grid">
+                        <div class="data-item full-width">
+                            <span class="label">Antecedentes Personales</span>
+                            <span class="value text-area">{{ paciente.antecedentes_personales }}</span>
+                        </div>
+                        <div class="data-item full-width">
+                            <span class="label">Antecedentes Familiares</span>
+                            <span class="value text-area">{{ paciente.antecedentes_familiares }}</span>
+                        </div>
+                        <div class="data-item full-width">
+                            <span class="label">Antecedentes Quirúrgicos</span>
+                            <span class="value text-area">{{ paciente.antecedentes_quirurgicos }}</span>
+                        </div>
+                        <div class="data-item full-width">
+                            <span class="label">Antecedentes Hemorrágicos</span>
+                            <span class="value text-area">{{ paciente.antecedentes_hemorragicos }}</span>
+                        </div>
+                        <div class="data-item full-width">
+                            <span class="label">Farmacológicos</span>
+                            <span class="value text-area">{{ paciente.farmacologicos }}</span>
+                        </div>
+                        <div class="data-item full-width">
+                            <span class="label">Reacción a Medicamentos</span>
+                            <span class="value text-area">{{ paciente.reaccion_medicamentos }}</span>
+                        </div>
+                        <div class="data-item full-width">
+                            <span class="label">Alergias</span>
+                            <span class="value text-area">{{ paciente.alergias }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="section-read-more-wrapper">
+                    {% if paciente.antecedentes_personales or paciente.antecedentes_familiares or paciente.antecedentes_quirurgicos or paciente.antecedentes_hemorragicos or paciente.farmacologicos or paciente.reaccion_medicamentos or paciente.alergias %}
+                        <button class="toggle-read-more-btn" data-target="antecedentes_alergias_section">Mostrar más</button>
+                    {% endif %}
                 </div>
             </div>
 
-            <!-- Card para Observaciones -->
-            <div class="card-custom">
-                <h3><i data-lucide="clipboard-list" class="card-icon"></i>Observaciones</h3>
-                <div class="data-grid">
-                    {{ render_campo_textarea('Observaciones', 'observaciones', paciente, editable=False) }}
+                        <div class="card-custom">
+                <h3><i data-lucide="hand" class="card-icon"></i>Hábitos y Examen Físico</h3>
+                <div class="collapsible-section-content collapsed" id="habitos_examen_section">
+                    <div class="data-grid">
+                        <div class="data-item full-width">
+                            <span class="label">Hábitos</span>
+                            <span class="value text-area">{{ paciente.habitos }}</span>
+                        </div>
+                        <div class="data-item full-width">
+                            <span class="label">Higiene Oral (Cepillado)</span>
+                            <span class="value text-area">{{ paciente.cepillado }}</span>
+                        </div>
+                        <div class="data-item full-width">
+                            <span class="label">Examen Físico</span>
+                            <span class="value text-area">{{ paciente.examen_fisico }}</span>
+                        </div>
+                        <div class="data-item full-width">
+                            <span class="label">Última Visita al Odontólogo</span>
+                            <span class="value text-area">{{ paciente.ultima_visita_odontologo }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="section-read-more-wrapper">
+                    {% if paciente.habitos or paciente.cepillado or paciente.examen_fisico or paciente.ultima_visita_odontologo %}
+                        <button class="toggle-read-more-btn" data-target="habitos_examen_section">Mostrar más</button>
+                    {% endif %}
                 </div>
             </div>
+
+
         </div>
 
         <!-- ======================================================= -->
-        <!-- COLUMNA 4: ACCIONES Y SEGUIMIENTO -->
+        <!-- COLUMNA 3: Hábitos y Examen Físico, Dentigrama, Imágenes, Plan, Observaciones -->
         <!-- ======================================================= -->
-        <div class="column">
+        <div class="column-third">
+            
+
+            <div class="card-custom">
+                <h3><i data-lucide="image" class="card-icon"></i>Dentigrama e Imágenes</h3>
+                <div class="gallery-grid-new"> 
+                    
+                    {% if paciente.dentigrama_canvas %}
+                    <div class="gallery-item-new full-width-grid" data-bs-toggle="modal" data-bs-target="#modalDentigrama" title="Haz clic para ampliar">
+                        <div class="dentigrama-preview-overlay-container">
+                            <img src="{{ url_for('static', filename='img/plantilla_dentigrama.png') }}" 
+                                 alt="Plantilla de dentigrama" 
+                                 class="dentigrama-fondo-preview">
+                            <img src="{{ paciente.dentigrama_canvas }}" 
+                                 alt="Trazos del dentigrama" 
+                                 class="dentigrama-trazos-preview">
+                        </div>
+                        <h5 class="mt-2 text-sm font-medium text-gray-700">Dentigrama</h5>
+                    </div>
+                    {% endif %}
+
+                    {# Imágenes Adicionales (en miniaturas) #}
+                    {% if paciente.imagen_1 or paciente.imagen_2 %}
+                        {% if paciente.imagen_1 %}
+                        <div class="gallery-item-new" data-bs-toggle="modal" data-bs-target="#modalImagen1" title="Haz clic para ampliar">
+                            <img src="{{ paciente.imagen_1 }}" alt="Imagen 1" class="img-fluid rounded border" style="max-height: 120px; object-fit: cover;">
+                            <h5 class="mt-1 text-xs font-medium text-gray-600">Imagen 1</h5>
+                        </div>
+                        {% endif %}
+                        {% if paciente.imagen_2 %}
+                        <div class="gallery-item-new" data-bs-toggle="modal" data-bs-target="#modalImagen2" title="Haz clic para ampliar">
+                            <img src="{{ paciente.imagen_2 }}" alt="Imagen 2" class="img-fluid rounded border" style="max-height: 120px; object-fit: cover;">
+                            <h5 class="mt-1 text-xs font-medium text-gray-600">Imagen 2</h5>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                    
+                    {% if not paciente.dentigrama_canvas and not paciente.imagen_1 and not paciente.imagen_2 %}
+                        <p class="text-muted text-center col-span-full">No hay imágenes ni dentigrama.</p>
+                    {% endif %}
+
+                </div>
+            </div>
+
+            <div class="card-custom">
+                <h3><i data-lucide="message-circle" class="card-icon"></i>Observaciones</h3>
+                <div class="collapsible-section-content collapsed" id="observaciones_section">
+                    <div class="data-grid">
+                        <div class="data-item full-width">
+                            <span class="label">Observaciones</span>
+                            <span class="value text-area">{{ paciente.observaciones }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="section-read-more-wrapper">
+                    {% if paciente.observaciones %}
+                        <button class="toggle-read-more-btn" data-target="observaciones_section">Mostrar más</button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card-custom">
+                <h3><i data-lucide="clipboard-list" class="card-icon"></i>Plan de Tratamiento</h3>
+                <div class="collapsible-section-content collapsed" id="plan_tratamiento_section">
+                    <div class="data-grid">
+                        <div class="data-item full-width">
+                            <span class="label">Plan de Tratamiento</span>
+                            <span class="value text-area">{{ paciente.plan_tratamiento }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="section-read-more-wrapper">
+                    {% if paciente.plan_tratamiento %}
+                        <button class="toggle-read-more-btn" data-target="plan_tratamiento_section">Mostrar más</button>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ======================================================= -->
+        <!-- COLUMNA 4: Evolución y Otras Acciones (Nueva Columna) -->
+        <!-- ======================================================= -->
+        <div class="column-fourth">
             <div class="card-custom">
                 <h3><i data-lucide="trending-up" class="card-icon"></i>Evolución</h3>
                 <div class="evolucion-list mb-4">
-                    {% for evolucion in paciente.evoluciones | sort(attribute='fecha', reverse=True) %}
+                    {% for evolucion in evoluciones_ordenadas %}
                     <div class="evolucion-item">
-                        <div class="evolucion-date">{{ evolucion.fecha.strftime('%d de %B, %Y') }}</div>
-                        <p class="evolucion-desc">{{ evolucion.descripcion }}</p>
+                        <div class="evolucion-date fw-bold text-primary small mb-1">{{ evolucion.fecha_formateada }}</div>
+                        <p class="evolucion-desc mb-0 text-muted">{{ evolucion.descripcion }}</p>
                     </div>
                     {% else %}
                     <p class="text-muted">No hay evoluciones registradas.</p>
@@ -155,13 +278,14 @@
                 </div>
                 <hr>
                 <h4 class="h6 mb-3 mt-4">Añadir Nueva Evolución</h4>
-                <form action="{{ url_for('evoluciones.agregar_evolucion', paciente_id=paciente.id) }}" method="post" class="evolucion-form">
+                <form action="{{ url_for('evoluciones.agregar_evolucion', paciente_id=paciente.id) }}" method="post" class="evolucion-form"> 
                     <div class="mb-3">
                         <textarea name="descripcion" class="form-control" rows="3" placeholder="Escribe aquí la nueva evolución..." required></textarea>
                     </div>
                     <button type="submit" class="btn-custom btn-secondary-custom w-100">Guardar Evolución</button>
                 </form>
             </div>
+
             <div class="card-custom">
                 <h3><i data-lucide="menu-square" class="card-icon"></i>Otras Acciones</h3>
                 <div class="d-grid gap-2">
@@ -171,64 +295,131 @@
             </div>
         </div>
 
-    </div> <!-- FIN de .profile-layout -->
+    </div> <!-- FIN de .profile-layout-new -->
 </div> <!-- FIN de .container-custom -->
 
 
-<!-- =================================================================== -->
-<!-- MODALES (VAN AL FINAL, JUSTO ANTES DEL ENDBLOCK) -->
-<!-- =================================================================== -->
+{# --- INICIO: MODAL PARA AMPLIAR IMAGEN DE PERFIL --- #}
+<div class="modal fade" id="avatarZoomModal" tabindex="-1" aria-labelledby="avatarZoomModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="avatarZoomModalLabel">Imagen de Perfil</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="zoomedAvatarImage" src="" class="img-fluid rounded" alt="Imagen de Perfil Ampliada">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{# --- FIN: MODAL PARA AMPLIAR IMAGEN DE PERFIL --- #}
 
-<!-- Modal para Dentigrama -->
-<!-- Archivo: mostrar_paciente.html (al final) -->
 
-{% if paciente.dentigrama_url %}
-<div class="modal fade" id="modalDentigrama" tabindex="-1">
+{# Modales para imágenes y dentigrama (sin cambios estructurales mayores) #}
+{# Modal para Dentigrama (adaptado para trazos transparentes) #}
+{% if paciente.dentigrama_canvas %}
+<div class="modal fade" id="modalDentigrama" tabindex="-1" aria-labelledby="modalDentigramaLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Dentigrama de {{ paciente.nombres }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="modalDentigramaLabel">Dentigrama de {{ paciente.nombres }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-
-            <!-- 👇▼▼▼ INICIO DE LA SECCIÓN MODIFICADA ▼▼▼👇 -->
             <div class="modal-body">
-                
-                <!-- 1. Contenedor al que le aplicaremos el CSS -->
-                <div class="dentigrama-modal-content">
-                    
-                    <!-- 2. Imagen de fondo -->
+                <div class="dentigrama-modal-content" style="position: relative; width: 800px; height: 413px; margin: auto;">
                     <img src="{{ url_for('static', filename='img/plantilla_dentigrama.png') }}" 
                          class="dentigrama-fondo" 
-                         alt="Plantilla de dentigrama">
-                    
-                    <!-- 3. Imagen de los trazos que se superpone -->
-                    <img src="{{ paciente.dentigrama_url }}" 
+                         alt="Plantilla de dentigrama" 
+                         style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain;">
+                    <img src="{{ paciente.dentigrama_canvas }}" 
                          class="dentigrama-trazos" 
-                         alt="Trazos del dentigrama">
-
+                         alt="Trazos del dentigrama"
+                         style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain;">
                 </div>
-
             </div>
-            <!-- ▲▲▲ FIN DE LA SECCIÓN MODIFICADA ▲▲▲ -->
-
         </div>
     </div>
 </div>
 {% endif %}
 
-<!-- Modal para Imagen 1 -->
-{% if paciente.imagen_1_url %}
-<div class="modal fade" id="modalImagen1" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><div class="modal-body"><img src="{{ paciente.imagen_1_url }}" class="img-fluid" alt="Imagen 1"></div></div></div>
+{# Modal para Imagen 1 #}
+{% if paciente.imagen_1 %}
+<div class="modal fade" id="modalImagen1" tabindex="-1" aria-labelledby="modalImagen1Label" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalImagen1Label">Imagen 1 de {{ paciente.nombres }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <img src="{{ paciente.imagen_1 }}" class="img-fluid" alt="Imagen 1">
+            </div>
+        </div>
+    </div>
 </div>
 {% endif %}
 
-<!-- Modal para Imagen 2 -->
-{% if paciente.imagen_2_url %}
-<div class="modal fade" id="modalImagen2" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><div class="modal-body"><img src="{{ paciente.imagen_2_url }}" class="img-fluid" alt="Imagen 2"></div></div></div>
+{# Modal para Imagen 2 #}
+{% if paciente.imagen_2 %}
+<div class="modal fade" id="modalImagen2" tabindex="-1" aria-labelledby="modalImagen2Label" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalImagen2Label">Imagen 2 de {{ paciente.nombres }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <img src="{{ paciente.imagen_2 }}" class="img-fluid" alt="Imagen 2">
+            </div>
+        </div>
+    </div>
 </div>
 {% endif %}
 
-{% endblock %}
+{% endblock %} {# Cierra {% block content %} #}
+
+
+{% block scripts %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // lucide.createIcons(); // COMENTADO: Ya se llama en base.html
+
+            // Lógica para abrir/cerrar "Mostrar más"
+            document.querySelectorAll('.toggle-read-more-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const targetId = this.dataset.target;
+                    const targetElement = document.getElementById(targetId);
+                    if (targetElement) {
+                        targetElement.classList.toggle('collapsed');
+                        if (targetElement.classList.contains('collapsed')) {
+                            this.textContent = 'Mostrar más';
+                        } else {
+                            this.textContent = 'Mostrar menos';
+                        }
+                    }
+                });
+            });
+
+            // --- INICIO: LÓGICA JAVASCRIPT PARA EL MODAL DE ZOOM DEL AVATAR ---
+            const profilePictureDisplay = document.getElementById('profile-picture-preview-display'); 
+            const avatarZoomModalElement = document.getElementById('avatarZoomModal');
+            const zoomedAvatarImage = document.getElementById('zoomedAvatarImage');
+
+            if (profilePictureDisplay && avatarZoomModalElement && zoomedAvatarImage) {
+                const avatarZoomModal = new bootstrap.Modal(avatarZoomModalElement);
+                profilePictureDisplay.addEventListener('click', function() {
+                    zoomedAvatarImage.src = this.src; 
+                    avatarZoomModal.show();
+                    console.log("Mostrar Paciente Script: Avatar image clicked for zoom.");
+                });
+            } else {
+                console.warn("Mostrar Paciente Script Warning: No se encontraron los elementos para la funcionalidad de zoom del avatar en mostrar_paciente.");
+            }
+            // --- FIN: LÓGICA MODAL DE ZOOM ---
+        });
+    </script>
+{% endblock %} {# Cierra {% block scripts %} #}

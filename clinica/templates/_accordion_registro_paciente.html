@@ -1,146 +1,283 @@
-<!-- Archivo: _accordion_registro_paciente.html (Versión Final y Corregida) -->
+<!-- Archivo: clinica/templates/_accordion_registro_paciente.html -->
 {% from '_componentes_paciente.html' import render_campo, render_campo_textarea %}
 
-<div class="accordion mt-3" id="accordionRegistroPaciente">
+{# ¡IMPORTANTE! Hemos ELIMINADO EL DIV.ACCORDION EXTERIOR.
+   Ahora, cada 'accordion-item card-custom mb-3' actúa como una tarjeta individual.
+   El 'data-bs-parent' en los botones debe apuntar al ID del primer item para mantener el comportamiento de acordeón. #}
+
+    <!-- =========== SECCIÓN 0: DATOS PERSONALES (PRIMER ITEM) =========== -->
+    {# Cada accordion-item ahora incluye 'card-custom mb-3' para darle la apariencia de tarjeta individual #}
+    <div class="accordion-item card-custom mb-3" id="accordionRegistroPaciente"> {# CAMBIO: El ID del grupo se mueve aquí. #}
+        <h2 class="accordion-header" id="headingDatosPersonales">
+            {# Este botón está expandido por defecto (sin 'collapsed') y con 'aria-expanded="true"' #}
+            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDatosPersonales" aria-expanded="true" aria-controls="collapseDatosPersonales">
+                <i data-lucide="user-circle" class="accordion-icon"></i>
+                <strong>Datos Personales</strong>
+            </button>
+        </h2>
+        {# Este contenido está visible por defecto (con 'show') #}
+        <div id="collapseDatosPersonales" class="accordion-collapse show" aria-labelledby="headingDatosPersonales" data-bs-parent="#accordionRegistroPaciente">
+            <div class="accordion-body">
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="nombres" class="form-label">Nombres <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="nombres" name="nombres" value="{{ paciente.nombres or '' }}" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="apellidos" class="form-label">Apellidos <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="apellidos" name="apellidos" value="{{ paciente.apellidos or '' }}" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="tipo_documento" class="form-label">Tipo de Documento <span class="text-danger">*</span></label>
+                        <select class="form-select" id="tipo_documento" name="tipo_documento" required>
+                            <option value="">Seleccione</option>
+                            <option value="CC" {% if paciente and paciente.tipo_documento == 'CC' %}selected{% endif %}>Cédula de Ciudadanía</option>
+                            <option value="TI" {% if paciente and paciente.tipo_documento == 'TI' %}selected{% endif %}>Tarjeta de Identidad</option>
+                            <option value="RC" {% if paciente and paciente.tipo_documento == 'RC' %}selected{% endif %}>Registro Civil</option>
+                            <option value="CE" {% if paciente and paciente.tipo_documento == 'CE' %}selected{% endif %}>Cédula de Extranjería</option>
+                            <option value="PA" {% if paciente and paciente.tipo_documento == 'PA' %}selected{% endif %}>Pasaporte</option>
+                            <option value="PPT" {% if paciente and paciente.tipo_documento == 'PPT' %}selected{% endif %}>Permiso de Protección</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="documento" class="form-label">Documento <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="documento" name="documento" value="{{ paciente.documento or '' }}" required>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="fecha_nacimiento" class="form-label">Fecha de Nacimiento <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="fecha_nacimiento" name="fecha_nacimiento" value="{{ paciente.fecha_nacimiento or '' }}" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="edad" class="form-label">Edad <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="edad" name="edad" value="{{ paciente.edad or '' }}" required readonly>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" value="{{ paciente.email or '' }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="telefono" class="form-label">Teléfono <span class="text-danger">*</span></label>
+                        <input type="text" pattern="\d{7,15}" title="Solo números, entre 7 y 15 dígitos" class="form-control" id="telefono" name="telefono" value="{{ paciente.telefono or '' }}" required>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="genero" class="form-label">Género</label>
+                        <select class="form-select" id="genero" name="genero">
+                            <option value="" {% if paciente and paciente.genero == '' %}selected{% endif %}>Seleccione</option>
+                            <option value="Masculino" {% if paciente and paciente.genero == 'Masculino' %}selected{% endif %}>Masculino</option>
+                            <option value="Femenino" {% if paciente and paciente.genero == 'Femenino' %}selected{% endif %}>Femenino</option>
+                            <option value="Otro" {% if paciente and paciente.genero == 'Otro' %}selected{% endif %}>Otro</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="estado_civil" class="form-label">Estado Civil</label>
+                        <select class="form-select" id="estado_civil" name="estado_civil">
+                             <option value="" {% if paciente and paciente.estado_civil == '' %}selected{% endif %}>Seleccione</option>
+                             <option value="Soltero/a" {% if paciente and paciente.estado_civil == 'Soltero/a' %}selected{% endif %}>Soltero/a</option>
+                             <option value="Casado/a" {% if paciente and paciente.estado_civil == 'Casado/a' %}selected{% endif %}>Casado/a</option>
+                             <option value="Unión Libre" {% if paciente and paciente.estado_civil == 'Unión Libre' %}selected{% endif %}>Unión Libre</option>
+                             <option value="Separado/a" {% if paciente and paciente.estado_civil == 'Separado/a' %}selected{% endif %}>Separado/a</option>
+                             <option value="Viudo/a" {% if paciente and paciente.estado_civil == 'Viudo/a' %}selected{% endif %}>Viudo/a</option>
+                        </select>
+                    </div>
+                                    {# --- CAMPO PARA IMAGEN DE PERFIL (ESTILO CONSULTORIO.ME) --- #}
+                    <div class="col-md-6 text-center"> {# Centramos el contenido de la columna #}
+                        <label class="form-label d-block mb-2">Imagen de Perfil</label>
+                        <div class="avatar-upload-container mx-auto"> {# Añadido mx-auto para centrar #}
+                            <img id="profile-picture-preview" 
+                                 src="{{ paciente.imagen_perfil_url or url_for('static', filename='img/placeholder_avatar.png') }}" 
+                                 alt="Avatar" 
+                                 class="rounded-circle border" 
+                                 style="width: 100px; height: 100px; object-fit: cover;">
+                            
+                            <input type="file" 
+                                   id="imagen_perfil_input" 
+                                   name="imagen_perfil" 
+                                   accept="image/*" 
+                                   class="d-none"> {# Oculta el input de archivo por defecto #}
+                            
+                            <div class="avatar-actions">
+                                <button type="button" class="btn btn-sm btn-light rounded-circle p-1 camera-btn" title="Tomar foto">
+                                    <i data-lucide="camera" style="width: 18px; height: 18px;"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-light rounded-circle p-1 upload-btn" title="Subir imagen">
+                                    <i data-lucide="upload" style="width: 18px; height: 18px;"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% if paciente and paciente.imagen_perfil_url %}
+                            <div class="form-check mt-3"> {# Margen superior para separarlo del avatar #}
+                                <input class="form-check-input mx-auto" type="checkbox" name="eliminar_imagen_perfil" id="eliminar_imagen_perfil">
+                                <label class="form-check-label" for="eliminar_imagen_perfil">
+                                    Eliminar imagen actual
+                                </label>
+                            </div>
+                        {% endif %}
+                    </div>
+                    {# --- FIN CAMPO PARA IMAGEN DE PERFIL --- #}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <input type="hidden" id="patientIdHiddenInput" value="{{ paciente.id or '' }}">
+    <!-- =========== FIN SECCIÓN 0: DATOS PERSONALES =========== -->
 
     <!-- =========== SECCIÓN 1: DIRECCIÓN Y ASEGURADORA =========== -->
-    <div class="accordion-item">
+    <div class="accordion-item card-custom mb-3">
         <h2 class="accordion-header" id="headingDireccionAseguradora">
             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDireccionAseguradora" aria-expanded="false" aria-controls="collapseDireccionAseguradora">
                 <i data-lucide="map-pin" class="accordion-icon"></i>
                 <strong>Dirección y Aseguradora</strong>
             </button>
         </h2>
+        {# data-bs-parent apunta al ID del primer accordion-item, lo que simula un grupo de acordeones. #}
         <div id="collapseDireccionAseguradora" class="accordion-collapse collapse" aria-labelledby="headingDireccionAseguradora" data-bs-parent="#accordionRegistroPaciente">
             <div class="accordion-body">
                 <div class="row mb-3">
-                    {{ render_campo('Dirección', 'direccion', None) }}
-                    {{ render_campo('Barrio', 'barrio', None) }}
-                    {{ render_campo('Municipio', 'municipio', None) }}
-                    {{ render_campo('Departamento', 'departamento', None) }}
+                    {{ render_campo('Dirección', 'direccion', paciente) }}
+                    {{ render_campo('Barrio', 'barrio', paciente) }}
+                    {{ render_campo('Municipio', 'municipio', paciente) }}
+                    {{ render_campo('Departamento', 'departamento', paciente) }}
                 </div>
                 <div class="row mb-3">
-                    {{ render_campo('Nombre de Aseguradora', 'aseguradora', None) }}
+                    {{ render_campo('Nombre de Aseguradora', 'aseguradora', paciente) }}
                     <div class="col-md-3">
                         <label for="tipo_vinculacion" class="form-label">Tipo de Vinculación</label>
                         <select class="form-select" id="tipo_vinculacion" name="tipo_vinculacion">
-                            <option value="">Seleccione</option>
-                            <option value="Contribuyente">Contribuyente</option>
-                            <option value="Beneficiario">Beneficiario</option>
-                            <option value="Subsidiado">Subsidiado</option>
+                            <option value="" {% if paciente and paciente.tipo_vinculacion == '' %}selected{% endif %}>Seleccione</option>
+                            <option value="Contribuyente" {% if paciente and paciente.tipo_vinculacion == 'Contribuyente' %}selected{% endif %}>Contribuyente</option>
+                            <option value="Beneficiario" {% if paciente and paciente.tipo_vinculacion == 'Beneficiario' %}selected{% endif %}>Beneficiario</option>
+                            <option value="Subsidiado" {% if paciente and paciente.tipo_vinculacion == 'Subsidiado' %}selected{% endif %}>Subsidiado</option>
                         </select>
                     </div>
-                    {{ render_campo('Ocupación', 'ocupacion', None) }}
+                    {{ render_campo('Ocupación', 'ocupacion', paciente) }}
                 </div>
             </div>
         </div>
-    </div> <!-- ✅ CIERRE CORRECTO DEL PRIMER ITEM -->
+    </div> 
 
     <!-- =========== SECCIÓN 2: DATOS DEL RESPONSABLE =========== -->
-    <div class="accordion-item">
+    <div class="accordion-item card-custom mb-3">
         <h2 class="accordion-header" id="headingResponsable">
             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseResponsable" aria-expanded="false" aria-controls="collapseResponsable">
                 <i data-lucide="shield" class="accordion-icon"></i>
                 <strong>Datos del Responsable</strong>
             </button>
         </h2>
+        {# data-bs-parent apunta al ID del primer accordion-item. #}
         <div id="collapseResponsable" class="accordion-collapse collapse" aria-labelledby="headingResponsable" data-bs-parent="#accordionRegistroPaciente">
             <div class="accordion-body">
                 <div class="row mb-3">
-                    {{ render_campo('Nombre del Responsable', 'nombre_responsable', None) }}
-                    {{ render_campo('Teléfono del Responsable', 'telefono_responsable', None) }}
-                    {{ render_campo('Parentesco', 'parentesco', None) }}
-                    {{ render_campo('Referido por', 'referido_por', None) }}
+                    {{ render_campo('Nombre del Responsable', 'nombre_responsable', paciente) }}
+                    {{ render_campo('Teléfono del Responsable', 'telefono_responsable', paciente) }}
+                    {{ render_campo('Parentesco', 'parentesco', paciente) }}
+                    {{ render_campo('Referido por', 'referido_por', paciente) }}
                 </div>
             </div>
         </div>
-    </div> <!-- ✅ CIERRE CORRECTO DEL SEGUNDO ITEM -->
+    </div> 
     
     <!-- =========== SECCIÓN 3: ANTECEDENTES PERSONALES =========== -->
-    <div class="accordion-item">
+    <div class="accordion-item card-custom mb-3">
         <h2 class="accordion-header" id="headingAntecedentes">
             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAntecedentes" aria-expanded="false" aria-controls="collapseAntecedentes">
                 <i data-lucide="file-text" class="accordion-icon"></i>
                 <strong>Antecedentes Personales</strong>
             </button>
         </h2>
+        {# data-bs-parent apunta al ID del primer accordion-item. #}
         <div id="collapseAntecedentes" class="accordion-collapse collapse" aria-labelledby="headingAntecedentes" data-bs-parent="#accordionRegistroPaciente">
             <div class="accordion-body">
                 <div class="row">
-                    {{ render_campo_textarea('Motivo de Consulta', 'motivo_consulta', None) }}
-                    {{ render_campo_textarea('Enfermedad Actual', 'enfermedad_actual', None) }}
-                    {{ render_campo_textarea('Antecedentes Personales', 'antecedentes_personales', None) }}
-                    {{ render_campo_textarea('Antecedentes Familiares', 'antecedentes_familiares', None) }}
-                    {{ render_campo_textarea('Antecedentes Quirúrgicos', 'antecedentes_quirurgicos', None) }}
-                    {{ render_campo_textarea('Antecedentes Hemorrágicos', 'antecedentes_hemorragicos', None) }}
-                    {{ render_campo_textarea('Farmacológicos', 'farmacologicos', None) }}
-                    {{ render_campo_textarea('Reacción a Medicamentos', 'reaccion_medicamentos', None) }}
-                    {{ render_campo_textarea('Alergias', 'alergias', None) }}
-                    {{ render_campo_textarea('Hábitos', 'habitos', None) }}
-                    {{ render_campo_textarea('Higiene Oral (Cepillado)', 'cepillado', None) }}
-                    {{ render_campo_textarea('Examen Físico', 'examen_fisico', None) }}
-                    {{ render_campo_textarea('Última Visita al Odontólogo', 'ultima_visita_odontologo', None) }}
-                    {{ render_campo_textarea('Plan de Tratamiento', 'plan_tratamiento', None) }}
-                    {{ render_campo_textarea('Observaciones', 'observaciones', None) }}
+                    {{ render_campo_textarea('Motivo de Consulta', 'motivo_consulta', paciente) }}
+                    {{ render_campo_textarea('Enfermedad Actual', 'enfermedad_actual', paciente) }}
+                    {{ render_campo_textarea('Antecedentes Personales', 'antecedentes_personales', paciente) }}
+                    {{ render_campo_textarea('Antecedentes Familiares', 'antecedentes_familiares', paciente) }}
+                    {{ render_campo_textarea('Antecedentes Quirúrgicos', 'antecedentes_quirurgicos', paciente) }}
+                    {{ render_campo_textarea('Antecedentes Hemorrágicos', 'antecedentes_hemorragicos', paciente) }}
+                    {{ render_campo_textarea('Farmacológicos', 'farmacologicos', paciente) }}
+                    {{ render_campo_textarea('Reacción a Medicamentos', 'reaccion_medicamentos', paciente) }}
+                    {{ render_campo_textarea('Alergias', 'alergias', paciente) }}
+                    {{ render_campo_textarea('Hábitos', 'habitos', paciente) }}
+                    {{ render_campo_textarea('Cepillado', 'cepillado', paciente) }}
+                    {{ render_campo_textarea('Examen Físico', 'examen_fisico', paciente) }}
+                    {{ render_campo_textarea('Última Visita al Odontólogo', 'ultima_visita_odontologo', paciente) }}
+                    {{ render_campo_textarea('Plan de Tratamiento', 'plan_tratamiento', paciente) }}
+                    {{ render_campo_textarea('Observaciones', 'observaciones', paciente) }}
                 </div>
             </div>
-        </div>
-    </div> <!-- ✅ CIERRE CORRECTO DEL TERCER ITEM -->
-
-
-<!-- En _accordion_registro_paciente.html -->
-
-<!-- =========== SECCIÓN 4: DENTIGRAMA (ADAPTADO PARA CREAR Y EDITAR) =========== -->
-<div class="accordion-item">
-    <h2 class="accordion-header" id="headingDentigrama">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDentigrama" aria-expanded="false" aria-controls="collapseDentigrama">
-            <i data-lucide="image" class="accordion-icon"></i>
-            <strong>Dentigrama</strong>
-        </button>
-    </h2>
-    <div id="collapseDentigrama" class="accordion-collapse show" aria-labelledby="headingDentigrama" data-bs-parent="#accordionRegistroPaciente">
-        <div class="accordion-body">
+        </div> 
+    </div>
+<!-- =========== SECCIÓN 4: DENTIGRAMA =========== -->
+    <div class="accordion-item card-custom mb-3" id="dentigramaAccordionItem"> {# <-- ¡NUEVO ID AQUÍ! #}
+        <h2 class="accordion-header" id="headingDentigrama">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDentigrama" aria-expanded="false" aria-controls="collapseDentigrama">
+                <i data-lucide="image" class="accordion-icon"></i>
+                <strong>Dentigrama</strong>
+            </button>
+        </h2>
+        <div id="collapseDentigrama" class="accordion-collapse collapse" aria-labelledby="headingDentigrama" data-bs-parent="#accordionRegistroPaciente">
+            <div class="accordion-body">
+                <div id="dentigrama-container" 
+                    style="position: relative; 
+                            width: 800px; 
+                            height: 413px; 
+                            margin: 0 auto; 
+                            border: 1px solid #ccc; 
+                            background-image: url('{{ url_for('static', filename='img/plantilla_dentigrama.png') }}'); 
+                            background-size: cover; 
+                            background-repeat: no-repeat; 
+                            background-position: center; 
+                            z-index: 0;">
                     
-            <!-- Contenedor visual del dentigrama. TIENE el fondo. -->
-            <!-- Aseguramos que este contenedor tenga un tamaño definido (800x400) -->
-            <div id="dentigrama-container" style="position: relative; width: 800px; height: 413px; margin: 0 auto; border: 1px solid #ccc; background-color: white;">                
-                <!-- El canvas donde se dibuja. Ocupa el 100% de su padre. -->
-                <!-- También pasamos la URL del fondo como un data attribute. -->
-                <canvas id="dentigrama_canvas" 
-                        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
-                        data-background-url="{{ url_for('static', filename='img/plantilla_dentigrama.png') }}"></canvas>
+                    <canvas id="dentigrama_canvas" 
+                            style="position: absolute; 
+                                top: 0; 
+                                left: 0; 
+                                width: 100%; 
+                                height: 100%; 
+                                background-color: transparent; 
+                                z-index: 10; 
+                                pointer-events: auto;"></canvas>
+
+                    {# Asegúrate de que el dentigrama_overlay_src esté presente si es para edición #}
+                    {% if paciente and paciente.dentigrama_canvas %}
+                        <img id="dentigrama_overlay_src" src="{{ paciente.dentigrama_canvas }}" style="display: none;">
+                    {% else %}
+                        {# Si no hay dentigrama_canvas en el paciente, asegúrate de que el src esté vacío o un placeholder #}
+                        <img id="dentigrama_overlay_src" src="" style="display: none;">
+                    {% endif %}
+                </div>
+
+                <div class="mt-3 text-center dentigrama-controls">
+                    <button type="button" class="btn btn-light btn-sm" id="btnColorRojo">🔴 Rojo</button>
+                    <button type="button" class="btn btn-light btn-sm" id="btnColorAzul">🔵 Azul</button>
+                    <button type="button" class="btn btn-light btn-sm" id="btnColorNegro">⚫ Negro</button>
+                    <button type="button" class="btn btn-light btn-sm" id="btnActivarCheck">✔️ Check</button>
+                    <span class="mx-2">/</span>
+                    <button type="button" class="btn btn-warning btn-sm" id="btnLimpiar">🧹 Limpiar</button>
+                    <button type="button" class="btn btn-info btn-sm" id="btnDeshacer">↩️ Deshacer</button>
+                    <span class="mx-2">/</span>
+                    <button type="button" class="btn btn-primary" id="btnGuardarDentigrama">💾 Aplicar Cambios al Dentigrama</button>
+                </div>
                 
-                <!-- Imagen oculta para precargar los trazos en modo edición. NO es visible. -->
-                {% if paciente and paciente.dentigrama_url %}
-                    <img id="dentigrama_overlay_src" src="{{ paciente.dentigrama_url }}" style="display: none;">
-                {% endif %}
-            </div>
+                <!-- Input oculto para la URL de Cloudinary -->
+                <input type="hidden" name="dentigrama_canvas" id="dentigrama_url_input" value="{{ paciente.dentigrama_canvas or '' }}">
 
-            <div class="mt-3 text-center">
-                <button type="button" class="btn btn-light btn-sm" id="btnColorRojo">🔴 Rojo</button>
-                <button type="button" class="btn btn-light btn-sm" id="btnColorAzul">🔵 Azul</button>
-                <button type="button" class="btn btn-light btn-sm" id="btnColorNegro">⚫ Negro</button>
-                <button type="button" class="btn btn-light btn-sm" id="btnActivarCheck">✔️ Check</button>
-                <span class="mx-2">/</span>
-                <button type="button" class="btn btn-warning btn-sm" id="btnLimpiar">🧹 Limpiar</button>
-                <button type="button" class="btn btn-info btn-sm" id="btnDeshacer">↩️ Deshacer</button>
-                <span class="mx-2">/</span>
-                <button type="button" class="btn btn-primary" id="btnGuardarDentigrama">💾 Aplicar Cambios al Dentigrama</button>
             </div>
-            
-            <!-- Input oculto para la URL de Cloudinary -->
-            <input type="hidden" name="dentigrama_url" id="dentigrama_url_input" value="{{ paciente.dentigrama_url or '' }}">
-
         </div>
     </div>
-</div>
 
 
-    <!-- =========== SECCIÓN 5: IMÁGENES DEL PACIENTE (VERSIÓN FINAL PARA EDICIÓN) =========== -->
-    <div class="accordion-item">
+    <!-- =========== SECCIÓN 5: IMÁGENES DEL PACIENTE =========== -->
+    <div class="accordion-item card-custom mb-3">
         <h2 class="accordion-header" id="headingImagenes">
             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseImagenes" aria-expanded="false" aria-controls="collapseImagenes">
-                <i data-lucide="images" class="accordion-icon"></i>
+                <i data-lucide="image" class="accordion-icon"></i>
                 <strong>Imágenes del Paciente</strong>
             </button>
         </h2>
@@ -153,9 +290,9 @@
                         <label class="form-label fw-bold">Imagen 1</label>
                         
                         {# Si la variable 'paciente' existe y tiene una URL, la mostramos #}
-                        {% if paciente and paciente.imagen_1_url %}
+                        {% if paciente and paciente.imagen_1 %}
                             <div class="mb-2">
-                                <img src="{{ paciente.imagen_1_url }}" alt="Imagen 1 actual" class="img-fluid rounded border" style="max-height: 200px;">
+                                <img src="{{ paciente.imagen_1 }}" alt="Imagen 1 actual" class="img-fluid rounded border" style="max-height: 200px;">
                             </div>
                             <div class="form-check mb-2">
                                 <input class="form-check-input" type="checkbox" name="eliminar_imagen_1" id="eliminar_imagen_1">
@@ -169,17 +306,17 @@
                             </div>
                         {% endif %}
                         
-                        <label for="imagen_1_url" class="form-label small text-muted mt-2">Subir nueva / Reemplazar</label>
-                        <input type="file" class="form-control" id="imagen_1_url" name="imagen_1_url" accept="image/*">
+                        <label for="imagen_1" class="form-label small text-muted mt-2">Subir nueva / Reemplazar</label>
+                        <input type="file" class="form-control" id="imagen_1" name="imagen_1" accept="image/*">
                     </div>
 
                     <!-- === LÓGICA PARA IMAGEN 2 === -->
                     <div class="col-md-6 mb-3">
                         <label class="form-label fw-bold">Imagen 2</label>
                         
-                        {% if paciente and paciente.imagen_2_url %}
+                        {% if paciente and paciente.imagen_2 %}
                             <div class="mb-2">
-                                <img src="{{ paciente.imagen_2_url }}" alt="Imagen 2 actual" class="img-fluid rounded border" style="max-height: 200px;">
+                                <img src="{{ paciente.imagen_2 }}" alt="Imagen 2 actual" class="img-fluid rounded border" style="max-height: 200px;">
                             </div>
                             <div class="form-check mb-2">
                                 <input class="form-check-input" type="checkbox" name="eliminar_imagen_2" id="eliminar_imagen_2">
@@ -194,16 +331,16 @@
                         {% endif %}
 
                         <label for="imagen_2_url" class="form-label small text-muted mt-2">Subir nueva / Reemplazar</label>
-                        <input type="file" class="form-control" id="imagen_2_url" name="imagen_2_url" accept="image/*">
+                        <input type="file" class="form-control" id="imagen_2_url" name="imagen_2" accept="image/*">
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- =========== NUEVA SECCIÓN: GESTIÓN DE EVOLUCIONES (SÓLO SI EL PACIENTE YA EXISTE) =========== -->
-    {% if paciente and paciente.id %} {# <-- ESTA ES LA CONDICIÓN CLAVE #}
-        <div class="accordion-item">
+    <!-- =========== SECCIÓN 6: GESTIÓN DE EVOLUCIONES (SÓLO SI EL PACIENTE YA EXISTE) =========== -->
+    {% if paciente and paciente.id %}
+        <div class="accordion-item card-custom mb-3">
             <h2 class="accordion-header" id="headingEvolucionesGestion">
                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEvolucionesGestion" aria-expanded="false" aria-controls="collapseEvolucionesGestion">
                     <i data-lucide="trending-up" class="accordion-icon"></i>
@@ -228,7 +365,7 @@
                                             data-evolution-descripcion="{{ evolucion.descripcion }}">
                                         Editar
                                     </button>
-                                    <form action="{{ url_for('evoluciones.eliminar_evolucion', evolucion_id=evolucion.id) }}" method="post" onsubmit="return confirm('¿Estás seguro de que quieres eliminar esta evolución?');">
+                                    <form action="{{ url_for('evoluciones.eliminar_evolucion', id=evolucion.id) }}" method="post" onsubmit="return confirm('¿Estás seguro de que quieres eliminar esta evolución?');">
                                         <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
                                     </form>
                                 </div>
@@ -240,19 +377,18 @@
                             <p class="text-muted">No hay evoluciones registradas para este paciente.</p>
                         {% endif %}
                     </div>
-                    {# Aquí NO se incluye el formulario para AÑADIR una nueva evolución #}
                 </div>
             </div>
-        </div> <!-- CIERRE DE LA NUEVA SECCIÓN DE GESTIÓN DE EVOLUCIONES -->
+        </div>
     {% endif %} 
 
-</div> <!-- CIERRE FINAL DE accordionRegistroPaciente -->
+</div> {# CIERRE FINAL DEL div.accordion con id="accordionRegistroPaciente" #}
 
-<!-- MODAL PARA EDITAR EVOLUCIÓN (se mantiene aquí, fuera de la condición del acordeón, para que siempre esté disponible en la página si se carga el JS) -->
+<!-- MODAL PARA EDITAR EVOLUCIÓN (se mantiene aquí, fuera de la condición del acordeón) -->
 <div class="modal fade" id="editEvolutionModal" tabindex="-1" aria-labelledby="editEvolutionModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <form id="editEvolutionForm" method="post"> {# La acción se establecerá con JavaScript #}
+            <form id="editEvolutionForm" method="post">
                 <div class="modal-header">
                     <h5 class="modal-title" id="editEvolutionModalLabel">Editar Evolución</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -273,7 +409,3 @@
     </div>
 </div>
 
-</div>
-
-<!-- Al final de _accordion_registro_paciente.html -->
-<script src="{{ url_for('static', filename='js/dentigrama_logic.js') }}"></script>

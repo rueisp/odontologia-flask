@@ -1,0 +1,47 @@
+/* static/css/avatar_upload.css */
+
+.avatar-upload-container {
+    position: relative;
+    width: 100px; /* Ancho de la imagen del avatar */
+    height: 100px; /* Alto de la imagen del avatar */
+    display: inline-block; /* Para que los botones se posicionen correctamente */
+    margin-bottom: 10px; /* Pequeño margen inferior */
+}
+
+.avatar-upload-container img {
+    border: 2px solid #ddd; /* Borde sutil */
+    box-shadow: 0 0 5px rgba(0,0,0,0.1); /* Sombra ligera */
+}
+
+.avatar-actions {
+    position: absolute;
+    bottom: -10px; /* Ajusta la posición vertical de los botones */
+    right: -10px; /* Ajusta la posición horizontal de los botones */
+    display: flex;
+    gap: 5px; /* Espacio entre los botones */
+    background: transparent; /* Fondo transparente */
+}
+
+.avatar-actions .btn {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Sombra para los botones */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px; /* Tamaño del botón */
+    height: 36px; /* Tamaño del botón */
+    padding: 0; /* Elimina padding interno del botón */
+    background-color: white; /* Fondo blanco para los botones */
+    border: 1px solid #ccc; /* Borde sutil para los botones */
+    color: #333; /* Color de los íconos */
+}
+
+.avatar-actions .btn:hover {
+    background-color: #f8f9fa; /* Cambio de color al pasar el ratón */
+    border-color: #aaa;
+}
+
+.avatar-actions .btn i[data-lucide] {
+    width: 18px;
+    height: 18px;
+    line-height: 1;
+}
