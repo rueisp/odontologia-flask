@@ -184,10 +184,6 @@
                                 <p class="text-muted mb-0">Doctor: ${cita.doctor || 'N/A'}</p>
                                 <div class="mt-2 text-end">
                                     <a href="${ editUrl }" class="btn btn-sm btn-outline-primary">Editar</a>
-                                    <form action="${ deleteUrl }" method="post" class="d-inline" onsubmit="return confirm('¿Estás seguro de que quieres eliminar esta cita?');">
-                                        <input type="hidden" name="next" value="${ nextUrlHidden }">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
-                                    </form>
                                 </div>
                             `;
                             citasListaModal.appendChild(citaDiv);

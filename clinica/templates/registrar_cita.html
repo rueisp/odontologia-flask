@@ -210,65 +210,56 @@
         <input type="hidden" name="next" value="{{ form_values.get('next_url', request.args.get('next', '')) }}">
 
 
-        <!-- Sección Datos del Paciente -->
+<!-- Sección Datos del Paciente (con búsqueda de paciente integrada) -->
         <fieldset>
-            {% if form_values.get('paciente_preseleccionado_id') %}
-                <div class="input-group-custom">
-                    <span class="input-group-label">Paciente:</span>
-                    <input type="text" class="form-control-embedded"
-                           value="{{ form_values.get('paciente_preseleccionado_nombre') }}" disabled>
-                </div>
-                 <small>Paciente preseleccionado. Para cambiar, cancela y selecciona otro paciente.</small>
-                {# Si hay paciente preseleccionado, también necesitamos pasar su ID para que el backend lo use #}
-                <input type="hidden" name="paciente_id_seleccionado_duplicado" value="{{ form_values.get('paciente_preseleccionado_id') }}">
-            {% else %}
-                {# Si no hay paciente preseleccionado, mostrar los campos para buscar o crear #}
-                <div class="input-group-custom">
-                    <span class="input-group-label">Seleccionar Existente:</span>
-                    <select class="form-control-embedded" id="paciente_id_existente" name="paciente_id">
-                        <option value="">Buscar o Crear Nuevo</option>
-                        {% for paciente in pacientes %}
-                            <option value="{{ paciente.id }}" {% if form_values.get('paciente_id') | int == paciente.id %}selected{% endif %}>
-                                {{ paciente.nombres }} {{ paciente.apellidos }} ({{ paciente.documento or 'N/A' }})
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <small class="d-block mb-3">O rellena los campos siguientes para crear un Nuevo Paciente:</small>
+            {# Campo oculto para el ID del paciente seleccionado (este es el que se enviará al backend) #}
+            <input type="hidden" id="paciente_id_seleccionado_hidden" name="paciente_id"
+                   value="{{ form_values.get('paciente_preseleccionado_id', '') }}">
 
-                <div class="input-group-custom">
-                    <span class="input-group-label">Nombres:<span class="required-asterisk">*</span></span>
-                    <input type="text" class="form-control-embedded" id="paciente_nombres" name="paciente_nombres"
-                           value="{{ form_values.get('paciente_nombres_val', '') }}"
-                           placeholder="Ej: Ana María" required>
-                </div>
-                <div class="input-group-custom">
-                    <span class="input-group-label">Apellidos:<span class="required-asterisk">*</span></span>
-                    <input type="text" class="form-control-embedded" id="paciente_apellidos" name="paciente_apellidos"
-                           value="{{ form_values.get('paciente_apellidos_val', '') }}"
-                           placeholder="Ej: Pérez Gómez" required>
-                </div>
-                <div class="input-group-custom">
-                    <span class="input-group-label">Edad:</span>
-                    <input type="number" class="form-control-embedded" id="paciente_edad" name="paciente_edad"
-                           value="{{ form_values.get('paciente_edad_val', '') }}"
-                           placeholder="Ej: 30" min="0">
-                </div>
-                <div class="input-group-custom">
-                    <span class="input-group-label">Documento:</span>
-                    <input type="text" class="form-control-embedded" id="paciente_documento" name="paciente_documento"
-                           value="{{ form_values.get('paciente_documento_val', '') }}"
-                           placeholder="Ej: 12345678">
-                </div>
-                <div class="input-group-custom">
-                    <span class="input-group-label">Teléfono:<span class="required-asterisk">*</span></span>
-                    <input type="tel" class="form-control-embedded" id="paciente_telefono" name="paciente_telefono"
-                           value="{{ form_values.get('paciente_telefono_val', '') }}"
-                           placeholder="Ej: 3001234567" required>
-                </div>
-            {% endif %}
+            <div class="input-group-custom relative">
+                <span class="input-group-label">Paciente:<span class="required-asterisk">*</span></span>
+                <input type="text" class="form-control-embedded" id="paciente_busqueda_input"
+                       placeholder="Buscar paciente existente o escribir nuevo" autocomplete="off"
+                       value="{{ form_values.get('paciente_preseleccionado_nombre', '') }}">
+                
+                {# Contenedor para las sugerencias de búsqueda #}
+                <div id="sugerencias_citas" class="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg mt-1 hidden" style="top: 100%; left: 0;"></div>
+            </div>
+            <small class="d-block mb-3" id="small_crear_nuevo_paciente">O rellena los campos siguientes para crear un Nuevo Paciente:</small>
 
-            {# Sección para mostrar pacientes duplicados y permitir selección #}
+            {# Campos para crear un nuevo paciente (inicialmente habilitados si no hay preseleccionado, o deshabilitados si lo hay) #}
+            <div class="input-group-custom">
+                <span class="input-group-label">Nombres:<span class="required-asterisk">*</span></span>
+                <input type="text" class="form-control-embedded" id="paciente_nombres" name="paciente_nombres_str" {# CAMBIADO NAME A _STR #}
+                       value="{{ form_values.get('paciente_nombres_val', '') }}"
+                       placeholder="Ej: Ana María" {% if form_values.get('paciente_preseleccionado_id') %}disabled{% else %}required{% endif %}>
+            </div>
+            <div class="input-group-custom">
+                <span class="input-group-label">Apellidos:<span class="required-asterisk">*</span></span>
+                <input type="text" class="form-control-embedded" id="paciente_apellidos" name="paciente_apellidos_str" {# CAMBIADO NAME A _STR #}
+                       value="{{ form_values.get('paciente_apellidos_val', '') }}"
+                       placeholder="Ej: Pérez Gómez" {% if form_values.get('paciente_preseleccionado_id') %}disabled{% else %}required{% endif %}>
+            </div>
+            <div class="input-group-custom">
+                <span class="input-group-label">Edad:</span>
+                <input type="number" class="form-control-embedded" id="paciente_edad" name="paciente_edad_val" {# CAMBIADO NAME A _VAL #}
+                       value="{{ form_values.get('paciente_edad_val', '') }}"
+                       placeholder="Ej: 30" min="0" {% if form_values.get('paciente_preseleccionado_id') %}disabled{% endif %}>
+            </div>
+            <div class="input-group-custom">
+                <span class="input-group-label">Documento:</span>
+                <input type="text" class="form-control-embedded" id="paciente_documento" name="paciente_documento_val" {# CAMBIADO NAME A _VAL #}
+                       value="{{ form_values.get('paciente_documento_val', '') }}"
+                       placeholder="Ej: 12345678" {% if form_values.get('paciente_preseleccionado_id') %}disabled{% endif %}>
+            </div>
+            <div class="input-group-custom">
+                <span class="input-group-label">Teléfono:<span class="required-asterisk">*</span></span>
+                <input type="tel" class="form-control-embedded" id="paciente_telefono" name="paciente_telefono_str" {# CAMBIADO NAME A _STR #}
+                       value="{{ form_values.get('paciente_telefono_val', '') }}"
+                       placeholder="Ej: 3001234567" {% if form_values.get('paciente_preseleccionado_id') %}disabled{% else %}required{% endif %}>
+            </div>
+
+            {# La sección de duplicados se mantiene pero su lógica ahora es manejada por el JS #}
             {% if form_values.get('mostrar_seccion_duplicados') %}
             <div class="alert alert-warning mt-4">
                 <p>Se encontraron múltiples pacientes con el mismo nombre. Por favor, seleccione el correcto o confirme la creación de uno nuevo.</p>
@@ -318,10 +309,17 @@
 
 
         <!-- Botones -->
-        <div class="d-grid gap-2">
-            <button type="submit" class="btn btn-primary w-100 mb-2">Guardar Cita</button>
-            <a href="{{ form_values.get('next_url', request.args.get('next', url_for('calendario.mostrar_calendario'))) }}"
-            class="btn btn-secondary w-100">Cancelar</a>
+        <div class="button-row"> {# Cambiado a button-row para aplicar tus estilos flex #}
+            <button type="submit" class="btn btn-primary">Guardar Cita</button>
+            {# AHORA: Aseguramos una URL de retorno válida.
+               Si 'next_url' existe en form_values (POST) o en request.args (GET), la usamos.
+               De lo contrario, siempre redirigimos al calendario principal.
+               La función url_for debe ser llamada en el backend para generar la URL. #}
+            {% set cancel_url = form_values.get('next_url') or request.args.get('next') %}
+            {% if not cancel_url %}
+                {% set cancel_url = url_for('calendario.mostrar_calendario') %}
+            {% endif %}
+            <a href="{{ cancel_url }}" class="btn btn-secondary">Cancelar</a>
         </div>
     </form>
 </div>
@@ -329,38 +327,113 @@
 
 {% block scripts %}
     {{ super() }}
-    <script>
+    <script type="module"> // <-- MUY IMPORTANTE: usa type="module" para imports/exports
+        // Importar las funciones de búsqueda y precarga desde el módulo de utilidades
+        import { initializePatientSearch, preloadPatient } from "{{ url_for('static', filename='js/search_utils.js') }}";
+
         document.addEventListener('DOMContentLoaded', function() {
             lucide.createIcons(); // Inicializar Lucide Icons
 
-            // Lógica para deshabilitar/habilitar campos de creación de paciente
-            const pacienteIdExistenteSelect = document.getElementById('paciente_id_existente');
+            // Elementos del nuevo sistema de búsqueda
+            const pacienteBusquedaInput = document.getElementById('paciente_busqueda_input');
+            const pacienteIdHiddenInput = document.getElementById('paciente_id_seleccionado_hidden');
+            const sugerenciasCitasDiv = document.getElementById('sugerencias_citas');
+            const smallCrearNuevoPaciente = document.getElementById('small_crear_nuevo_paciente');
+
+            // Referencias a los campos de creación/edición de paciente manual
+            const inputNombres = document.getElementById('paciente_nombres');
+            const inputApellidos = document.getElementById('paciente_apellidos');
+            const inputTelefono = document.getElementById('paciente_telefono');
+            const inputEdad = document.getElementById('paciente_edad');
+            const inputDocumento = document.getElementById('paciente_documento');
+
             const camposNuevoPaciente = [
-                document.getElementById('paciente_nombres'),
-                document.getElementById('paciente_apellidos'),
-                document.getElementById('paciente_documento'),
-                document.getElementById('paciente_telefono'),
-                document.getElementById('paciente_edad')
+                inputNombres, inputApellidos, inputTelefono, inputEdad, inputDocumento
             ];
 
-            if (pacienteIdExistenteSelect) {
-                function toggleCamposNuevoPaciente() {
-                    const isPacienteExistenteSelected = pacienteIdExistenteSelect.value !== '';
-                    camposNuevoPaciente.forEach(campo => {
-                        if (campo) { // Asegurarse de que el campo existe
-                            campo.disabled = isPacienteExistenteSelected;
-                            if (isPacienteExistenteSelected) {
-                                campo.removeAttribute('required'); // No requerido si se selecciona uno existente
-                            } else {
-                                if (campo.id === 'paciente_nombres' || campo.id === 'paciente_apellidos' || campo.id === 'paciente_telefono') {
-                                    campo.setAttribute('required', 'required'); // Requerido si se crea uno nuevo
-                                }
-                            }
-                        }
-                    });
+            // --- Funciones de Utilidad (dentro del scope de este archivo) ---
+
+            function clearNewPatientFields() {
+                inputNombres.value = '';
+                inputApellidos.value = '';
+                inputTelefono.value = '';
+                inputEdad.value = '';
+                inputDocumento.value = '';
+                pacienteIdHiddenInput.value = ''; // Limpiar el ID oculto también
+                // NOTA: pacienteBusquedaInput.value no se limpia aquí si el usuario está buscando.
+                // Se limpia solo si el callback de initializePatientSearch lo hace o si se invoca clearNewPatientFields directamente.
+            }
+
+            async function populateNewPatientFields(patientData) {
+                if (!patientData) { // Si patientData es null, limpiar campos
+                    clearNewPatientFields();
+                    toggleNewPatientFields(true); // Habilitar campos
+                    return;
                 }
-                pacienteIdExistenteSelect.addEventListener('change', toggleCamposNuevoPaciente);
-                toggleCamposNuevoPaciente(); // Llamar al cargar para establecer el estado inicial
+                
+                // Rellenar campos visibles
+                // Asumiendo que 'nombre' viene como "Nombres Apellidos" de obtener_paciente_ajax
+                const nombreCompletoArr = patientData.nombre.split(' ');
+                inputNombres.value = nombreCompletoArr.shift(); // Primer elemento como nombre
+                inputApellidos.value = nombreCompletoArr.join(' '); // El resto como apellido
+                
+                inputTelefono.value = patientData.telefono !== 'No especificado' ? patientData.telefono : '';
+                inputEdad.value = patientData.edad !== 'No especificada' ? patientData.edad : '';
+                inputDocumento.value = patientData.documento !== 'No especificado' ? patientData.documento : '';
+            }
+
+            // `true` para habilitar, `false` para deshabilitar
+            function toggleNewPatientFields(enable) {
+                camposNuevoPaciente.forEach(campo => {
+                    if (campo) {
+                        campo.disabled = !enable;
+                        if (enable) {
+                            // Solo añadir 'required' a los campos obligatorios si se está creando un nuevo paciente
+                            if (campo.id === 'paciente_nombres' || campo.id === 'paciente_apellidos' || campo.id === 'paciente_telefono') {
+                                campo.setAttribute('required', 'required');
+                            }
+                        } else {
+                            campo.removeAttribute('required'); // Quitar 'required' si está deshabilitado
+                        }
+                    }
+                });
+                if (smallCrearNuevoPaciente) {
+                    smallCrearNuevoPaciente.style.display = enable ? 'block' : 'none';
+                }
+            }
+
+
+            // --- Lógica de Inicialización de Búsqueda para este formulario ---
+            if (pacienteBusquedaInput && sugerenciasCitasDiv && pacienteIdHiddenInput) {
+                initializePatientSearch(pacienteBusquedaInput, sugerenciasCitasDiv, pacienteIdHiddenInput, 
+                                        async (patientData) => { // onPatientSelectedCallback
+                                            await populateNewPatientFields(patientData);
+                                            toggleNewPatientFields(false); // Deshabilitar campos de nuevo paciente
+                                        }, 
+                                        () => { // onSearchClearedCallback
+                                            clearNewPatientFields();
+                                            toggleNewPatientFields(true); // Habilitar campos de nuevo paciente
+                                        });
+            } else {
+                console.error('ERROR: No se encontraron todos los elementos DOM para inicializar la búsqueda de pacientes en registrar_cita.html');
+            }
+
+            // --- Pre-carga inicial si hay un paciente_id en form_values (desde el backend) ---
+            const initialPatientId = pacienteIdHiddenInput.value; // Ya viene de Jinja si hay preseleccionado
+            if (initialPatientId) {
+                preloadPatient(initialPatientId, pacienteBusquedaInput, pacienteIdHiddenInput, 
+                                async (patientData) => { // onPatientSelectedCallback
+                                    await populateNewPatientFields(patientData);
+                                    toggleNewPatientFields(false); // Deshabilitar campos de nuevo paciente
+                                })
+                .catch(error => {
+                    console.error('Error al precargar paciente en registrar_cita:', error);
+                    clearNewPatientFields();
+                    toggleNewPatientFields(true);
+                });
+            } else {
+                // Si no hay un ID inicial, asegúrate de que los campos de creación de nuevo paciente estén habilitados
+                toggleNewPatientFields(true);
             }
         });
     </script>

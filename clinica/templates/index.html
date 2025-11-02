@@ -50,35 +50,40 @@
                 </p>
             </div>
 
-            <!-- Enlaces de navegación -->
-            <a href="{{ url_for('pacientes.lista_pacientes') }}" class="block mb-4 text-gray-700 hover:text-black">
-                <i data-lucide="users" class="w-5 h-5 text-black inline-block mr-2"></i> Pacientes
-            </a>
-            <a href="{{ url_for('calendario.registrar_cita', paciente_id_param=None) }}" class="inline-block w-1/2 sm:w-auto">
-                <button id="btnNuevaCita"
-                        class="w-full sm:w-[140px] bg-gray-700 text-white px-4 py-2 rounded-xl hover:bg-gray-600 transition flex items-center justify-center gap-1 whitespace-nowrap text-sm">
-                    <i data-lucide="calendar-plus" class="w-4 h-4"></i><span>Cita</span>
-                </button>
-            </a>
-            <a href="{{ url_for('calendario.mostrar_calendario') }}" class="block mb-4 text-gray-700 hover:text-black">
-                <i data-lucide="calendar-days" class="w-5 h-5 text-black inline-block mr-2"></i> Calendario
-            </a>
-            <a href="{{ url_for('papelera.ver_papelera') }}" class="block mb-4 text-gray-700 hover:text-black">
-                <i data-lucide="trash-2" class="w-5 h-5 text-black inline-block mr-2"></i> Papelera
-            </a>
+            <!-- Grupo de Enlaces de Navegación (para aplicar espaciado consistente) -->
+            <div class="space-y-2"> {# <-- NUEVO: Añadimos un contenedor con espacio vertical #}
+
+                <a href="{{ url_for('pacientes.lista_pacientes') }}" class="block p-3 rounded-xl text-gray-700 hover:bg-gray-100 hover:text-black transition-colors duration-200 flex items-center">
+                    <i data-lucide="users" class="w-5 h-5 text-black inline-block mr-3"></i> Pacientes
+                </a>
+                
+                {# Enlace para 'Cita' - ahora como un elemento de menú consistente #}
+                <a href="{{ url_for('calendario.registrar_cita', paciente_id_param=None) }}" class="block p-3 rounded-xl text-gray-700 hover:bg-gray-100 hover:text-black transition-colors duration-200 flex items-center">
+                    <i data-lucide="calendar-plus" class="w-5 h-5 text-black inline-block mr-3"></i> Cita
+                </a>
+                
+                <a href="{{ url_for('calendario.mostrar_calendario') }}" class="block p-3 rounded-xl text-gray-700 hover:bg-gray-100 hover:text-black transition-colors duration-200 flex items-center">
+                    <i data-lucide="calendar-days" class="w-5 h-5 text-black inline-block mr-3"></i> Calendario
+                </a>
+                
+                <a href="{{ url_for('papelera.ver_papelera') }}" class="block p-3 rounded-xl text-gray-700 hover:bg-gray-100 hover:text-black transition-colors duration-200 flex items-center">
+                    <i data-lucide="trash-2" class="w-5 h-5 text-black inline-block mr-3"></i> Papelera
+                </a>
+            </div> {# <-- FIN: Contenedor con espacio vertical #}
             
             <hr class="my-4"> <!-- Separador visual -->
 
             <!-- ▼▼▼ INICIO DE LOS NUEVOS ENLACES DE CUENTA ▼▼▼ -->
-            <a href="{{ url_for('main.perfil') }}" class="block mb-4 text-gray-700 hover:text-black">
-                <i data-lucide="user-cog" class="w-5 h-5 text-black inline-block mr-2"></i> Mi Perfil
-            </a>
-            <a href="{{ url_for('main.logout') }}" class="block text-gray-700 hover:text-black">
-                <i data-lucide="log-out" class="w-5 h-5 text-black inline-block mr-2"></i> Salir
-            </a>
+            <div class="space-y-2"> {# <-- NUEVO: Otro contenedor para este grupo #}
+                <a href="{{ url_for('main.perfil') }}" class="block p-3 rounded-xl text-gray-700 hover:bg-gray-100 hover:text-black transition-colors duration-200 flex items-center">
+                    <i data-lucide="user-cog" class="w-5 h-5 text-black inline-block mr-3"></i> Mi Perfil
+                </a>
+                <a href="{{ url_for('main.logout') }}" class="block p-3 rounded-xl text-gray-700 hover:bg-gray-100 hover:text-black transition-colors duration-200 flex items-center">
+                    <i data-lucide="log-out" class="w-5 h-5 text-black inline-block mr-3"></i> Salir
+                </a>
+            </div> {# <-- FIN: Contenedor con espacio vertical #}
             <!-- ▲▲▲ FIN DE LOS NUEVOS ENLACES ▲▲▲ -->
         </div>
-
         <!-- Panel central (middle-panel) -->
         <div class="middle-panel bg-white px-2 py-4 sm:px-4 lg:p-6 rounded-xl shadow-lg mx-auto w-full lg:max-w-6xl">
             <!-- Barra superior (Búsqueda y botones de acción) (TU CÓDIGO ACTUAL) -->
@@ -402,7 +407,7 @@
 </div> <!-- Fin contenedor general seguro -->
 
 {# Asegúrate de que tu script index.js se cargue y que lucide.createIcons() se llame si no lo hace globalmente #}
-<script src="{{ url_for('static', filename='js/index.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='js/index.js') }}"></script>
 
 {% endblock %}
 

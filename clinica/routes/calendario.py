@@ -62,7 +62,12 @@ def construir_dias_del_mes(anio, mes, citas_del_mes_obj):
                 'estado': cita_dict['estado'],
                 'paciente_id': cita_dict['paciente_id'],
                 'paciente_nombre_completo': cita_dict['paciente_nombre_completo'],
-                'paciente_telefono_str': cita_dict['paciente_telefono_str']
+                'paciente_telefono_str': cita_dict['paciente_telefono_str'],
+                # --- ¡AÑADIDO AQUÍ: Los campos de URL que ya se generaron! ---
+                'edit_url': cita_dict['edit_url'],
+                'delete_url': cita_dict['delete_url'],
+                'next_url_encoded': cita_dict['next_url_encoded']
+                # --- FIN AÑADIDO ---
             })
         # --- FIN PREPARACIÓN DE CITAS ---
 
@@ -137,7 +142,7 @@ def mostrar_calendario():
             # ¡Las URLs se construyen AQUÍ, en Python, con el ID real de la cita!
             # Y el `next` ya se codifica aquí en Python
             'edit_url': url_for('calendario.editar_cita', cita_id=cita_obj.id, next=current_full_path_for_template),
-            'delete_url': url_for('calendario.eliminar_cita', cita_id=cita_obj.id),
+            'delete_url': url_for('calendario.eliminar_cita', cita_id=cita_obj.id, next=current_full_path_for_template),
             'next_url_encoded': quote_plus(current_full_path_for_template) # Codificar aquí directamente
         })
     dias_render = construir_dias_del_mes(anio_actual, mes_actual, citas_para_construir) # ¡Pasamos las citas_para_construir!
@@ -154,15 +159,16 @@ def mostrar_calendario():
                            current_full_path=current_full_path_for_template) # <--- ¡AHORA PASAMOS LA VARIABLE CORRECTA!
     
     
-# --- FUNCIÓN DEFINITIVA: registrar_cita (¡Sin dependencia de Paciente existente!) ---
-@calendario_bp.route('/registrar_cita', methods=['GET', 'POST']) # <--- ¡Una sola ruta sin paciente_id_param!
+
+@calendario_bp.route('/registrar_cita', methods=['GET', 'POST'])
 @login_required 
-def registrar_cita(): # <--- ¡Ya no toma paciente_id_param como argumento!
+def registrar_cita(): 
     next_url_get = request.args.get('next')
     fecha_preseleccionada_str = request.args.get('fecha') if request.method == 'GET' else None
     
-    # Preparamos los valores del formulario para el template
     form_values = {
+        'paciente_preseleccionado_id': '', # Nuevo campo para pasar el ID precargado al HTML
+        'paciente_preseleccionado_nombre': '', # Nuevo campo para pasar el nombre precargado al HTML
         'paciente_nombres_val': '', 'paciente_apellidos_val': '', 'paciente_edad_val': '',
         'paciente_documento_val': '', 'paciente_telefono_val': '',
         'fecha_val': fecha_preseleccionada_str or '', 'hora_val': '',
@@ -170,31 +176,62 @@ def registrar_cita(): # <--- ¡Ya no toma paciente_id_param como argumento!
         'next_url': next_url_get or '',
     }
 
+    # Si se viene de un perfil de paciente (GET), preseleccionar ese paciente
+    paciente_id_param = request.args.get('paciente_id_param', type=int) # Leer el ID si viene de URL
+    if request.method == 'GET' and paciente_id_param:
+        paciente_precargado = Paciente.query.filter_by(id=paciente_id_param, is_deleted=False).first()
+        if paciente_precargado:
+            form_values['paciente_preseleccionado_id'] = paciente_precargado.id
+            form_values['paciente_preseleccionado_nombre'] = f"{paciente_precargado.nombres} {paciente_precargado.apellidos}"
+            form_values['paciente_nombres_val'] = paciente_precargado.nombres
+            form_values['paciente_apellidos_val'] = paciente_precargado.apellidos
+            form_values['paciente_edad_val'] = paciente_precargado.edad
+            form_values['paciente_documento_val'] = paciente_precargado.documento
+            form_values['paciente_telefono_val'] = paciente_precargado.telefono
+
+
     if request.method == 'POST':
         try:
             current_next_url = request.form.get('next') or next_url_get or ''
-            nombres_pac_form = request.form.get('paciente_nombres', '').strip()
-            apellidos_pac_form = request.form.get('paciente_apellidos', '').strip()
-            edad_pac_str = request.form.get('paciente_edad', '').strip()
-            documento_pac_form = request.form.get('paciente_documento', '').strip() or None
-            telefono_pac_form = request.form.get('paciente_telefono', '').strip()
+            
+            # --- OBTENER ID DE PACIENTE SELECCIONADO DEL BUSCADOR (oculto) ---
+            paciente_id_seleccionado = request.form.get('paciente_id', type=int) 
+            
+            # --- OBTENER DATOS DE CAMPOS MANUALES (para crear nueva cita o si no hay paciente_id) ---
+            nombres_pac_form = request.form.get('paciente_nombres_str', '').strip() # NOMBRE CORREGIDO
+            apellidos_pac_form = request.form.get('paciente_apellidos_str', '').strip() # NOMBRE CORREGIDO
+            # edad_pac_str = request.form.get('paciente_edad_val', '').strip() # No se guarda en Cita, pero lo puedes usar para validación si crearas Paciente
+            # documento_pac_form = request.form.get('paciente_documento_val', '').strip() # No se guarda en Cita
+            telefono_pac_form = request.form.get('paciente_telefono_str', '').strip() # NOMBRE CORREGIDO
+
             fecha_str = request.form.get('fecha')
             hora_str = request.form.get('hora')
             doctor_form = request.form.get('doctor', '').strip()
             motivo_form = request.form.get('motivo', '').strip()
             observaciones_form = request.form.get('observaciones', '').strip()
 
+            # Rellenar form_values para re-renderizar si hay errores
             form_values.update({
-                'paciente_nombres_val': nombres_pac_form, 'paciente_apellidos_val': apellidos_pac_form,
-                'paciente_edad_val': edad_pac_str, 'paciente_documento_val': documento_pac_form,
+                'paciente_preseleccionado_id': paciente_id_seleccionado, # Mantener el ID seleccionado
+                'paciente_preseleccionado_nombre': request.form.get('paciente_busqueda_input', ''), # También el nombre visible del buscador
+                'paciente_nombres_val': nombres_pac_form, 
+                'paciente_apellidos_val': apellidos_pac_form,
+                # 'paciente_edad_val': edad_pac_str, # Si se usan en el futuro
+                # 'paciente_documento_val': documento_pac_form,
                 'paciente_telefono_val': telefono_pac_form,
                 'fecha_val': fecha_str, 'hora_val': hora_str, 'doctor_val': doctor_form,
                 'motivo_val': motivo_form, 'observaciones_val': observaciones_form
             })
 
             # --- Validaciones de la Cita (Campos Obligatorios) ---
-            if not (nombres_pac_form and apellidos_pac_form and fecha_str and hora_str and doctor_form):
-                flash("Nombres, Apellidos del paciente, Fecha, Hora y Doctor son campos obligatorios para la cita.", "error")
+            # Si hay un paciente_id, no necesitamos nombres/apellidos_str requeridos
+            if not paciente_id_seleccionado and not (nombres_pac_form and apellidos_pac_form and telefono_pac_form):
+                 flash("Nombres, Apellidos y Teléfono del paciente son obligatorios si no se selecciona un paciente existente.", "error")
+                 return render_template('registrar_cita.html', form_values=form_values)
+
+            # Validaciones para fecha, hora y doctor, siempre requeridos
+            if not (fecha_str and hora_str and doctor_form):
+                flash("Fecha, Hora y Doctor son campos obligatorios para la cita.", "error")
                 return render_template('registrar_cita.html', form_values=form_values)
             
             try:
@@ -204,21 +241,33 @@ def registrar_cita(): # <--- ¡Ya no toma paciente_id_param como argumento!
                 flash("Formato de fecha u hora inválido.", "error")
                 return render_template('registrar_cita.html', form_values=form_values)
             
-
             nueva_cita = Cita(
-                # paciente_id = None, # Ya es nullable=True, así que si no se asigna, será NULL
-                # --- ¡AQUÍ SE ASIGNAN LOS CAMPOS DEL PACIENTE AL OBJETO CITA! ---
-                paciente_nombres_str=nombres_pac_form, 
-                paciente_apellidos_str=apellidos_pac_form,
-                paciente_telefono_str=telefono_pac_form, # <--- ¡Añadido!
-                # --- FIN ASIGNACIÓN DE CAMPOS DEL PACIENTE ---
                 fecha=fecha_obj,
                 hora=hora_obj,
                 doctor=doctor_form,
                 motivo=motivo_form or None,
                 observaciones=observaciones_form or None,
+                # Inicializar paciente_id y campos string como None
+                paciente_id=None,
+                paciente_nombres_str=None,
+                paciente_apellidos_str=None,
+                paciente_telefono_str=None,
             )
-            # --- FIN MODIFICACIÓN CLAVE ---
+
+            # --- Lógica para asignar paciente a la cita ---
+            if paciente_id_seleccionado:
+                paciente_existente = Paciente.query.filter_by(id=paciente_id_seleccionado, is_deleted=False).first()
+                if paciente_existente:
+                    nueva_cita.paciente_id = paciente_existente.id
+                else:
+                    flash("El paciente seleccionado no es válido o ha sido eliminado.", "error")
+                    return render_template('registrar_cita.html', form_values=form_values)
+            else:
+                # Si no se seleccionó un paciente, usar los datos manuales para la cita
+                nueva_cita.paciente_nombres_str = nombres_pac_form
+                nueva_cita.paciente_apellidos_str = apellidos_pac_form
+                nueva_cita.paciente_telefono_str = telefono_pac_form
+            # --- FIN Lógica de asignación de paciente ---
             
             db.session.add(nueva_cita)
             db.session.commit() 
@@ -238,9 +287,7 @@ def registrar_cita(): # <--- ¡Ya no toma paciente_id_param como argumento!
 
     return render_template('registrar_cita.html', 
                            form_values=form_values, 
-                           pacientes=Paciente.query.filter_by(is_deleted=False).order_by(Paciente.apellidos).all()) # Si necesitas la lista de pacientes, pásala
-
-
+                           pacientes=Paciente.query.filter_by(is_deleted=False).order_by(Paciente.apellidos).all()) # Ya no se usa la lista 'pacientes' en el template. Puedes quitarla.
 # --- FUNCIÓN EDITAR CITA ---
 @calendario_bp.route('/editar_cita/<int:cita_id>', methods=['GET', 'POST'])
 @login_required 

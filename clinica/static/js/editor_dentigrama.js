@@ -155,9 +155,9 @@ function iniciarDibujo(e) {
             tipo: 'check',
             x: x / dentigramaCanvas.clientWidth,
             y: y / dentigramaCanvas.clientHeight,
-            size: 15,
+            size: 30,
             color: 'rgba(128, 0, 128, 1)', // Color del check (púrpura)
-            grosor: 4
+            grosor: 6
         });
         redrawAll();
         modoActual = 'pincel';
