@@ -25,40 +25,5 @@ jobs:
         run: pip install psycopg2-binary
 
       - name: Ping Supabase Database
-        # Este 'run' ejecuta el bloque de código Python
-        run: |
-          python << EOF
-import psycopg2
-import os
-import datetime
-import sys
-
-db_url = os.environ.get('DATABASE_URL_SUPABASE')
-
-if not db_url:
-    # Indentación corregida (4 espacios)
-    print(f"[[{datetime.datetime.now()}]] ERROR: DATABASE_URL_SUPABASE no está configurada.", file=sys.stderr)
-    # Indentación corregida (4 espacios)
-    sys.exit(1)
-else:
-    # Indentación corregida (4 espacios)
-    try:
-        # Indentación corregida (8 espacios)
-        conn = psycopg2.connect(db_url)
-        # Indentación corregida (8 espacios)
-        cur = conn.cursor()
-        # Indentación corregida (8 espacios)
-        cur.execute("SELECT 1")
-        # Indentación corregida (8 espacios)
-        cur.close()
-        # Indentación corregida (8 espacios)
-        conn.close()
-        # Indentación corregida (8 espacios)
-        print(f"[[{datetime.datetime.now()}]] INFO: Ping exitoso a Supabase.")
-    # Indentación corregida (4 espacios)
-    except Exception as e:
-        # Indentación corregida (8 espacios)
-        print(f"[[{datetime.datetime.now()}]] ERROR: Falló el ping a Supabase: {e}", file=sys.stderr)
-        # Indentación corregida (8 espacios)
-        sys.exit(1)
-EOF
+        # Asegúrate de que el script ping_supabase.py esté en la raíz de tu repositorio
+        run: python ping_supabase.py
