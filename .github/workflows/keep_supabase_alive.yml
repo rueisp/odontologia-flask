@@ -1,32 +1,64 @@
-# .github/workflows/keep_supabase_alive.yml
-
 name: Keep Supabase Project Alive
 
 on:
   schedule:
+    # Se ejecuta Lunes, Miércoles y Viernes a medianoche UTC
     - cron: '0 0 * * 1,3,5' 
-  workflow_dispatch: # <--- Asegúrate de que esto esté aquí para ejecución manual
+  workflow_dispatch:
 
 jobs:
   ping:
     runs-on: ubuntu-latest
-    # Define variables de entorno para este job.
-    # Aquí inyectamos el SECRET que crearemos en GitHub.
-    env: # <--- 'env' debe estar indentado 4 espacios desde 'jobs'
-      DATABASE_URL_SUPABASE: ${{ secrets.SUPABASE_DATABASE_URL }} # <--- Esta línea debe estar indentada 2 espacios desde 'env'
+    env:
+      DATABASE_URL_SUPABASE: ${{ secrets.SUPABASE_DATABASE_URL }}
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3 
+        uses: actions/checkout@v3
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10' 
+          python-version: '3.10'
 
       - name: Install dependencies
         run: pip install psycopg2-binary
 
       - name: Ping Supabase Database
-        run: | # <--- Aquí el pipe '|' le dice a YAML que la siguiente línea es un string multilínea
-          python -c "import psycopg2, os, datetime, sys; db_url = os.environ.get('DATABASE_URL_SUPABASE'); if not db_url: print(f'[{datetime.datetime.now()}] ERROR: DATABASE_URL_SUPABASE no está configurada.', file=sys.stderr); sys.exit(1); try: conn = psycopg2.connect(db_url); cur = conn.cursor(); cur.execute('SELECT 1'); cur.close(); conn.close(); print(f'[{datetime.datetime.now()}] INFO: Ping exitoso a Supabase.'); except Exception as e: print(f'[{datetime.datetime.now()}] ERROR: Falló el ping a Supabase: {e}', file=sys.stderr); sys.exit(1);"
+        # Este 'run' ejecuta el bloque de código Python
+        run: |
+          python << EOF
+import psycopg2
+import os
+import datetime
+import sys
+
+db_url = os.environ.get('DATABASE_URL_SUPABASE')
+
+if not db_url:
+    # Indentación corregida (4 espacios)
+    print(f"[[{datetime.datetime.now()}]] ERROR: DATABASE_URL_SUPABASE no está configurada.", file=sys.stderr)
+    # Indentación corregida (4 espacios)
+    sys.exit(1)
+else:
+    # Indentación corregida (4 espacios)
+    try:
+        # Indentación corregida (8 espacios)
+        conn = psycopg2.connect(db_url)
+        # Indentación corregida (8 espacios)
+        cur = conn.cursor()
+        # Indentación corregida (8 espacios)
+        cur.execute("SELECT 1")
+        # Indentación corregida (8 espacios)
+        cur.close()
+        # Indentación corregida (8 espacios)
+        conn.close()
+        # Indentación corregida (8 espacios)
+        print(f"[[{datetime.datetime.now()}]] INFO: Ping exitoso a Supabase.")
+    # Indentación corregida (4 espacios)
+    except Exception as e:
+        # Indentación corregida (8 espacios)
+        print(f"[[{datetime.datetime.now()}]] ERROR: Falló el ping a Supabase: {e}", file=sys.stderr)
+        # Indentación corregida (8 espacios)
+        sys.exit(1)
+EOF
