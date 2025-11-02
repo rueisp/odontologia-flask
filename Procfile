@@ -1,1 +1,1 @@
-web: gunicorn clinica:create_app()
+web: /opt/render/project/src/.venv/bin/gunicorn clinica:app --bind 0.0.0.0:$PORT --workers 1
