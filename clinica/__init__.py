@@ -150,3 +150,5 @@ def create_app():
         app.register_blueprint(papelera_bp, url_prefix='/papelera')
         
     return app
+
+app = create_app()
