@@ -1,19 +1,15 @@
-# app.py (o run.py, en la raíz de tu proyecto)
+# run.py (o app.py, en la raíz de tu proyecto)
 
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv # Importa load_dotenv
 from clinica import create_app
-from flask_migrate import Migrate # <--- Importa Migrate aquí
-from clinica.extensions import db # <--- Importa db aquí
 
 # --- Cargar variables de entorno para desarrollo local ---
+# Esto DEBE ejecutarse antes de que create_app() lea os.environ.get()
 load_dotenv() 
 
 app = create_app()
 
-# --- Inicializar Flask-Migrate con la aplicación y la base de datos ---
-# Esto registra automáticamente los comandos 'db' con Flask CLI
-migrate = Migrate(app, db) # <--- Asegúrate de que 'db' se importa de clinica.extensions
-
 if __name__ == '__main__':
+    # Usar la variable de entorno FLASK_DEBUG para controlar el modo debug
     app.run(debug=os.environ.get('FLASK_DEBUG') == '1', host='0.0.0.0', port=5000)
