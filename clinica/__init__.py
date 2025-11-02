@@ -131,6 +131,8 @@ def create_app():
 
     # --- 3. REGISTRAR BLUEPRINTS (RUTAS) ---
     with app.app_context(): 
+        db.create_all() # <--- ¡AÑADE ESTA LÍNEA AHORA!
+
         from .routes.main import main_bp
         from .routes.pacientes import pacientes_bp
         from .routes.pacientes_evoluciones import evoluciones_bp
