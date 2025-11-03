@@ -2,7 +2,7 @@ name: Keep Apps Alive (Render + Supabase)
 on:
   schedule:
     # Se ejecuta cada 15 minutos, de Lunes (1) a Sábado (6), entre las 8:00 am y las 7:00 pm (19:00) UTC
-    - cron: '*/15 8-19 * * 1-6' 
+    - cron: '*/15 8-20 * * 0-6' 
   
 
   workflow_dispatch: # Permite ejecución manual
@@ -31,7 +31,7 @@ jobs:
       # --- PASO 1: Ping a RENDER (Cada hora) ---
       - name: Ping Render App at /awake
         run: |
-          python -c "import requests; response = requests.get('$RENDER_URL/awake', timeout=30); print(f'Render Ping: {response.status_code}')"
+          python -c "import requests; response = requests.get('$RENDER_URL/awake', timeout=60); print(f'Render Ping: {response.status_code}')"
 
       # --- PASO 2: Ping a SUPABASE (Usando tu script existente) ---
       - name: Ping Supabase Database
