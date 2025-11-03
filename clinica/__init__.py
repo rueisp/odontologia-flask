@@ -149,6 +149,16 @@ def create_app():
         app.register_blueprint(calendario_bp, url_prefix='/calendario')
         app.register_blueprint(export_bp, url_prefix='/export')
         app.register_blueprint(papelera_bp, url_prefix='/papelera')
+
+        # ==============================================================
+        # *** NUEVO: RUTA PARA MANTENER LA APP VIVA (PING) ***
+        # ==============================================================
+        @app.route('/awake')
+        def awake():
+            # Este endpoint responderá a GitHub Actions para mantener Render activo
+            return "Render App Awake", 200
+        # ==============================================================
+        
         
     return app
 
