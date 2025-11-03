@@ -26,6 +26,8 @@ jobs:
         # ¡Importante! Necesitamos la librería 'requests' para hacer el ping HTTP
         run: pip install requests
 
-      - name: Ping Supabase Database
-        # Asegúrate de que el script ping_supabase.py esté en la raíz de tu repositorio
-        run: python ping_supabase.py
+      - name: Ping Render App at /awake
+        # Ejecuta un script de Python muy simple para hacer el ping a la URL de Render
+        # Usa la variable RENDER_URL y la ruta '/awake' que pusiste en __init__.py
+        run: |
+          python -c "import requests; response = requests.get('$RENDER_URL/awake', timeout=30); print(f'Ping a Render completado con código: {response.status_code}')"
