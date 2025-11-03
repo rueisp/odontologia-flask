@@ -34,6 +34,5 @@ jobs:
           python -c "import requests; response = requests.get('$RENDER_URL/awake', timeout=60); print(f'Render Ping: {response.status_code}')"
 
       # --- PASO 2: Ping a SUPABASE (Usando tu script existente) ---
-      - name: Ping Supabase Database
-        # Este paso ejecutará tu script original, que debería usar DATABASE_URL_SUPABASE
-        run: python ping_supabase.py
+      # - name: Ping Supabase Database
+      #   run: python ping_supabase.py
