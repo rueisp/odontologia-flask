@@ -1,17 +1,19 @@
-name: Keep Render Flask Alive
+name: Keep Apps Alive (Render + Supabase)
 on:
   schedule:
-    # Ejecutar CADA HORA (a los minutos 00 de cada hora UTC)
-    - cron: '0 * * * *'
-  workflow_dispatch: # Permite ejecutarlo manualmente
+    # Se ejecuta cada 15 minutos, de Lunes (1) a Sábado (6), entre las 8:00 am y las 7:00 pm (19:00) UTC
+    - cron: '*/15 8-19 * * 1-6' 
+  
+
+  workflow_dispatch: # Permite ejecución manual
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     env:
-      # Usamos el secreto que acabas de crear para Render
+      # Variables necesarias
       RENDER_URL: ${{ secrets.RENDER_APP_URL }}
-      # Eliminamos DATABASE_URL_SUPABASE por ahora, ya que solo enfocamos en Render
+      DATABASE_URL_SUPABASE: ${{ secrets.SUPABASE_DATABASE_URL }} # Mantenemos el secreto de Supabase
       
     steps:
       - name: Checkout code
@@ -23,11 +25,15 @@ jobs:
           python-version: '3.10'
 
       - name: Install dependencies
-        # ¡Importante! Necesitamos la librería 'requests' para hacer el ping HTTP
-        run: pip install requests
+        # Asegúrate de que 'requests' y 'psycopg2-binary' estén aquí
+        run: pip install requests psycopg2-binary
 
+      # --- PASO 1: Ping a RENDER (Cada hora) ---
       - name: Ping Render App at /awake
-        # Ejecuta un script de Python muy simple para hacer el ping a la URL de Render
-        # Usa la variable RENDER_URL y la ruta '/awake' que pusiste en __init__.py
         run: |
-          python -c "import requests; response = requests.get('$RENDER_URL/awake', timeout=30); print(f'Ping a Render completado con código: {response.status_code}')"
+          python -c "import requests; response = requests.get('$RENDER_URL/awake', timeout=30); print(f'Render Ping: {response.status_code}')"
+
+      # --- PASO 2: Ping a SUPABASE (Usando tu script existente) ---
+      - name: Ping Supabase Database
+        # Este paso ejecutará tu script original, que debería usar DATABASE_URL_SUPABASE
+        run: python ping_supabase.py
