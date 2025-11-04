@@ -31,7 +31,7 @@ jobs:
       # --- PASO 1: Ping a RENDER (Cada hora) ---
       - name: Ping Render App at /awake
         run: |
-          python -c "import requests; response = requests.get('$RENDER_URL/awake', timeout=60); print(f'Render Ping: {response.status_code}')"
+          python -c "import requests; response = requests.get('$RENDER_URL/awake', timeout=90); print(f'Render Ping: {response.status_code}')"
 
       # --- PASO 2: Ping a SUPABASE (Usando tu script existente) ---
       # - name: Ping Supabase Database
