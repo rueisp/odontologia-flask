@@ -2,7 +2,7 @@ name: Keep Apps Alive (Render + Supabase)
 on:
   schedule:
     # Se ejecuta cada 15 minutos, de Lunes (1) a Sábado (6), entre las 8:00 am y las 7:00 pm (19:00) UTC
-    - cron: '*/15 * * * *'
+    - cron: '*/12 * * * *'
   
 
   workflow_dispatch: # Permite ejecución manual
