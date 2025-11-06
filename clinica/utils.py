@@ -4,7 +4,7 @@ import os
 import calendar
 import locale
 from datetime import date, datetime, time
-from sqlalchemy import func, case, or_, and_ # Asegúrate de que 'and_' esté importado
+from sqlalchemy import func, case, or_, and_
 from sqlalchemy.orm import joinedload
 from .extensions import db
 from .models import Paciente, Cita
@@ -42,22 +42,15 @@ def convertir_a_fecha(valor_str):
     except (ValueError, TypeError):
         return None
 
+# --- FUNCIÓN get_index_panel_data (¡CORREGIDA PARA NO DEVOLVER FECHAS FORMATADAS!) ---
 def get_index_panel_data(today_date: date, current_time: time):
     """Función para obtener los datos necesarios para el panel de inicio."""
     datos_panel = {}
 
-    # 1. Fecha actual formateada (¡ahora usa today_date!)
-    # ESTA SECCIÓN DE CÓDIGO YA NO ES NECESARIA AQUÍ.
-    # La fecha formateada principal y la corta ahora se gestionan en main.py
-    # y se pasan directamente al render_template, para evitar este conflicto.
-    # Puedes eliminar todo el bloque 'locale' y 'fecha_formateada_buffer' de aquí.
-    # Si aún necesitas formatear fechas cortas para otras partes DENTRO de get_index_panel_data
-    # que no sean la fecha principal del dashboard, puedes mantener una variable local,
-    # pero NO la añadas a datos_panel['fecha_actual_formateada'] ni a datos_panel['fecha_actual_corta'].
-    
-    # Para simplificar y evitar el conflicto, simplemente asegurémonos de que NO estamos
-    # añadiendo 'fecha_actual_corta' ni 'fecha_actual_formateada' a 'datos_panel'.
-    # Si quieres una fecha corta para Citas para Hoy (XX noviembre), puedes dejarla localmente.
+    # Las variables 'fecha_actual_formateada' y 'fecha_actual_corta'
+    # ya no se gestionan ni se devuelven desde aquí.
+    # Ahora se formatean y se pasan directamente desde main.py al template.
+
 
     # --- CONSULTA BASE PARA CITAS DEL DASHBOARD ---
     base_query_citas = Cita.query.outerjoin(Paciente, Cita.paciente_id == Paciente.id).filter(
@@ -88,9 +81,6 @@ def get_index_panel_data(today_date: date, current_time: time):
 
     proxima_cita_data = None
     if proxima_cita_obj:
-        # Asegúrate de que el formateo de fecha para la próxima cita sea consistente y use today_date si aplica
-        # O si es una fecha futura, solo formatear la fecha del objeto cita
-        
         # Guardamos el locale original antes de cambiarlo
         locale_original_time = locale.getlocale(locale.LC_TIME)
         try:
@@ -125,23 +115,6 @@ def get_index_panel_data(today_date: date, current_time: time):
         }
     datos_panel['proxima_cita'] = proxima_cita_data
 
-    # 4. Fecha actual corta (¡Gestionada en main.py, NO la añadas a datos_panel aquí!)
-    # Este bloque de código para 'fecha_corta_buffer' debe ELIMINARSE COMPLETAMENTE o
-    # asegurarse de que NO ASIGNE a datos_panel['fecha_actual_corta'].
-    # Si necesitas una fecha corta para algún propósito interno de get_index_panel_data,
-    # puedes mantener la lógica localmente, pero no la exportes en 'datos_panel'.
-    # Ejemplo de eliminación segura (opcional si la variable no se usa más):
-    # try:
-    #     locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
-    #     _temp_fecha_corta_para_uso_interno = today_date.strftime("%d de %B").capitalize()
-    # except locale.Error:
-    #     _temp_fecha_corta_para_uso_interno = today_date.strftime("%d %B").capitalize()
-    # finally:
-    #     if locale_original_time != (None, None):
-    #         try:
-    #             locale.setlocale(locale.LC_TIME, locale_original_time)
-    #         except locale.Error: pass
-
 
     # 5. Lista de citas de hoy
     citas_de_hoy_lista_query = base_query_citas.filter(Cita.fecha == today_date)
@@ -168,11 +141,11 @@ def get_index_panel_data(today_date: date, current_time: time):
             'estado': cita_item.estado,
         })
     datos_panel['citas_del_dia'] = citas_hoy_procesadas
-    
+
     return datos_panel
 
 
-# --- VERSIÓN MEJORADA DE extract_public_id_from_url ---
+# --- VERSIÓN MEJORADA DE extract_public_id_from_url (se mantiene igual) ---
 def extract_public_id_from_url(url):
     """
     Extrae el public_id de una URL de Cloudinary de forma robusta.
@@ -198,7 +171,7 @@ def extract_public_id_from_url(url):
             public_id_parts = path_components[1:]
         else:
             public_id_parts = path_components
-        
+
         # Unir las partes restantes y quitar la extensión del archivo
         full_public_id_with_ext = '/'.join(public_id_parts)
         public_id = os.path.splitext(full_public_id_with_ext)[0] # os.path.splitext es robusto para quitar extensiones
@@ -206,14 +179,14 @@ def extract_public_id_from_url(url):
         # Cloudinary espera el public_id incluyendo las carpetas
         # Por ejemplo, si la URL es ".../dentigramas_pacientes/mi_dentigrama.png"
         # el public_id debería ser "dentigramas_pacientes/mi_dentigrama"
-        
+
         # Asegúrate de que el public_id no esté vacío después del procesamiento
         if not public_id:
             logger.warning(f"Public ID extraído está vacío de la URL: {url}")
             return None
 
         return public_id
-        
+
     except (ValueError, IndexError, TypeError) as e:
         logger.warning(f"Error al extraer el public_id de la URL '{url}'. Error: {e}", exc_info=True)
         return None
