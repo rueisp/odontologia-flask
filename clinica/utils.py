@@ -42,35 +42,22 @@ def convertir_a_fecha(valor_str):
     except (ValueError, TypeError):
         return None
 
-# --- FUNCIÓN get_index_panel_data (¡AHORA RECIBE LA FECHA Y HORA LOCALIZADAS!) ---
-# Los parámetros today_date y current_time DEBEN ser pasados desde main.py
-def get_index_panel_data(today_date: date, current_time: time): # <--- ¡Modificado para aceptar parámetros!
+def get_index_panel_data(today_date: date, current_time: time):
     """Función para obtener los datos necesarios para el panel de inicio."""
-    # Eliminado: hoy = date.today()
-    # Eliminado: ahora = datetime.now()
-    # Ahora usamos today_date y current_time que ya vienen localizados
-
     datos_panel = {}
 
     # 1. Fecha actual formateada (¡ahora usa today_date!)
-    fecha_formateada_buffer = None
-    locale_original_time = locale.getlocale(locale.LC_TIME)
-    try:
-        locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
-        fecha_formateada_buffer = today_date.strftime("%A, %d de %B de %Y").capitalize() # <--- Usar today_date
-    except locale.Error:
-        logger.warning("Locale 'es_ES.UTF-8' no disponible. Usando locale por defecto para formatear fecha.")
-        locale.setlocale(locale.LC_TIME, '')
-        fecha_formateada_buffer = today_date.strftime("%A, %d de %B de %Y").capitalize() # <--- Usar today_date
-    finally:
-        if locale_original_time != (None, None):
-            try:
-                locale.setlocale(locale.LC_TIME, locale_original_time)
-            except locale.Error:
-                logger.warning(f"Advertencia: No se pudo restaurar el locale original {locale_original_time} para LC_TIME.")
-    # Ya no pasamos fecha_actual_formateada desde aquí, ahora se formatea en main.py y se pasa al template.
-    # datos_panel['fecha_actual_formateada'] = fecha_formateada_buffer # <-- Esta línea se elimina o no se usa, porque main.py ya lo hace.
-
+    # ESTA SECCIÓN DE CÓDIGO YA NO ES NECESARIA AQUÍ.
+    # La fecha formateada principal y la corta ahora se gestionan en main.py
+    # y se pasan directamente al render_template, para evitar este conflicto.
+    # Puedes eliminar todo el bloque 'locale' y 'fecha_formateada_buffer' de aquí.
+    # Si aún necesitas formatear fechas cortas para otras partes DENTRO de get_index_panel_data
+    # que no sean la fecha principal del dashboard, puedes mantener una variable local,
+    # pero NO la añadas a datos_panel['fecha_actual_formateada'] ni a datos_panel['fecha_actual_corta'].
+    
+    # Para simplificar y evitar el conflicto, simplemente asegurémonos de que NO estamos
+    # añadiendo 'fecha_actual_corta' ni 'fecha_actual_formateada' a 'datos_panel'.
+    # Si quieres una fecha corta para Citas para Hoy (XX noviembre), puedes dejarla localmente.
 
     # --- CONSULTA BASE PARA CITAS DEL DASHBOARD ---
     base_query_citas = Cita.query.outerjoin(Paciente, Cita.paciente_id == Paciente.id).filter(
@@ -86,16 +73,14 @@ def get_index_panel_data(today_date: date, current_time: time): # <--- ¡Modific
         )
 
     # 2. Estadísticas: Citas de hoy
-    # Usar today_date en lugar de hoy
-    citas_hoy_count = base_query_citas.filter(Cita.fecha == today_date).count() # <--- Usar today_date
+    citas_hoy_count = base_query_citas.filter(Cita.fecha == today_date).count()
     datos_panel['estadisticas'] = {'citas_hoy': citas_hoy_count or 0}
 
     # 3. Próxima cita
-    # Usar today_date y current_time
     proxima_cita_obj = base_query_citas.filter(
         or_(
-            Cita.fecha > today_date, # Citas de días futuros
-            and_(Cita.fecha == today_date, Cita.hora >= current_time) # <--- Citas de hoy que aún no han pasado, usando current_time
+            Cita.fecha > today_date,
+            and_(Cita.fecha == today_date, Cita.hora >= current_time)
         )
     ).options(joinedload(Cita.paciente))\
      .order_by(Cita.fecha, Cita.hora)\
@@ -103,18 +88,25 @@ def get_index_panel_data(today_date: date, current_time: time): # <--- ¡Modific
 
     proxima_cita_data = None
     if proxima_cita_obj:
-        fecha_cita_str_buffer = None
+        # Asegúrate de que el formateo de fecha para la próxima cita sea consistente y use today_date si aplica
+        # O si es una fecha futura, solo formatear la fecha del objeto cita
+        
+        # Guardamos el locale original antes de cambiarlo
+        locale_original_time = locale.getlocale(locale.LC_TIME)
         try:
             locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
             fecha_cita_str_buffer = proxima_cita_obj.fecha.strftime("%d %b, %Y")
         except locale.Error:
+            logger.warning("Locale 'es_ES.UTF-8' no disponible. Usando locale por defecto.")
+            locale.setlocale(locale.LC_TIME, '')
             fecha_cita_str_buffer = proxima_cita_obj.fecha.strftime("%d %b, %Y")
         finally:
+            # Restaurar el locale original
             if locale_original_time != (None, None):
                 try:
                     locale.setlocale(locale.LC_TIME, locale_original_time)
                 except locale.Error:
-                    pass
+                    logger.warning(f"Advertencia: No se pudo restaurar el locale original {locale_original_time} para LC_TIME.")
 
         hora_cita_str = proxima_cita_obj.hora.strftime("%I:%M %p")
 
@@ -133,25 +125,26 @@ def get_index_panel_data(today_date: date, current_time: time): # <--- ¡Modific
         }
     datos_panel['proxima_cita'] = proxima_cita_data
 
-    # 4. Fecha actual corta (¡ahora usa today_date!)
-    fecha_corta_buffer = None
-    try:
-        locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
-        fecha_corta_buffer = today_date.strftime("%d de %B").capitalize() # <--- Usar today_date
-    except locale.Error:
-        fecha_corta_buffer = today_date.strftime("%d %B").capitalize() # <--- Usar today_date
-    finally:
-        if locale_original_time != (None, None):
-            try:
-                locale.setlocale(locale.LC_TIME, locale_original_time)
-            except locale.Error:
-                pass
-    datos_panel['fecha_actual_corta'] = fecha_corta_buffer
+    # 4. Fecha actual corta (¡Gestionada en main.py, NO la añadas a datos_panel aquí!)
+    # Este bloque de código para 'fecha_corta_buffer' debe ELIMINARSE COMPLETAMENTE o
+    # asegurarse de que NO ASIGNE a datos_panel['fecha_actual_corta'].
+    # Si necesitas una fecha corta para algún propósito interno de get_index_panel_data,
+    # puedes mantener la lógica localmente, pero no la exportes en 'datos_panel'.
+    # Ejemplo de eliminación segura (opcional si la variable no se usa más):
+    # try:
+    #     locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
+    #     _temp_fecha_corta_para_uso_interno = today_date.strftime("%d de %B").capitalize()
+    # except locale.Error:
+    #     _temp_fecha_corta_para_uso_interno = today_date.strftime("%d %B").capitalize()
+    # finally:
+    #     if locale_original_time != (None, None):
+    #         try:
+    #             locale.setlocale(locale.LC_TIME, locale_original_time)
+    #         except locale.Error: pass
 
 
     # 5. Lista de citas de hoy
-    # Usar today_date en lugar de hoy
-    citas_de_hoy_lista_query = base_query_citas.filter(Cita.fecha == today_date) # <--- Usar today_date
+    citas_de_hoy_lista_query = base_query_citas.filter(Cita.fecha == today_date)
     citas_de_hoy_lista = citas_de_hoy_lista_query.options(joinedload(Cita.paciente))\
                                                 .order_by(Cita.hora)\
                                                 .all()
@@ -175,9 +168,8 @@ def get_index_panel_data(today_date: date, current_time: time): # <--- ¡Modific
             'estado': cita_item.estado,
         })
     datos_panel['citas_del_dia'] = citas_hoy_procesadas
-
+    
     return datos_panel
-
 
 
 # --- VERSIÓN MEJORADA DE extract_public_id_from_url ---
