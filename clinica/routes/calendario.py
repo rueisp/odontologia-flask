@@ -1,18 +1,20 @@
 # clinica/routes/calendario.py
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app 
-from datetime import date, datetime, time, timedelta 
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
+from datetime import date, datetime, time, timedelta
 import calendar
-from ..models import db, Cita, Paciente, AuditLog 
+from ..models import db, Cita, Paciente, AuditLog
 from sqlalchemy.orm import joinedload
 from sqlalchemy import or_, extract, func, exc as sqlalchemy_exc
-from urllib.parse import urlparse, urljoin 
-import uuid 
+from urllib.parse import urlparse, urljoin
+import uuid
 import os
 from flask_login import current_user, login_required
-from uuid import uuid4 
-from ..utils import convertir_a_fecha 
-from urllib.parse import quote_plus # <-- ¡AÑADIR ESTA IMPORTACIÓN! Para URL encoding
+from uuid import uuid4
+from ..utils import convertir_a_fecha
+from urllib.parse import quote_plus
+
+import pytz # <--- ¡IMPORTANTE: AÑADIR ESTA IMPORTACIÓN!
 
 calendario_bp = Blueprint('calendario', __name__, url_prefix='/calendario')
 
@@ -30,31 +32,28 @@ def is_safe_url(target):
            ref_url.netloc == test_url.netloc
 
 
-def construir_dias_del_mes(anio, mes, citas_del_mes_obj):
+# --- MODIFICACIÓN: La función construir_dias_del_mes ahora acepta la fecha actual localizada ---
+def construir_dias_del_mes(anio, mes, citas_del_mes_obj, dia_hoy_local, mes_hoy_local, anio_hoy_local):
     dias_calendario = []
     primer_dia_obj = date(anio, mes, 1)
     total_dias_en_mes = calendar.monthrange(anio, mes)[1]
-    dia_hoy = date.today()
-    dia_semana_inicio = (primer_dia_obj.weekday() + 1) % 7  
+    # dia_hoy = date.today() # <--- ELIMINADO: Ya no usamos date.today() aquí
+
+    dia_semana_inicio = (primer_dia_obj.weekday() + 1) % 7
 
     for _ in range(dia_semana_inicio):
         dias_calendario.append({'fecha': None, 'hoy': False, 'citas': []})
 
     for dia_num in range(1, total_dias_en_mes + 1):
         fecha_actual_dia = date(anio, mes, dia_num)
-        # --- ¡MODIFICACIÓN CLAVE AQUÍ! Acceder a la fecha como un elemento de diccionario ---
-        citas_en_dia_actual = [c for c in citas_del_mes_obj if date.fromisoformat(c['fecha']) == fecha_actual_dia]
-        # NOTA: asumo que c['fecha'] es una cadena 'YYYY-MM-DD' como la formateamos en mostrar_calendario
-        # Si no, deberíamos usar datetime.strptime(c['fecha'], '%Y-%m-%d').date()
-        # Pero date.fromisoformat es más directo si el formato es estándar ISO.
 
-        # --- PREPARAR LAS CITAS CON LA INFORMACIÓN DEL PACIENTE Y HORA/FECHA FORMATEADA ---
+        citas_en_dia_actual = [c for c in citas_del_mes_obj if date.fromisoformat(c['fecha']) == fecha_actual_dia]
+
         citas_preparadas = []
-        for cita_dict in citas_en_dia_actual: # Renombrado a cita_dict para mayor claridad
-            # Todos estos valores ya vienen del diccionario 'cita_dict'
+        for cita_dict in citas_en_dia_actual:
             citas_preparadas.append({
                 'id': cita_dict['id'],
-                'fecha': cita_dict['fecha'], 
+                'fecha': cita_dict['fecha'],
                 'hora': cita_dict['hora'],
                 'motivo': cita_dict['motivo'],
                 'doctor': cita_dict['doctor'],
@@ -63,18 +62,20 @@ def construir_dias_del_mes(anio, mes, citas_del_mes_obj):
                 'paciente_id': cita_dict['paciente_id'],
                 'paciente_nombre_completo': cita_dict['paciente_nombre_completo'],
                 'paciente_telefono_str': cita_dict['paciente_telefono_str'],
-                # --- ¡AÑADIDO AQUÍ: Los campos de URL que ya se generaron! ---
                 'edit_url': cita_dict['edit_url'],
                 'delete_url': cita_dict['delete_url'],
                 'next_url_encoded': cita_dict['next_url_encoded']
-                # --- FIN AÑADIDO ---
             })
-        # --- FIN PREPARACIÓN DE CITAS ---
+
+        # --- MODIFICACIÓN CLAVE: Comparamos con la fecha localizada de "hoy" ---
+        es_hoy = (fecha_actual_dia.day == dia_hoy_local and
+                  fecha_actual_dia.month == mes_hoy_local and
+                  fecha_actual_dia.year == anio_hoy_local)
 
         dias_calendario.append({
-            'fecha': fecha_actual_dia, # La fecha del día puede seguir siendo un objeto date aquí
-            'hoy': fecha_actual_dia == dia_hoy,
-            'citas': citas_preparadas 
+            'fecha': fecha_actual_dia,
+            'hoy': es_hoy, # <--- Usamos la nueva variable 'es_hoy'
+            'citas': citas_preparadas
         })
 
     total_celdas_actual = len(dias_calendario)
@@ -84,21 +85,37 @@ def construir_dias_del_mes(anio, mes, citas_del_mes_obj):
     return dias_calendario
 
 
-@calendario_bp.route('/') 
-@login_required 
+@calendario_bp.route('/')
+@login_required
 def mostrar_calendario():
-    anio_actual = request.args.get('anio', default=date.today().year, type=int)
-    mes_actual = request.args.get('mes', default=date.today().month, type=int)
+    # --- MODIFICACIONES CLAVE PARA ZONA HORARIA ---
+    # Define la zona horaria de tu clínica
+    local_timezone = pytz.timezone('America/Bogota') # <--- CAMBIAR SI TU ZONA HORARIA ES DIFERENTE
+
+    # Obtiene la fecha y hora actuales en esa zona horaria
+    now_in_local_tz = datetime.now(local_timezone)
+
+    # Usa la fecha localizada para determinar los valores predeterminados de anio y mes
+    anio_actual = request.args.get('anio', default=now_in_local_tz.year, type=int)
+    mes_actual = request.args.get('mes', default=now_in_local_tz.month, type=int)
+
+    # Guarda el día, mes y año de "hoy" en la zona horaria local para marcarlo en el calendario
+    dia_hoy_local = now_in_local_tz.day
+    mes_hoy_local = now_in_local_tz.month
+    anio_hoy_local = now_in_local_tz.year
+    # --- FIN MODIFICACIONES CLAVE PARA ZONA HORARIA ---
+
 
     try:
         date(anio_actual, mes_actual, 1)
     except ValueError:
         flash("Mes o año inválido.", "warning")
-        anio_actual = date.today().year
-        mes_actual = date.today().month
+        # Si hay un error, volvemos a la fecha localizada
+        anio_actual = now_in_local_tz.year
+        mes_actual = now_in_local_tz.month
 
     query_citas = Cita.query.outerjoin(Paciente, Cita.paciente_id == Paciente.id).options(joinedload(Cita.paciente)).filter(
-        Cita.is_deleted == False, 
+        Cita.is_deleted == False,
         extract('year', Cita.fecha) == anio_actual,
         extract('month', Cita.fecha) == mes_actual
     )
@@ -107,7 +124,7 @@ def mostrar_calendario():
         query_citas = query_citas.filter(
             or_(
                 Paciente.odontologo_id == current_user.id,
-                Cita.paciente_id == None 
+                Cita.paciente_id == None
             )
         )
     else:
@@ -115,9 +132,8 @@ def mostrar_calendario():
 
     citas_del_mes = query_citas.order_by(Cita.fecha, Cita.hora).all()
 
-    # --- ¡MODIFICACIÓN CLAVE FINAL AQUÍ: Asegurar que request.full_path se pasa! ---
-    current_full_path_for_template = request.full_path # Capturar request.full_path una sola vez
-    
+    current_full_path_for_template = request.full_path
+
     citas_para_construir = []
     for cita_obj in citas_del_mes:
         paciente_nombre_completo = "Paciente sin registrar"
@@ -139,13 +155,14 @@ def mostrar_calendario():
             'paciente_id': cita_obj.paciente_id,
             'paciente_nombre_completo': paciente_nombre_completo,
             'paciente_telefono_str': cita_obj.paciente_telefono_str,
-            # ¡Las URLs se construyen AQUÍ, en Python, con el ID real de la cita!
-            # Y el `next` ya se codifica aquí en Python
             'edit_url': url_for('calendario.editar_cita', cita_id=cita_obj.id, next=current_full_path_for_template),
             'delete_url': url_for('calendario.eliminar_cita', cita_id=cita_obj.id, next=current_full_path_for_template),
-            'next_url_encoded': quote_plus(current_full_path_for_template) # Codificar aquí directamente
+            'next_url_encoded': quote_plus(current_full_path_for_template)
         })
-    dias_render = construir_dias_del_mes(anio_actual, mes_actual, citas_para_construir) # ¡Pasamos las citas_para_construir!
+
+    # --- MODIFICACIÓN: Pasamos los valores de "hoy" a construir_dias_del_mes ---
+    dias_render = construir_dias_del_mes(anio_actual, mes_actual, citas_para_construir,
+                                         dia_hoy_local, mes_hoy_local, anio_hoy_local) # <--- AÑADIDO
     nombre_mes_actual_display = NOMBRES_MESES_ESP[mes_actual-1]
 
     return render_template('calendario.html',
@@ -154,11 +171,12 @@ def mostrar_calendario():
                            nombres_meses=NOMBRES_MESES_ESP,
                            nombre_mes_display=nombre_mes_actual_display,
                            dias=dias_render,
-                           anio_hoy=date.today().year,
-                           mes_hoy=date.today().month,
-                           current_full_path=current_full_path_for_template) # <--- ¡AHORA PASAMOS LA VARIABLE CORRECTA!
-    
-    
+                           # --- MODIFICACIÓN: Pasamos los valores de "hoy" localizados a la plantilla ---
+                           anio_hoy=anio_hoy_local,
+                           mes_hoy=mes_hoy_local,
+                           dia_hoy=dia_hoy_local, # <--- AÑADIDO
+                           current_full_path=current_full_path_for_template)
+
 
 @calendario_bp.route('/registrar_cita', methods=['GET', 'POST'])
 @login_required 
