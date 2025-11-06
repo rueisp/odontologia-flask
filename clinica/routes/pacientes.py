@@ -13,7 +13,7 @@ from ..models import Paciente, Cita, Evolucion, AuditLog
 from ..utils import allowed_file, convertir_a_fecha, extract_public_id_from_url # Asegúrate de que extract_public_id_from_url esté correctamente definida en tu utils.py
 import io
 import uuid 
-
+import pytz # <--- ¡IMPORTAR pytz!
 
 # =========================================================================
 # === FUNCIONES AUXILIARES (MOVIDAS AL PRINCIPIO DEL ARCHIVO) ===
@@ -117,29 +117,40 @@ def lista_pacientes():
 
 
 @pacientes_bp.route('/<int:id>', methods=['GET', 'POST'])
-@login_required 
+@login_required
 def mostrar_paciente(id):
     query = Paciente.query.filter_by(id=id, is_deleted=False)
     if not current_user.is_admin:
         query = query.filter_by(odontologo_id=current_user.id)
     paciente = query.first_or_404()
-    
+
     if request.method == 'POST':
         descripcion = request.form.get('descripcion')
         if descripcion and descripcion.strip():
+            # --- MODIFICACIONES CLAVE PARA LA ZONA HORARIA EN EL POST ---
+            local_timezone = pytz.timezone('America/Bogota') # <--- TU ZONA HORARIA
+            now_in_local_tz = datetime.now(local_timezone)
+            fecha_local_para_evolucion = now_in_local_tz.date() # Obtener solo la fecha
+            # --- FIN MODIFICACIONES ---
+
             nueva_evolucion = Evolucion(
                 descripcion=descripcion.strip(),
-                paciente_id=paciente.id 
+                paciente_id=paciente.id,
+                fecha=fecha_local_para_evolucion # <--- ¡ASIGNAR LA FECHA LOCALIZADA!
             )
             db.session.add(nueva_evolucion)
-            db.session.commit()
-            flash('Evolución añadida correctamente.', 'success')
+            try:
+                db.session.commit()
+                flash('Evolución añadida correctamente.', 'success')
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.error(f"Error al añadir evolución para paciente {paciente.id}: {e}", exc_info=True)
+                flash('Ocurrió un error al guardar la evolución.', 'danger')
         else:
             flash('La descripción de la evolución no puede estar vacía.', 'warning')
         return redirect(url_for('pacientes.mostrar_paciente', id=paciente.id))
 
     # --- Lógica de PREPARACIÓN DE DATOS en Python para la plantilla (¡CRÍTICO!) ---
-    # Convertimos el objeto paciente a un diccionario o un objeto con atributos ya formateados
     paciente_data_para_template = {
         'id': paciente.id,
         'nombres': paciente.nombres or 'N/A',
@@ -148,14 +159,13 @@ def mostrar_paciente(id):
         'documento': paciente.documento or 'N/A',
         'telefono': paciente.telefono or 'N/A',
         'email': paciente.email or 'N/A',
-        # Formatear fecha_nacimiento aquí en Python a una cadena
         'fecha_nacimiento': paciente.fecha_nacimiento.strftime('%d/%m/%Y') if isinstance(paciente.fecha_nacimiento, (date, datetime)) else 'N/A',
         'edad': f"{paciente.edad} años" if paciente.edad is not None else 'N/A',
         'genero': paciente.genero or 'N/A',
         'estado_civil': paciente.estado_civil or 'N/A',
         'ocupacion': paciente.ocupacion or 'N/A',
         'dentigrama_canvas': paciente.dentigrama_canvas,
-        'imagen_perfil_url': paciente.imagen_perfil_url, # ¡AÑADIDO!
+        'imagen_perfil_url': paciente.imagen_perfil_url,
         'imagen_1': paciente.imagen_1,
         'imagen_2': paciente.imagen_2,
         'direccion': paciente.direccion or 'N/A',
@@ -188,16 +198,19 @@ def mostrar_paciente(id):
     # 2. Preparar las evoluciones para la plantilla (ya ordenadas y con fechas formateadas)
     evoluciones_procesadas = []
     if paciente.evoluciones:
+        # Asegúrate de que la ordenación sea consistente.
+        # sorted(..., key=lambda evo: evo.fecha) es bueno si 'fecha' es un objeto date/datetime.
         evoluciones_ordenadas_py = sorted(paciente.evoluciones, key=lambda evo: evo.fecha, reverse=True)
         for evolucion_obj in evoluciones_ordenadas_py:
             evoluciones_procesadas.append({
                 'id': evolucion_obj.id,
                 'descripcion': evolucion_obj.descripcion,
                 # Formatear la fecha de evolución aquí en Python a una cadena
+                # Si la fecha se guarda correctamente como un objeto 'date', esto funcionará bien.
                 'fecha_formateada': evolucion_obj.fecha.strftime('%d de %B, %Y') if isinstance(evolucion_obj.fecha, (date, datetime)) else 'N/A'
             })
-    
-    # 3. Extraer el Public ID del dentigrama
+
+    # 3. Extraer el Public ID del dentigrama (se mantiene igual)
     full_public_id_trazos = None
     if paciente.dentigrama_canvas:
         try:
@@ -206,15 +219,12 @@ def mostrar_paciente(id):
             print(f"DENTIGRAMA ERROR (Backend): Error al extraer public ID de dentigrama_canvas: {e}")
             full_public_id_trazos = None
 
-    return render_template('mostrar_paciente.html', 
-                            paciente=paciente_data_para_template, # ¡Pasamos el DICCIONARIO FORMATEADO!
-                            evoluciones_ordenadas=evoluciones_procesadas, # ¡Lista de DICCIONARIOS FORMATEADOS!
+    return render_template('mostrar_paciente.html',
+                            paciente=paciente_data_para_template,
+                            evoluciones_ordenadas=evoluciones_procesadas,
                             full_public_id_trazos=full_public_id_trazos,
-                            current_full_path=request.full_path) # <--- ¡AÑADIDA ESTA LÍNEA!
+                            current_full_path=request.full_path)
 
-# clinica/routes/pacientes.py
-
-# ... tus imports existentes ...
 
 # === FUNCION crear_paciente ===
 @pacientes_bp.route('/crear', methods=['GET', 'POST'])
