@@ -1,5 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from datetime import datetime, date
 from flask_login import UserMixin 
 from werkzeug.security import generate_password_hash, check_password_hash
 from .extensions import db
@@ -68,7 +68,7 @@ class Evolucion(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     descripcion = db.Column(db.Text, nullable=False)
-    fecha = db.Column(db.DateTime, default=datetime.utcnow)
+    fecha = db.Column(db.DateTime, nullable=False) # <--- ¡CAMBIO CLAVE: ELIMINADO EL DEFAULT!
     paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=False) # ondelete='CASCADE' no tiene efecto con soft delete del padre
     
     # --- OPCIONAL: CAMPOS PARA SOFT DELETE EN EVOLUCION (si quieres que se puedan borrar evoluciones individualmente) ---
