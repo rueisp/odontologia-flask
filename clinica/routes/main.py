@@ -7,7 +7,8 @@ from flask_login import login_user, logout_user, login_required, current_user
 from ..models import db, Usuario, AuditLog # Asegúrate de que 'db' esté importado
 from ..extensions import db # Esta línea es redundante si ya importas db desde models, pero no hace daño
 from ..utils import get_index_panel_data
-
+from datetime import datetime, date # <--- ¡Asegúrate de que datetime está importado!
+import pytz # <--- ¡IMPORTAR pytz!
 # Creamos el Blueprint
 main_bp = Blueprint('main', __name__) 
 
@@ -16,29 +17,43 @@ main_bp = Blueprint('main', __name__)
 @main_bp.route("/")
 @login_required
 def index():
+    # --- MODIFICACIONES CLAVE PARA ZONA HORARIA ---
+    # 1. Define la zona horaria de tu clínica
+    local_timezone = pytz.timezone('America/Bogota') # <--- ¡CAMBIA ESTO SI TU ZONA HORARIA ES DIFERENTE!
+
+    # 2. Obtiene la fecha y hora actuales en esa zona horaria
+    now_in_local_tz = datetime.now(local_timezone)
+
+    # 3. Formatea la fecha localizada para mostrarla en el dashboard
+    fecha_actual_formateada = now_in_local_tz.strftime('%A, %d de %B de %Y')
+    fecha_actual_corta = now_in_local_tz.strftime('%d %B') # Para "Citas para Hoy (06 november)"
+    # --- FIN MODIFICACIONES CLAVE PARA ZONA HORARIA ---
+
     try:
-        panel_data = get_index_panel_data() 
+        # ¡IMPORTANTE! Pasamos la fecha localizada a la función que obtiene los datos
+        panel_data = get_index_panel_data(now_in_local_tz.date(), now_in_local_tz.time())
     except Exception as e:
         current_app.logger.error(f"Error al obtener datos del panel para el index: {e}", exc_info=True)
         panel_data = {}
         flash("Ocurrió un error al cargar los datos del panel.", "danger")
 
     try:
-
         if current_user.is_admin:
             # El admin ve las últimas 5 acciones de TODOS los usuarios
             ultimas_acciones = AuditLog.query.order_by(AuditLog.timestamp.desc()).limit(5).all()
         else:
             # Un usuario normal solo ve SUS últimas 5 acciones
             ultimas_acciones = AuditLog.query.filter_by(user_id=current_user.id).order_by(AuditLog.timestamp.desc()).limit(5).all()
-            
+
     except Exception as e:
         current_app.logger.error(f"Error al obtener las últimas acciones de auditoría: {e}", exc_info=True)
         ultimas_acciones = []
-        
+
     return render_template(
-        "index.html", 
-        ultimas_acciones=ultimas_acciones, 
+        "index.html",
+        ultimas_acciones=ultimas_acciones,
+        fecha_actual_formateada=fecha_actual_formateada, # <--- Pasamos la fecha formateada
+        fecha_actual_corta=fecha_actual_corta,           # <--- Pasamos la fecha corta
         **panel_data
     )
 

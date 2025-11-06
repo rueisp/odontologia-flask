@@ -3,16 +3,16 @@
 import os
 import calendar
 import locale
-from datetime import date, datetime, time 
-from sqlalchemy import func, case, or_ # Asegúrate de que 'or_' esté importado
+from datetime import date, datetime, time
+from sqlalchemy import func, case, or_, and_ # Asegúrate de que 'and_' esté importado
 from sqlalchemy.orm import joinedload
 from .extensions import db
-from .models import Paciente, Cita # Asegúrate de que Paciente y Cita estén importados
-from flask import current_app 
-from flask_login import current_user 
+from .models import Paciente, Cita
+from flask import current_app
+from flask_login import current_user
 
-import logging 
-logger = logging.getLogger(__name__) 
+import logging
+logger = logging.getLogger(__name__)
 
 nombres_meses = [calendar.month_name[i] for i in range(1, 13)]
 
@@ -40,73 +40,72 @@ def convertir_a_fecha(valor_str):
     try:
         return datetime.strptime(valor_str, '%Y-%m-%d').date()
     except (ValueError, TypeError):
-        return None        
+        return None
 
-# --- FUNCIÓN get_index_panel_data (¡MODIFICADA PARA OUTER JOIN!) ---
-def get_index_panel_data():
+# --- FUNCIÓN get_index_panel_data (¡AHORA RECIBE LA FECHA Y HORA LOCALIZADAS!) ---
+# Los parámetros today_date y current_time DEBEN ser pasados desde main.py
+def get_index_panel_data(today_date: date, current_time: time): # <--- ¡Modificado para aceptar parámetros!
     """Función para obtener los datos necesarios para el panel de inicio."""
-    hoy = date.today()
+    # Eliminado: hoy = date.today()
+    # Eliminado: ahora = datetime.now()
+    # Ahora usamos today_date y current_time que ya vienen localizados
+
     datos_panel = {}
-    
-    # 1. Fecha actual formateada
-    fecha_formateada_buffer = None 
+
+    # 1. Fecha actual formateada (¡ahora usa today_date!)
+    fecha_formateada_buffer = None
     locale_original_time = locale.getlocale(locale.LC_TIME)
     try:
-        # Simplificación de locales, asumiendo que 'es_ES.UTF-8' funciona o se usa el defecto
-        locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8') 
-        fecha_formateada_buffer = hoy.strftime("%A, %d de %B de %Y").capitalize()
+        locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
+        fecha_formateada_buffer = today_date.strftime("%A, %d de %B de %Y").capitalize() # <--- Usar today_date
     except locale.Error:
         logger.warning("Locale 'es_ES.UTF-8' no disponible. Usando locale por defecto para formatear fecha.")
-        locale.setlocale(locale.LC_TIME, '') 
-        fecha_formateada_buffer = hoy.strftime("%A, %d de %B de %Y").capitalize()
+        locale.setlocale(locale.LC_TIME, '')
+        fecha_formateada_buffer = today_date.strftime("%A, %d de %B de %Y").capitalize() # <--- Usar today_date
     finally:
-        # Siempre restaurar el locale original
         if locale_original_time != (None, None):
             try:
                 locale.setlocale(locale.LC_TIME, locale_original_time)
             except locale.Error:
                 logger.warning(f"Advertencia: No se pudo restaurar el locale original {locale_original_time} para LC_TIME.")
-    datos_panel['fecha_actual_formateada'] = fecha_formateada_buffer
+    # Ya no pasamos fecha_actual_formateada desde aquí, ahora se formatea en main.py y se pasa al template.
+    # datos_panel['fecha_actual_formateada'] = fecha_formateada_buffer # <-- Esta línea se elimina o no se usa, porque main.py ya lo hace.
+
 
     # --- CONSULTA BASE PARA CITAS DEL DASHBOARD ---
-    # Usamos LEFT OUTER JOIN para incluir citas que NO tienen un paciente asociado (paciente_id es NULL)
     base_query_citas = Cita.query.outerjoin(Paciente, Cita.paciente_id == Paciente.id).filter(
-        Cita.is_deleted == False # Siempre filtrar citas no borradas
+        Cita.is_deleted == False
     )
 
     if hasattr(current_user, 'is_admin') and not current_user.is_admin:
-        # Si no es admin, solo mostrar citas donde:
-        # 1. El paciente asociado le pertenece (Paciente.odontologo_id == current_user.id)
-        # 2. O la cita NO tiene paciente_id (Cita.paciente_id IS NULL)
         base_query_citas = base_query_citas.filter(
             or_(
                 Paciente.odontologo_id == current_user.id,
-                Cita.paciente_id == None 
+                Cita.paciente_id == None
             )
         )
-    # Nota: Si es admin, no necesitamos filtros adicionales sobre Paciente.odontologo_id o Paciente.is_deleted
-    # porque el outerjoin y Cita.is_deleted == False ya los incluyen.
 
-    
     # 2. Estadísticas: Citas de hoy
-    # Usamos la consulta base y filtramos por fecha
-    citas_hoy_count = base_query_citas.filter(Cita.fecha == hoy).count() # Usar .count() directamente en el query
+    # Usar today_date en lugar de hoy
+    citas_hoy_count = base_query_citas.filter(Cita.fecha == today_date).count() # <--- Usar today_date
     datos_panel['estadisticas'] = {'citas_hoy': citas_hoy_count or 0}
 
     # 3. Próxima cita
-    ahora = datetime.now()
+    # Usar today_date y current_time
     proxima_cita_obj = base_query_citas.filter(
-        Cita.fecha >= hoy,
-        case((Cita.fecha == hoy, Cita.hora > ahora.time()), else_=(Cita.fecha > hoy))
+        or_(
+            Cita.fecha > today_date, # Citas de días futuros
+            and_(Cita.fecha == today_date, Cita.hora >= current_time) # <--- Citas de hoy que aún no han pasado, usando current_time
+        )
     ).options(joinedload(Cita.paciente))\
      .order_by(Cita.fecha, Cita.hora)\
      .first()
-    
+
     proxima_cita_data = None
     if proxima_cita_obj:
         fecha_cita_str_buffer = None
         try:
-            locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8') 
+            locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
             fecha_cita_str_buffer = proxima_cita_obj.fecha.strftime("%d %b, %Y")
         except locale.Error:
             fecha_cita_str_buffer = proxima_cita_obj.fecha.strftime("%d %b, %Y")
@@ -115,11 +114,10 @@ def get_index_panel_data():
                 try:
                     locale.setlocale(locale.LC_TIME, locale_original_time)
                 except locale.Error:
-                    pass 
-        
+                    pass
+
         hora_cita_str = proxima_cita_obj.hora.strftime("%I:%M %p")
-        
-        # Obtener nombre del paciente para la próxima cita
+
         paciente_nombre_proxima_cita = "Paciente sin registrar"
         if proxima_cita_obj.paciente and not proxima_cita_obj.paciente.is_deleted:
             paciente_nombre_proxima_cita = f"{proxima_cita_obj.paciente.nombres} {proxima_cita_obj.paciente.apellidos}"
@@ -135,27 +133,29 @@ def get_index_panel_data():
         }
     datos_panel['proxima_cita'] = proxima_cita_data
 
-    # 4. Fecha actual corta
+    # 4. Fecha actual corta (¡ahora usa today_date!)
     fecha_corta_buffer = None
     try:
-        locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8') 
-        fecha_corta_buffer = hoy.strftime("%d de %B").capitalize()
+        locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
+        fecha_corta_buffer = today_date.strftime("%d de %B").capitalize() # <--- Usar today_date
     except locale.Error:
-        fecha_corta_buffer = hoy.strftime("%d %B").capitalize() 
+        fecha_corta_buffer = today_date.strftime("%d %B").capitalize() # <--- Usar today_date
     finally:
         if locale_original_time != (None, None):
             try:
                 locale.setlocale(locale.LC_TIME, locale_original_time)
             except locale.Error:
-                pass 
+                pass
     datos_panel['fecha_actual_corta'] = fecha_corta_buffer
 
+
     # 5. Lista de citas de hoy
-    citas_de_hoy_lista_query = base_query_citas.filter(Cita.fecha == hoy)
+    # Usar today_date en lugar de hoy
+    citas_de_hoy_lista_query = base_query_citas.filter(Cita.fecha == today_date) # <--- Usar today_date
     citas_de_hoy_lista = citas_de_hoy_lista_query.options(joinedload(Cita.paciente))\
                                                 .order_by(Cita.hora)\
                                                 .all()
-    
+
     citas_hoy_procesadas = []
     for cita_item in citas_de_hoy_lista:
         paciente_nombre_completo = "Paciente sin registrar"
@@ -168,14 +168,14 @@ def get_index_panel_data():
 
         citas_hoy_procesadas.append({
             'id': cita_item.id,
-            'hora_formateada': cita_item.hora.strftime("%I:%M %p"), 
+            'hora_formateada': cita_item.hora.strftime("%I:%M %p"),
             'paciente_nombre_completo': paciente_nombre_completo,
             'motivo': cita_item.motivo,
             'doctor': cita_item.doctor,
             'estado': cita_item.estado,
         })
     datos_panel['citas_del_dia'] = citas_hoy_procesadas
-    
+
     return datos_panel
 
 
