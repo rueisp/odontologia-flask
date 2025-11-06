@@ -24,9 +24,15 @@ def index():
     # 2. Obtiene la fecha y hora actuales en esa zona horaria
     now_in_local_tz = datetime.now(local_timezone)
 
+    # --- AÑADE ESTAS LÍNEAS DE DEBUG AQUÍ ---
+    print(f"DEBUG_DASHBOARD: Hora UTC en el servidor (main.py): {datetime.utcnow()}")
+    print(f"DEBUG_DASHBOARD: Hora localizada (America/Bogota) en main.py: {now_in_local_tz}")
+    print(f"DEBUG_DASHBOARD: Dia Hoy Local en main.py: {now_in_local_tz.day}/{now_in_local_tz.month}/{now_in_local_tz.year}")
+    # --- FIN DE LÍNEAS DE DEBUG ---
+
     # 3. Formatea la fecha localizada para mostrarla en el dashboard
     fecha_actual_formateada = now_in_local_tz.strftime('%A, %d de %B de %Y')
-    fecha_actual_corta = now_in_local_tz.strftime('%d %B') # Para "Citas para Hoy (06 november)"
+    fecha_actual_corta = now_in_local_tz.strftime('%d %B')
     # --- FIN MODIFICACIONES CLAVE PARA ZONA HORARIA ---
 
     try:
@@ -39,10 +45,8 @@ def index():
 
     try:
         if current_user.is_admin:
-            # El admin ve las últimas 5 acciones de TODOS los usuarios
             ultimas_acciones = AuditLog.query.order_by(AuditLog.timestamp.desc()).limit(5).all()
         else:
-            # Un usuario normal solo ve SUS últimas 5 acciones
             ultimas_acciones = AuditLog.query.filter_by(user_id=current_user.id).order_by(AuditLog.timestamp.desc()).limit(5).all()
 
     except Exception as e:
@@ -52,11 +56,10 @@ def index():
     return render_template(
         "index.html",
         ultimas_acciones=ultimas_acciones,
-        fecha_actual_formateada=fecha_actual_formateada, # <--- Pasamos la fecha formateada
-        fecha_actual_corta=fecha_actual_corta,           # <--- Pasamos la fecha corta
+        fecha_actual_formateada=fecha_actual_formateada,
+        fecha_actual_corta=fecha_actual_corta,
         **panel_data
     )
-
 
 @main_bp.route('/login', methods=['GET', 'POST'])
 def login():
