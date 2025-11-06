@@ -95,6 +95,11 @@ def mostrar_calendario():
     # Obtiene la fecha y hora actuales en esa zona horaria
     now_in_local_tz = datetime.now(local_timezone)
 
+    print(f"DEBUG_CALENDARIO: Hora UTC en el servidor: {datetime.utcnow()}")
+    print(f"DEBUG_CALENDARIO: Hora localizada (America/Bogota): {now_in_local_tz}")
+    print(f"DEBUG_CALENDARIO: Dia Hoy Local: {now_in_local_tz.day}/{now_in_local_tz.month}/{now_in_local_tz.year}")
+
+    
     # Usa la fecha localizada para determinar los valores predeterminados de anio y mes
     anio_actual = request.args.get('anio', default=now_in_local_tz.year, type=int)
     mes_actual = request.args.get('mes', default=now_in_local_tz.month, type=int)
