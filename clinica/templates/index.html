@@ -3,417 +3,220 @@
 {% block title %}Inicio - Clínica{% endblock %}
 
 {% block head_extra %}
-    {# Estilos específicos para el log de actividad, puedes moverlos a tu CSS principal si prefieres #}
+    {# Estilos específicos para el log de actividad (tu código original) #}
     <style>
-        .action-type-badge {
-            font-size: 0.75em; /* 12px */
-            padding: 0.25em 0.6em; /* Ajusta el padding para que sea más rectangular */
-            border-radius: 0.375rem; /* rounded-md de Tailwind */
-            color: white;
-            margin-right: 0.5em;
-            line-height: 1; /* Asegura que el texto no haga el badge muy alto */
-            display: inline-block; /* Para que el margin-right funcione bien */
-        }
-        .badge-delete { background-color: #EF4444; } /* Tailwind red-500 */
-        .badge-edit { background-color: #F59E0B; color: #1F2937 !important; } /* Tailwind amber-500, texto oscuro */
-        .badge-create { background-color: #10B981; } /* Tailwind emerald-500 */
-        .badge-default { background-color: #6B7280; } /* Tailwind gray-500 */
-
-        /* Estilo para la cabecera de la tarjeta de actividad */
-        .activity-log-card-header {
-            background-color: #000000; /* Tailwind gray-800 o similar a tu bg-black */
-            color: white;
-        }
+        .action-type-badge { font-size: 0.75em; padding: 0.25em 0.6em; border-radius: 0.375rem; color: white; margin-right: 0.5em; line-height: 1; display: inline-block; }
+        .badge-delete { background-color: #EF4444; }
+        .badge-edit { background-color: #F59E0B; color: #1F2937 !important; }
+        .badge-create { background-color: #10B981; }
+        .badge-default { background-color: #6B7280; }
+        .activity-log-card-header, .facturas-card-header { background-color: #000000; color: white; } /* Añadida clase para Facturas */
     </style>
 {% endblock %}
 
 {% block content %}
 
-<!-- Contenedor principal -->
-<div class="w-full max-w-screen overflow-x-hidden">
-    <!-- Contenedor principal del dashboard -->
-    <div class="dashboard flex flex-col lg:flex-row gap-4 p-4 lg:p-10 mx-auto w-full">
+<!-- =================================================================== -->
+<!-- ▼▼▼ 1. NUEVA BARRA SUPERIOR MÓVIL (AÑADIDA) ▼▼▼ -->
+<!-- =================================================================== -->
+<!-- Esta barra solo es visible en pantallas pequeñas (lg:hidden) y contiene el botón de hamburguesa -->
+<header class="bg-white shadow-sm p-4 flex justify-between items-center lg:hidden sticky top-0 z-30">
+    <a href="{{ url_for('main.index') }}" class="text-xl font-bold text-gray-800">Historia Clínica</a>
+    <button id="hamburger-btn" class="p-2 -mr-2">
+        <i data-lucide="menu" class="w-6 h-6 text-gray-700"></i>
+    </button>
+</header>
+
+<!-- Contenedor principal del dashboard (Tu estructura original) -->
+<div class="dashboard flex flex-col lg:flex-row gap-4 p-4 lg:p-10 mx-auto w-full">
+    
+    <!-- =================================================================== -->
+    <!-- ▼▼▼ 2. PANEL IZQUIERDO (MODIFICADO) ▼▼▼ -->
+    <!-- =================================================================== -->
+    <!-- Se le han añadido clases para el comportamiento móvil y un ID 'main-sidebar' -->
+    <div id="main-sidebar" class="sidebar p-4 bg-white w-72 fixed inset-y-0 left-0 transform -translate-x-full transition-transform duration-300 ease-in-out z-50 lg:relative lg:translate-x-0 lg:w-80 lg:flex-shrink-0">
         
-        <!-- Panel izquierdo: menú (CÓDIGO MODIFICADO Y MEJORADO) -->
-        <div class="sidebar p-4 lg:p-4 hidden lg:block lg:w-80 lg:flex-shrink-0">
-            
-            <!-- Título dinámico -->
-            <div class="bg-black text-white p-4 rounded-3xl shadow-md mb-6 text-center">
-                <h2 class="text-xl font-bold text-white">Historia Clínica</h2>
-                {# Mostramos el nombre completo del usuario si lo tiene, si no, su username #}
-                <p class="text-lg mt-2">
-                    {% if current_user.nombre_completo and current_user.nombre_completo.strip() %}
-                        {{ current_user.nombre_completo }}
-                    {% else %}
-                        {{ current_user.username }}
-                    {% endif %}
-                </p>
-            </div>
-
-            <!-- Grupo de Enlaces de Navegación (para aplicar espaciado consistente) -->
-            <div class="space-y-2"> {# <-- NUEVO: Añadimos un contenedor con espacio vertical #}
-
-                <a href="{{ url_for('pacientes.lista_pacientes') }}" class="block p-3 rounded-xl text-gray-700 hover:bg-gray-100 hover:text-black transition-colors duration-200 flex items-center">
-                    <i data-lucide="users" class="w-5 h-5 text-black inline-block mr-3"></i> Pacientes
-                </a>
-                
-                {# Enlace para 'Cita' - ahora como un elemento de menú consistente #}
-                <a href="{{ url_for('calendario.registrar_cita', paciente_id_param=None) }}" class="block p-3 rounded-xl text-gray-700 hover:bg-gray-100 hover:text-black transition-colors duration-200 flex items-center">
-                    <i data-lucide="calendar-plus" class="w-5 h-5 text-black inline-block mr-3"></i> Cita
-                </a>
-                
-                <a href="{{ url_for('calendario.mostrar_calendario') }}" class="block p-3 rounded-xl text-gray-700 hover:bg-gray-100 hover:text-black transition-colors duration-200 flex items-center">
-                    <i data-lucide="calendar-days" class="w-5 h-5 text-black inline-block mr-3"></i> Calendario
-                </a>
-                
-                <a href="{{ url_for('papelera.ver_papelera') }}" class="block p-3 rounded-xl text-gray-700 hover:bg-gray-100 hover:text-black transition-colors duration-200 flex items-center">
-                    <i data-lucide="trash-2" class="w-5 h-5 text-black inline-block mr-3"></i> Papelera
-                </a>
-            </div> {# <-- FIN: Contenedor con espacio vertical #}
-            
-            <hr class="my-4"> <!-- Separador visual -->
-
-            <!-- ▼▼▼ INICIO DE LOS NUEVOS ENLACES DE CUENTA ▼▼▼ -->
-            <div class="space-y-2"> {# <-- NUEVO: Otro contenedor para este grupo #}
-                <a href="{{ url_for('main.perfil') }}" class="block p-3 rounded-xl text-gray-700 hover:bg-gray-100 hover:text-black transition-colors duration-200 flex items-center">
-                    <i data-lucide="user-cog" class="w-5 h-5 text-black inline-block mr-3"></i> Mi Perfil
-                </a>
-                <a href="{{ url_for('main.logout') }}" class="block p-3 rounded-xl text-gray-700 hover:bg-gray-100 hover:text-black transition-colors duration-200 flex items-center">
-                    <i data-lucide="log-out" class="w-5 h-5 text-black inline-block mr-3"></i> Salir
-                </a>
-            </div> {# <-- FIN: Contenedor con espacio vertical #}
-            <!-- ▲▲▲ FIN DE LOS NUEVOS ENLACES ▲▲▲ -->
+        <!-- Título dinámico (tu código original) -->
+        <div class="bg-black text-white p-4 rounded-3xl shadow-md mb-6 text-center">
+            <h2 class="text-xl font-bold text-white">Historia Clínica</h2>
+            <p class="text-lg mt-2">
+                {% if current_user.nombre_completo and current_user.nombre_completo.strip() %}{{ current_user.nombre_completo }}{% else %}{{ current_user.username }}{% endif %}
+            </p>
         </div>
-        <!-- Panel central (middle-panel) -->
-        <div class="middle-panel bg-white px-2 py-4 sm:px-4 lg:p-6 rounded-xl shadow-lg mx-auto w-full lg:max-w-6xl">
-            <!-- Barra superior (Búsqueda y botones de acción) (TU CÓDIGO ACTUAL) -->
-            <div class="w-full mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div class="flex flex-grow gap-2 w-full sm:w-auto">
-                    <div class="relative w-full">
-                        <input type="text" id="busquedaPaciente" placeholder="Buscar paciente..."
-                               class="w-full border border-gray-300 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                               autocomplete="off"/>
-                        <div id="sugerencias" class="absolute z-50 w-full bg-white border border-gray-200 rounded-xl shadow-md mt-1 hidden"></div>
-                    </div>
-                    <button id="btnBuscarPaciente" class="bg-black text-white px-3 py-2 rounded-xl hover:bg-gray-900 transition flex items-center">
-                        <i data-lucide="search" class="w-4 h-4"></i>
-                    </button>
+
+        <!-- Grupo de Enlaces (tu código original, con Reportes y Inicio añadidos) -->
+        <div class="space-y-2">
+             <a href="{{ url_for('main.index') }}" class="block p-3 rounded-xl text-gray-700 hover:bg-gray-100 flex items-center"><i data-lucide="home" class="w-5 h-5 mr-3"></i> Inicio</a>
+            <a href="{{ url_for('pacientes.lista_pacientes') }}" class="block p-3 rounded-xl text-gray-700 hover:bg-gray-100 hover:text-black transition-colors duration-200 flex items-center"><i data-lucide="users" class="w-5 h-5 text-black inline-block mr-3"></i> Pacientes</a>
+            <a href="{{ url_for('calendario.registrar_cita', paciente_id_param=None) }}" class="block p-3 rounded-xl text-gray-700 hover:bg-gray-100 hover:text-black transition-colors duration-200 flex items-center"><i data-lucide="calendar-plus" class="w-5 h-5 text-black inline-block mr-3"></i> Cita</a>
+            <a href="{{ url_for('calendario.mostrar_calendario') }}" class="block p-3 rounded-xl text-gray-700 hover:bg-gray-100 hover:text-black transition-colors duration-200 flex items-center"><i data-lucide="calendar-days" class="w-5 h-5 text-black inline-block mr-3"></i> Calendario</a>
+            <a href="{{ url_for('reportes.vista_reportes') }}" class="block p-3 rounded-xl text-gray-700 hover:bg-gray-100 flex items-center"><i data-lucide="file-text" class="w-5 h-5 mr-3"></i> Reportes</a>
+            <a href="{{ url_for('papelera.ver_papelera') }}" class="block p-3 rounded-xl text-gray-700 hover:bg-gray-100 hover:text-black transition-colors duration-200 flex items-center"><i data-lucide="trash-2" class="w-5 h-5 text-black inline-block mr-3"></i> Papelera</a>
+        </div>
+        <hr class="my-4">
+        <div class="space-y-2">
+            <a href="{{ url_for('main.perfil') }}" class="block p-3 rounded-xl text-gray-700 hover:bg-gray-100 hover:text-black transition-colors duration-200 flex items-center"><i data-lucide="user-cog" class="w-5 h-5 text-black inline-block mr-3"></i> Mi Perfil</a>
+            <a href="{{ url_for('main.logout') }}" class="block p-3 rounded-xl text-gray-700 hover:bg-gray-100 hover:text-black transition-colors duration-200 flex items-center"><i data-lucide="log-out" class="w-5 h-5 text-black inline-block mr-3"></i> Salir</a>
+        </div>
+    </div>
+    
+    <!-- Panel central (middle-panel) - TU CÓDIGO ORIGINAL SIN NINGÚN CAMBIO -->
+    <div class="middle-panel bg-white px-2 py-4 sm:px-4 lg:p-6 rounded-xl shadow-lg mx-auto w-full lg:max-w-6xl">
+        <div class="w-full mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex flex-grow gap-2 w-full sm:w-auto">
+                <div class="relative w-full">
+                    <input type="text" id="busquedaPaciente" placeholder="Buscar paciente..." class="w-full border border-gray-300 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" autocomplete="off"/>
+                    <div id="sugerencias" class="absolute z-50 w-full bg-white border border-gray-200 rounded-xl shadow-md mt-1 hidden"></div>
                 </div>
-                <div class="flex gap-2 shrink-0 w-full sm:w-auto justify-center">
-                    <a href="{{ url_for('pacientes.crear_paciente') }}" class="inline-block w-1/2 sm:w-auto">
-                        <button id="btnNuevoPaciente"
-                                class="w-full sm:w-[140px] bg-gray-900 text-white px-4 py-2 rounded-xl hover:bg-blue-800 transition flex items-center justify-center gap-1 whitespace-nowrap text-sm">
-                            <i data-lucide="user-plus" class="w-4 h-4"></i><span>Nuevo</span>
-                        </button>
-                    </a>
-                    {# CAMBIO CLAVE AQUÍ: AHORA LLAMA A LA NUEVA RUTA SIN PACIENTE #}
-                    <a href="{{ url_for('calendario.registrar_cita', paciente_id_param=None) }}" class="inline-block w-1/2 sm:w-auto">
-                        <button id="btnNuevaCita"
-                                class="w-full sm:w-[140px] bg-gray-700 text-white px-4 py-2 rounded-xl hover:bg-gray-600 transition flex items-center justify-center gap-1 whitespace-nowrap text-sm">
-                            <i data-lucide="calendar-plus" class="w-4 h-4"></i><span>Cita</span>
-                        </button>
-                    </a>
-                    <a href="{{ url_for('calendario.mostrar_calendario') }}" class="inline-block w-1/3 sm:w-auto"> {# Ajustado w-1/3 para móvil #}
-                        <button id="btnVerCalendario" {# Puedes darle un ID si lo necesitas para JS #}
-                                class="w-full sm:w-auto bg-blue-700 text-white px-4 py-2 rounded-xl hover:bg-teal-700 transition flex items-center justify-center gap-1 whitespace-nowrap text-sm">
-                            {# He usado bg-teal-600 como ejemplo, elige el color que prefieras (ej. bg-green-600, bg-purple-600) #}
-                            {# sm:w-auto o un ancho fijo como sm:w-[120px] o sm:w-[140px] si quieres que todos tengan el mismo ancho en pantallas sm y mayores #}
-                            <i data-lucide="calendar-days" class="w-4 h-4"></i><span>Calendario</span>
-                        </button>
-                    </a>
-                </div>
+                <button id="btnBuscarPaciente" class="bg-black text-white px-3 py-2 rounded-xl hover:bg-gray-900 transition flex items-center"><i data-lucide="search" class="w-4 h-4"></i></button>
             </div>
-
-            <!-- Flash message (TU CÓDIGO ACTUAL) -->
-            {% with messages = get_flashed_messages(with_categories=true) %} {# Añadido with_categories=true para Bootstrap Alerts si los usas #}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="p-4 mb-4 text-sm rounded-lg 
-                            {% if category == 'success' %} bg-green-100 text-green-700 
-                            {% elif category == 'danger' or category == 'error' %} bg-red-100 text-red-700 
-                            {% elif category == 'warning' %} bg-yellow-100 text-yellow-700 
-                            {% else %} bg-blue-100 text-blue-700 {% endif %}" role="alert">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-
-            <!-- ****** INICIO NUEVO DISEÑO DEL PANEL CENTRAL ****** (TU CÓDIGO ACTUAL) -->
-            <div class="space-y-6">
-                <!-- Saludo -->
-                <!-- ****** INICIO DEL NUEVO DISEÑO CORREGIDO ****** -->
-                <div class="greeting-header mb-6">
-                    <h1 class="text-2xl sm:text-3xl font-semibold text-gray-800">
-                        Hola,
-                        {# Primero, verificamos si el usuario tiene un nombre completo y no está vacío #}
-                        {% if current_user.nombre_completo and current_user.nombre_completo.strip() %}
-                            {{ current_user.nombre_completo }}
-                        {# Si no tiene nombre completo, mostramos su nombre de usuario como alternativa #}
-                        {% else %}
-                            {{ current_user.username }}
-                        {% endif %}!
-                    </h1>
-                    {% if fecha_actual_formateada %}
-                    <p class="text-gray-500 text-sm">
-                        Hoy es {{ fecha_actual_formateada }}
-                    </p>
-                    {% endif %}
-                </div>
-                <!-- ****** FIN DEL NUEVO DISEÑO CORREGIDO ****** -->
-                <!-- Tarjetas de información de citas (TU CÓDIGO ACTUAL) -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 mb-8">
-                    <div class="bg-black text-white p-8 lg:p-8 rounded-3xl flex justify-between items-center shadow-lg">
-                        <div>
-                            <div class="text-sm text-gray-300 mb-1">Hoy tienes</div>
-                            <div class="text-3xl lg:text-4xl font-bold">
-                                {{ estadisticas.citas_hoy if estadisticas else '0' }} cita{{ 's' if estadisticas and estadisticas.citas_hoy != 1 else '' }}
-                            </div>
-                        </div>
-                        <div class="bg-gray-800 p-3 rounded-full">
-                            <i data-lucide="calendar-check" class="w-6 h-6 text-white"></i>
-                        </div>
-                    </div>
-                    <div class="bg-gray-50 border border-gray-200 p-5 lg:p-8 rounded-3xl flex justify-between items-center shadow-none">
-                        <div>
-                            <div class="text-sm text-gray-500 mb-1">Tu próxima cita:</div>
-                            {% if proxima_cita %}
-                                <div class="text-lg font-semibold text-gray-700">{{ proxima_cita.fecha_formateada }}</div>
-                                <div class="text-md text-gray-600">{{ proxima_cita.paciente_nombre }}</div>
-                            {% else %}
-                                <div class="text-lg font-semibold text-gray-700">No hay citas programadas</div>
-                            {% endif %}
-                        </div>
-                        <div class="bg-gray-200 p-3 rounded-full">
-                            <i data-lucide="user-check" class="w-6 h-6 text-gray-600"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Sección Citas de Hoy (TU CÓDIGO ACTUAL) -->
-                {% if citas_del_dia is defined and citas_del_dia is not none %} {# Asegurarse que la variable exista #}
-                <div class="today-appointments-section bg-white p-4 sm:p-6 rounded-xl shadow-lg mb-6">
-                    <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center">
-                        <i data-lucide="list-checks" class="w-5 h-5 mr-2 text-gray-600"></i>
-                        Citas para Hoy {% if fecha_actual_corta %}({{ fecha_actual_corta }}){% endif %}
-                    </h3>
-                    <div id="lista-citas-hoy" class="space-y-3">
-                        {% if citas_del_dia %}
-                            {% for cita_info in citas_del_dia %}
-                            <div class="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow duration-200 appointment-card" data-cita-id="{{ cita_info.id }}" data-estado="{{ cita_info.estado | default('pendiente') }}">
-                                <div class="flex justify-between items-start gap-3">
-                                    <div class="flex-grow">
-                                        <p class="font-semibold text-gray-800 text-sm">{{ cita_info.paciente_nombre_completo }}</p>
-                                        <p class="text-xs text-gray-600">Motivo: {{ cita_info.motivo }}</p>
-                                        <p class="text-xs text-gray-500 mt-0.5">Dr(a): {{ cita_info.doctor if cita_info.doctor else 'N/A' }}</p>
-                                    </div>
-                                    <div class="text-right flex-shrink-0">
-                                        <span class="text-sm font-medium text-blue-600 block">{{ cita_info.hora_formateada }}</span>
-                                        <span class="text-xs px-2 py-0.5 rounded-full mt-1 inline-block
-                                            {% if cita_info.estado == 'completada' %} bg-green-100 text-green-700 
-                                            {% elif cita_info.estado == 'cancelada' %} bg-red-100 text-red-700 
-                                            {% elif cita_info.estado == 'confirmada' %} bg-sky-100 text-sky-700
-                                            {% elif cita_info.estado == 'pendiente' or not cita_info.estado %} bg-yellow-100 text-yellow-700 
-                                            {% else %} bg-gray-100 text-gray-700 {% endif %}">
-                                            {{ cita_info.estado | capitalize if cita_info.estado else 'Pendiente' }}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div class="mt-2 pt-2 border-t border-gray-100 flex justify-between items-center">
-                                    <a href="{{ url_for('calendario.editar_cita', cita_id=cita_info.id, next=request.full_path) }}" 
-                                       class="text-xs text-blue-500 hover:text-blue-700 hover:underline">
-                                       Ver/Editar Cita
-                                    </a>
-                                    <div class="appointment-actions space-x-1.5">
-                                        {% if cita_info.estado != 'completada' %}
-                                        <button class="btn-cambiar-estado text-xs bg-green-500 hover:bg-green-600 text-white py-0.5 px-1.5 rounded-md" data-nuevo-estado="completada">Completar</button>
-                                        {% endif %}
-                                        {% if cita_info.estado != 'pendiente' and cita_info.estado != 'cancelada' %}
-                                        <button class="btn-cambiar-estado text-xs bg-yellow-500 hover:bg-yellow-600 text-white py-0.5 px-1.5 rounded-md" data-nuevo-estado="pendiente">Pendiente</button>
-                                        {% endif %}
-                                        {% if cita_info.estado != 'cancelada' %}
-                                        <button class="btn-cambiar-estado text-xs bg-red-500 hover:bg-red-600 text-white py-0.5 px-1.5 rounded-md" data-nuevo-estado="cancelada">Cancelar</button>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="text-center py-6 text-gray-500">
-                                <i data-lucide="calendar-x" class="w-12 h-12 text-gray-300 mx-auto mb-2"></i>
-                                <p>No hay citas programadas para hoy.</p>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endif %}
+            <div class="flex gap-2 shrink-0 w-full sm:w-auto justify-center">
+                <a href="{{ url_for('pacientes.crear_paciente') }}" class="inline-block w-1/2 sm:w-auto"><button id="btnNuevoPaciente" class="w-full sm:w-[140px] bg-gray-900 text-white px-4 py-2 rounded-xl hover:bg-blue-800 transition flex items-center justify-center gap-1 whitespace-nowrap text-sm"><i data-lucide="user-plus" class="w-4 h-4"></i><span>Nuevo</span></button></a>
+                <a href="{{ url_for('calendario.registrar_cita', paciente_id_param=None) }}" class="inline-block w-1/2 sm:w-auto"><button id="btnNuevaCita" class="w-full sm:w-[140px] bg-gray-700 text-white px-4 py-2 rounded-xl hover:bg-gray-600 transition flex items-center justify-center gap-1 whitespace-nowrap text-sm"><i data-lucide="calendar-plus" class="w-4 h-4"></i><span>Cita</span></button></a>
+                <a href="{{ url_for('calendario.mostrar_calendario') }}" class="inline-block w-1/3 sm:w-auto"><button id="btnVerCalendario" class="w-full sm:w-auto bg-blue-700 text-white px-4 py-2 rounded-xl hover:bg-teal-700 transition flex items-center justify-center gap-1 whitespace-nowrap text-sm"><i data-lucide="calendar-days" class="w-4 h-4"></i><span>Calendario</span></button></a>
             </div>
-            <!-- ****** FIN NUEVO DISEÑO DEL PANEL CENTRAL ****** -->
+        </div>
+        {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for category, message in messages %}<div class="p-4 mb-4 text-sm rounded-lg {% if category == 'success' %} bg-green-100 text-green-700 {% elif category == 'danger' or category == 'error' %} bg-red-100 text-red-700 {% elif category == 'warning' %} bg-yellow-100 text-yellow-700 {% else %} bg-blue-100 text-blue-700 {% endif %}" role="alert">{{ message }}</div>{% endfor %}{% endif %}{% endwith %}
+        <div class="space-y-6">
+            <div class="greeting-header mb-6"><h1 class="text-2xl sm:text-3xl font-semibold text-gray-800">Hola, {% if current_user.nombre_completo and current_user.nombre_completo.strip() %}{{ current_user.nombre_completo }}{% else %}{{ current_user.username }}{% endif %}!</h1>{% if fecha_actual_formateada %}<p class="text-gray-500 text-sm">Hoy es {{ fecha_actual_formateada }}</p>{% endif %}</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 mb-8">
+                <div class="bg-black text-white p-8 lg:p-8 rounded-3xl flex justify-between items-center shadow-lg"><div><div class="text-sm text-gray-300 mb-1">Hoy tienes</div><div class="text-3xl lg:text-4xl font-bold">{{ estadisticas.citas_hoy if estadisticas else '0' }} cita{{ 's' if estadisticas and estadisticas.citas_hoy != 1 else '' }}</div></div><div class="bg-gray-800 p-3 rounded-full"><i data-lucide="calendar-check" class="w-6 h-6 text-white"></i></div></div>
+                <div class="bg-gray-50 border border-gray-200 p-5 lg:p-8 rounded-3xl flex justify-between items-center shadow-none"><div><div class="text-sm text-gray-500 mb-1">Tu próxima cita:</div>{% if proxima_cita %}<div class="text-lg font-semibold text-gray-700">{{ proxima_cita.fecha_formateada }}</div><div class="text-md text-gray-600">{{ proxima_cita.paciente_nombre }}</div>{% else %}<div class="text-lg font-semibold text-gray-700">No hay citas programadas</div>{% endif %}</div><div class="bg-gray-200 p-3 rounded-full"><i data-lucide="user-check" class="w-6 h-6 text-gray-600"></i></div></div>
+            </div>
+            {% if citas_del_dia is defined and citas_del_dia is not none %}<div class="today-appointments-section bg-white p-4 sm:p-6 rounded-xl shadow-lg mb-6"><h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center"><i data-lucide="list-checks" class="w-5 h-5 mr-2 text-gray-600"></i>Citas para Hoy {% if fecha_actual_corta %}({{ fecha_actual_corta }}){% endif %}</h3><div id="lista-citas-hoy" class="space-y-3">{% if citas_del_dia %}{% for cita_info in citas_del_dia %}<div class="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow duration-200 appointment-card" data-cita-id="{{ cita_info.id }}" data-estado="{{ cita_info.estado | default('pendiente') }}"><div class="flex justify-between items-start gap-3"><div class="flex-grow"><p class="font-semibold text-gray-800 text-sm">{{ cita_info.paciente_nombre_completo }}</p><p class="text-xs text-gray-600">Motivo: {{ cita_info.motivo }}</p><p class="text-xs text-gray-500 mt-0.5">Dr(a): {{ cita_info.doctor if cita_info.doctor else 'N/A' }}</p></div><div class="text-right flex-shrink-0"><span class="text-sm font-medium text-blue-600 block">{{ cita_info.hora_formateada }}</span><span class="text-xs px-2 py-0.5 rounded-full mt-1 inline-block {% if cita_info.estado == 'completada' %} bg-green-100 text-green-700 {% elif cita_info.estado == 'cancelada' %} bg-red-100 text-red-700 {% elif cita_info.estado == 'confirmada' %} bg-sky-100 text-sky-700 {% elif cita_info.estado == 'pendiente' or not cita_info.estado %} bg-yellow-100 text-yellow-700 {% else %} bg-gray-100 text-gray-700 {% endif %}">{{ cita_info.estado | capitalize if cita_info.estado else 'Pendiente' }}</span></div></div><div class="mt-2 pt-2 border-t border-gray-100 flex justify-between items-center"><a href="{{ url_for('calendario.editar_cita', cita_id=cita_info.id, next=request.full_path) }}" class="text-xs text-blue-500 hover:text-blue-700 hover:underline">Ver/Editar Cita</a><div class="appointment-actions space-x-1.5">{% if cita_info.estado != 'completada' %}<button class="btn-cambiar-estado text-xs bg-green-500 hover:bg-green-600 text-white py-0.5 px-1.5 rounded-md" data-nuevo-estado="completada">Completar</button>{% endif %}{% if cita_info.estado != 'pendiente' and cita_info.estado != 'cancelada' %}<button class="btn-cambiar-estado text-xs bg-yellow-500 hover:bg-yellow-600 text-white py-0.5 px-1.5 rounded-md" data-nuevo-estado="pendiente">Pendiente</button>{% endif %}{% if cita_info.estado != 'cancelada' %}<button class="btn-cambiar-estado text-xs bg-red-500 hover:bg-red-600 text-white py-0.5 px-1.5 rounded-md" data-nuevo-estado="cancelada">Cancelar</button>{% endif %}</div></div></div>{% endfor %}{% else %}<div class="text-center py-6 text-gray-500"><i data-lucide="calendar-x" class="w-12 h-12 text-gray-300 mx-auto mb-2"></i><p>No hay citas programadas para hoy.</p></div>{% endif %}</div></div>{% endif %}
+        </div>
 
-            <!-- ===================================================================== -->
-            <!-- ========= INICIO: Sección de Actividad Reciente / "Papelera" ======== -->
-            <!-- ===================================================================== -->
-            <div class="mt-6 lg:mt-8">
-
-                {# BLOQUE 1: Encabezado "Actividad Reciente" #}
-                <div class="max-w-lg max-w-lg"> 
-                                                {# Prueba diferentes max-w-sm, max-w-md, max-w-lg, max-w-xl, etc. #}
-                    <div class="activity-log-card-header px-4 py-3 sm:px-6 sm:py-4 flex items-center rounded-2xl shadow-md"> 
+        <!-- =================================================================== -->
+        <!-- ▼▼▼ SECCIÓN DE DOS COLUMNAS: ACTIVIDAD RECIENTE Y FACTURAS RECIENTES (MODIFICADA) ▼▼▼ -->
+        <!-- =================================================================== -->
+        <div class="mt-6 lg:mt-8 grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+            <!-- Columna para Actividad Reciente -->
+            <div>
+                <div class="max-w-lg mx-auto md:mx-0"> {# Añadido mx-auto md:mx-0 para centrado en móviles y alineación en desktop #}
+                    <div class="activity-log-card-header px-4 py-3 sm:px-6 sm:py-4 flex items-center rounded-2xl shadow-md">
                         <i data-lucide="history" class="w-5 h-5 mr-3 text-white"></i>
                         <h3 class="text-lg font-semibold text-white mb-0">Actividad Reciente</h3>
                     </div>
                 </div>
-                {# Fin del encabezado #}
-
-                {# Aquí puedes añadir un pequeño espacio entre el encabezado y el cuerpo,
-
-                {# BLOQUE 2: Cuerpo con la Lista de Actividades #}
-                {# Este bloque será blanco y completamente redondeado. 
-                Si quieres que esté pegado al header negro, el header no debe tener mb (margin-bottom) 
-                y este bloque no debe tener mt (margin-top).
-                Si quieres un pequeño espacio, puedes añadir mb-X al header o mt-X a este bloque.
-                #}
-                <div class="bg-white rounded-3xl shadow-lg"> 
+                <div class="bg-white rounded-3xl shadow-lg">
                     {% if ultimas_acciones %}
-                        <ul class="divide-y divide-gray-200">
-                            {% for accion in ultimas_acciones %}
-                            <li class="px-4 py-3 sm:px-6 sm:py-4 hover:bg-gray-50 transition-colors duration-150">
-                                <div class="flex items-center justify-between mb-1">
-                                    <div class="flex items-center">
-                                        {% set action_prefix = accion.action_type.split('_')[0] %}
-                                        <span class="action-type-badge 
-                                            {% if action_prefix == 'ELIMINAR' %}badge-delete
-                                            {% elif action_prefix == 'SOFT DELETE' %}badge-delete
-                                            {% elif action_prefix == 'EDITAR' %}badge-edit
-                                            {% elif action_prefix == 'CREAR' %}badge-create
-                                            {% else %}badge-default{% endif %}">
-                                            {{ action_prefix | upper }}
-                                        </span>
-                                        <span class="text-sm font-medium text-gray-800">
-                                            {{ accion.action_type.split('_')[1:] | join(' ') | title if '_' in accion.action_type else accion.action_type | title }}
-                                        </span>
-                                    </div>
-                                    <span class="text-xs text-gray-500">{{ accion.timestamp.strftime('%d/%m/%y %H:%M') }}</span>
+                    <ul class="divide-y divide-gray-200">
+                        {% for accion in ultimas_acciones %}
+                        <li class="px-4 py-3 sm:px-6 sm:py-4 hover:bg-gray-50 transition-colors duration-150">
+                            <div class="flex items-center justify-between mb-1">
+                                <div class="flex items-center">
+                                    {% set action_prefix = accion.action_type.split('_')[0] %}
+                                    <span class="action-type-badge {% if action_prefix == 'ELIMINAR' %}badge-delete{% elif action_prefix == 'SOFT DELETE' %}badge-delete{% elif action_prefix == 'EDITAR' %}badge-edit{% elif action_prefix == 'CREAR' %}badge-create{% else %}badge-default{% endif %}">{{ action_prefix | upper }}</span>
+                                    <span class="text-sm font-medium text-gray-800">{{ accion.action_type.split('_')[1:] | join(' ') | title if '_' in accion.action_type else accion.action_type | title }}</span>
                                 </div>
-                                <p class="text-sm text-gray-600 leading-relaxed">{{ accion.description }}</p>
-                                {% if accion.user_username and accion.user_username != "Sistema/Desconocido" %}
-                                    <p class="text-xs text-gray-400 mt-1">Realizado por: {{ accion.user_username }}</p>
-                                {% endif %}
-                            </li>
-                            {% endfor %}
-                        </ul>
+                                <span class="text-xs text-gray-500">{{ accion.timestamp.strftime('%d/%m/%y %H:%M') }}</span>
+                            </div>
+                            <p class="text-sm text-gray-600 leading-relaxed">{{ accion.description }}</p>
+                            {% if accion.user_username and accion.user_username != "Sistema/Desconocido" %}
+                            <p class="text-xs text-gray-400 mt-1">Realizado por: {{ accion.user_username }}</p>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
                     {% else %}
-                        <div class="px-4 py-6 sm:px-6 text-center text-gray-500">
-                            <i data-lucide="info" class="w-8 h-8 text-gray-400 mx-auto mb-2"></i>
-                            <p>No hay actividad reciente para mostrar.</p>
-                        </div>
+                    <div class="px-4 py-6 sm:px-6 text-center text-gray-500">
+                        <i data-lucide="info" class="w-8 h-8 text-gray-400 mx-auto mb-2"></i>
+                        <p>No hay actividad reciente para mostrar.</p>
+                    </div>
                     {% endif %}
                 </div>
             </div>
-            {# Fin del bloque de actividad reciente #}
-            <!-- ===================================================================== -->
-            <!-- ========= FIN: Sección de Actividad Reciente / "Papelera" =========== -->
-            <!-- ===================================================================== -->
 
-        </div> <!-- Fin middle-panel -->
-        
-        <!-- Panel derecho (TU CÓDIGO ACTUAL) -->
-        <div class="right-panel p-4 lg:p-6">
-            <div class="bg-black text-white p-6 rounded-3xl shadow-md mb-4 relative">
-                <h2 class="text-xl lg:text-2xl font-bold" id="nombrePaciente">Nombre del Paciente</h2>
-                <p id="documentoPaciente" class="text-sm lg:text-base">Documento</p>
-                <p id="telefonoPaciente" class="text-sm lg:text-base">Teléfono</p>
-                <div class="absolute bottom-4 right-4">
-                    <i data-lucide="user-circle-2" class="w-8 h-8 text-gray-300"></i>
+            <!-- Columna para Facturas Recientes -->
+            <div>
+                <div class="max-w-lg mx-auto md:mx-0"> {# Añadido mx-auto md:mx-0 para centrado en móviles y alineación en desktop #}
+                    <div class="facturas-card-header px-4 py-3 sm:px-6 sm:py-4 flex items-center rounded-2xl shadow-md">
+                        <i data-lucide="receipt-text" class="w-5 h-5 mr-3 text-white"></i> {# Icono para facturas #}
+                        <h3 class="text-lg font-semibold text-white mb-0">Facturas Recientes</h3>
+                    </div>
+                </div>
+                <div class="bg-white rounded-3xl shadow-lg">
+                    {% if facturas_recientes %}
+                    <ul class="divide-y divide-gray-200">
+                        {% for factura in facturas_recientes %}
+                        <li class="px-4 py-3 sm:px-6 sm:py-4 hover:bg-gray-50 transition-colors duration-150">
+                            <div class="flex items-center justify-between mb-1">
+                                <div class="flex items-center">
+                                    <span class="text-sm font-medium text-gray-800">Factura #{{ factura.id }}</span>
+                                </div>
+                                <span class="text-xs text-gray-500">{{ factura.fecha_creacion.strftime('%d/%m/%y %H:%M') }}</span>
+                            </div>
+                            <p class="text-sm text-gray-600 leading-relaxed">Agrupa {{ factura.citas | length }} cita(s)</p> {# Asumiendo que `factura.citas` es una lista de citas asociadas #}
+                            {# Puedes añadir un enlace para ver los detalles de la factura o sus citas #}
+                            <a href="{{ url_for('facturacion.ver_detalles_factura', factura_id=factura.id) }}" class="text-xs text-blue-500 hover:text-blue-700 hover:underline mt-1 block">Ver detalles</a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="px-4 py-6 sm:px-6 text-center text-gray-500">
+                        <i data-lucide="info" class="w-8 h-8 text-gray-400 mx-auto mb-2"></i>
+                        <p>No hay facturas recientes para mostrar.</p>
+                        <a href="{{ url_for('reportes.vista_reportes') }}" class="text-blue-500 hover:underline text-sm mt-2 block">Generar una nueva factura</a>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
-            <div class="flex gap-4 mb-4 border-b border-gray-300 pb-2">
-                <button class="tab-btn-panel-derecho py-2 px-4 font-semibold text-gray-700 hover:text-black border-b-2 border-transparent hover:border-black focus:outline-none" data-seccion="datos">Datos</button>
-                <button class="tab-btn-panel-derecho py-2 px-4 font-semibold text-gray-700 hover:text-black border-b-2 border-transparent hover:border-black focus:outline-none" data-seccion="citas">Citas</button>
-                <button class="tab-btn-panel-derecho py-2 px-4 font-semibold text-gray-700 hover:text-black border-b-2 border-transparent hover:border-black focus:outline-none" data-seccion="imagenes">Imágenes</button>
-            </div>
-            <div id="seccion-datos" class="space-y-2 text-sm">
-                {% for label, id_val in [
-                    ("Estado del paciente", "estadoPaciente"), ("Género • Edad", "generoEdad"),
-                    ("Fecha de nacimiento", "fechaNacimiento"), ("Dirección", "direccionPaciente"),
-                    ("Email", "emailPaciente"), ("Ocupación", "ocupacionPaciente"),
-                    ("Aseguradora", "aseguradoraPaciente"), ("Alergias", "alergiasPaciente"),
-                    ("Enfermedad Actual", "enfermedadPaciente")
-                ] %}
-                <div class="bg-gray-100 rounded-xl px-4 py-3 text-gray-600 flex justify-between items-center">
-                    <span class="font-medium text-gray-700">{{ label }}</span>
-                    <span id="{{ id_val }}" class="text-right">No especificado</span>
-                </div>
-                {% endfor %}
-            </div>
-            <div id="seccion-citas" class="hidden space-y-2 text-sm">
-                {% for label, id_val in [
-                    ("Última cita", "ultimaCita"), ("Próxima cita", "proximaCitaPanelDerecho"),
-                    ("Motivo frecuente", "motivoFrecuente")
-                ] %}
-                <div class="bg-gray-100 rounded-xl px-4 py-3 text-gray-600 flex justify-between items-center">
-                    <span class="font-medium text-gray-700">{{ label }}</span>
-                    <span id="{{ id_val }}" class="text-right">No especificado</span>
-                </div>
-                {% endfor %}
-            </div>
-            <div id="seccion-imagenes" class="hidden space-y-4 p-4 bg-gray-50 rounded-lg">
-                <h4 class="font-semibold text-gray-800">Imágenes del Paciente</h4>
-                
-                <!-- Contenedor para la imagen de perfil (si la tienes en tu modelo y quieres mostrarla aquí) -->
-                <!-- <div id="imagenPerfilDisplayContainer" class="border p-2 rounded-md bg-white hidden">
-                    <p class="text-xs text-gray-500 mb-1">Imagen de Perfil:</p>
-                    <img id="imagenPerfilDisplay" class="max-w-full h-auto mx-auto" alt="Imagen de Perfil">
-                    <p id="noImagenPerfil" class="text-sm text-gray-500 text-center hidden">No hay imagen de perfil registrada.</p>
-                </div> -->
+        </div> {# FIN de la sección de dos columnas #}
 
-                <div id="dentigramaDisplayContainer" class="border p-2 rounded-md bg-white hidden">
-                    <p class="text-xs text-gray-500 mb-1">Dentigrama:</p>
-                    <img id="dentigramaDisplay" class="max-w-full h-auto mx-auto" alt="Dentigrama del Paciente">
-                    <p id="noDentigrama" class="text-sm text-gray-500 text-center hidden">No hay dentigrama registrado.</p>
-                </div>
-                <div id="imagen1DisplayContainer" class="border p-2 rounded-md bg-white hidden">
-                    <p class="text-xs text-gray-500 mb-1">Imagen 1:</p>
-                    <img id="imagen1Display" class="max-w-full h-auto mx-auto" alt="Imagen Adicional 1">
-                    <p id="noImagen1" class="text-sm text-gray-500 text-center hidden">No hay Imagen 1 registrada.</p>
-                </div>
-                <div id="imagen2DisplayContainer" class="border p-2 rounded-md bg-white hidden">
-                    <p class="text-xs text-gray-500 mb-1">Imagen 2:</p>
-                    <img id="imagen2Display" class="max-w-full h-auto mx-auto" alt="Imagen Adicional 2">
-                    <p id="noImagen2" class="text-sm text-gray-500 text-center hidden">No hay Imagen 2 registrada.</p>
-                </div>
-            </div>
-            <div class="mt-6 flex flex-col sm:flex-row gap-3">
-                <div id="panel-controles" 
-                    class="mt-6 flex flex-col sm:flex-row gap-3"
-                    data-edit-url-base="{{ url_for('pacientes.editar_paciente', id=0) }}"
-                    data-citas-url-base="{{ url_for('calendario.historial_citas_paciente', paciente_id=0) }}"> {# Ajustado a tu ruta de historial de citas #}
+    </div>
+    
+    <!-- Panel derecho - TU CÓDIGO ORIGINAL SIN NINGÚN CAMBIO -->
+    <div class="right-panel p-4 lg:p-6">
+        <div class="bg-black text-white p-6 rounded-3xl shadow-md mb-4 relative"><h2 class="text-xl lg:text-2xl font-bold" id="nombrePaciente">Nombre del Paciente</h2><p id="documentoPaciente" class="text-sm lg:text-base">Documento</p><p id="telefonoPaciente" class="text-sm lg:text-base">Teléfono</p><div class="absolute bottom-4 right-4"><i data-lucide="user-circle-2" class="w-8 h-8 text-gray-300"></i></div></div>
+        <div class="flex gap-4 mb-4 border-b border-gray-300 pb-2"><button class="tab-btn-panel-derecho py-2 px-4 font-semibold text-gray-700 hover:text-black border-b-2 border-transparent hover:border-black focus:outline-none" data-seccion="datos">Datos</button><button class="tab-btn-panel-derecho py-2 px-4 font-semibold text-gray-700 hover:text-black border-b-2 border-transparent hover:border-black focus:outline-none" data-seccion="citas">Citas</button><button class="tab-btn-panel-derecho py-2 px-4 font-semibold text-gray-700 hover:text-black border-b-2 border-transparent hover:border-black focus:outline-none" data-seccion="imagenes">Imágenes</button></div>
+        <div id="seccion-datos" class="space-y-2 text-sm">{% for label, id_val in [("Estado del paciente", "estadoPaciente"), ("Género • Edad", "generoEdad"),("Fecha de nacimiento", "fechaNacimiento"), ("Dirección", "direccionPaciente"),("Email", "emailPaciente"), ("Ocupación", "ocupacionPaciente"),("Aseguradora", "aseguradoraPaciente"), ("Alergias", "alergiasPaciente"),("Enfermedad Actual", "enfermedadPaciente")] %}<div class="bg-gray-100 rounded-xl px-4 py-3 text-gray-600 flex justify-between items-center"><span class="font-medium text-gray-700">{{ label }}</span><span id="{{ id_val }}" class="text-right">No especificado</span></div>{% endfor %}</div>
+        <div id="seccion-citas" class="hidden space-y-2 text-sm">{% for label, id_val in [("Última cita", "ultimaCita"), ("Próxima cita", "proximaCitaPanelDerecho"),("Motivo frecuente", "motivoFrecuente")] %}<div class="bg-gray-100 rounded-xl px-4 py-3 text-gray-600 flex justify-between items-center"><span class="font-medium text-gray-700">{{ label }}</span><span id="{{ id_val }}" class="text-right">No especificado</span></div>{% endfor %}</div>
+        <div id="seccion-imagenes" class="hidden space-y-4 p-4 bg-gray-50 rounded-lg"><h4 class="font-semibold text-gray-800">Imágenes del Paciente</h4><div id="dentigramaDisplayContainer" class="border p-2 rounded-md bg-white hidden"><p class="text-xs text-gray-500 mb-1">Dentigrama:</p><img id="dentigramaDisplay" class="max-w-full h-auto mx-auto" alt="Dentigrama del Paciente"><p id="noDentigrama" class="text-sm text-gray-500 text-center hidden">No hay dentigrama registrado.</p></div><div id="imagen1DisplayContainer" class="border p-2 rounded-md bg-white hidden"><p class="text-xs text-gray-500 mb-1">Imagen 1:</p><img id="imagen1Display" class="max-w-full h-auto mx-auto" alt="Imagen Adicional 1"><p id="noImagen1" class="text-sm text-gray-500 text-center hidden">No hay Imagen 1 registrada.</p></div><div id="imagen2DisplayContainer" class="border p-2 rounded-md bg-white hidden"><p class="text-xs text-gray-500 mb-1">Imagen 2:</p><img id="imagen2Display" class="max-w-full h-auto mx-auto" alt="Imagen Adicional 2"><p id="noImagen2" class="text-sm text-gray-500 text-center hidden">No hay Imagen 2 registrada.</p></div></div>
+        <div class="mt-6 flex flex-col sm:flex-row gap-3"><div id="panel-controles" class="mt-6 flex flex-col sm:flex-row gap-3" data-edit-url-base="{{ url_for('pacientes.editar_paciente', id=0) }}" data-citas-url-base="{{ url_for('calendario.historial_citas_paciente', paciente_id=0) }}"><button id="btnEditarPaciente" class="w-full sm:w-auto px-4 py-2 bg-gray-900 text-white text-sm rounded-xl hover:bg-blue-700 transition flex items-center justify-center gap-2"><i data-lucide="edit-3" class="w-4 h-4"></i> Editar paciente</button><button id="btnVerCitas" class="w-full sm:w-auto px-4 py-2 bg-blue-700 text-white text-sm rounded-xl hover:bg-gray-700 transition flex items-center justify-center gap-2"><i data-lucide="history" class="w-4 h-4"></i> Facturacion</button></div></div> 
+    </div>
+</div>
 
-                    <!-- ¡LOS BOTONES AHORA ESTÁN DENTRO! -->
-                    
-                    <!-- He corregido el ID del botón a 'btnEditarPaciente' para que coincida con el JS que tienes -->
-                    <button id="btnEditarPaciente" class="w-full sm:w-auto px-4 py-2 bg-gray-900 text-white text-sm rounded-xl hover:bg-blue-700 transition flex items-center justify-center gap-2">
-                        <i data-lucide="edit-3" class="w-4 h-4"></i> Editar paciente
-                    </button>
-                    
-                    <button id="btnVerCitas" class="w-full sm:w-auto px-4 py-2 bg-blue-700 text-white text-sm rounded-xl hover:bg-gray-700 transition flex items-center justify-center gap-2">
-                        <i data-lucide="history" class="w-4 h-4"></i> Ver historial
-                    </button>
-                </div>
-            </div> 
-        </div> <!-- Fin right-panel -->
-
-    </div> <!-- Fin dashboard -->
-</div> <!-- Fin contenedor general seguro -->
-
-{# Asegúrate de que tu script index.js se cargue y que lucide.createIcons() se llame si no lo hace globalmente #}
-<script type="module" src="{{ url_for('static', filename='js/index.js') }}"></script>
+<!-- =================================================================== -->
+<!-- ▼▼▼ 3. NUEVO OVERLAY PARA EL FONDO OSCURO (AÑADIDO) ▼▼▼ -->
+<!-- =================================================================== -->
+<div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden"></div>
 
 {% endblock %}
 
 {% block scripts %}
-    {{ super() }} {# Para heredar cualquier script del bloque 'scripts' de base.html #}
-    <script>
+    {{ super() }}
 
+    <!-- TU SCRIPT ORIGINAL, QUE FUNCIONA, NO SE TOCA -->
+    <script type="module" src="{{ url_for('static', filename='js/index.js') }}?v=final_102"></script>
+
+    <!-- =================================================================== -->
+    <!-- ▼▼▼ 4. NUEVO SCRIPT AISLADO PARA EL MENÚ MÓVIL (AÑADIDO) ▼▼▼ -->
+    <!-- =================================================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Este script es independiente y solo maneja el menú móvil
+            const hamburgerBtn = document.getElementById('hamburger-btn');
+            const mobileSidebar = document.getElementById('main-sidebar');
+            const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+            function toggleSidebar() {
+                if (mobileSidebar && sidebarOverlay) {
+                    mobileSidebar.classList.toggle('-translate-x-full');
+                    sidebarOverlay.classList.toggle('hidden');
+                }
+            }
+
+            // Llamamos a Lucide aquí de nuevo por si algún icono no se renderizó
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+
+            if (hamburgerBtn) {
+                hamburgerBtn.addEventListener('click', toggleSidebar);
+            }
+            if (sidebarOverlay) {
+                sidebarOverlay.addEventListener('click', toggleSidebar);
+            }
+        });
     </script>
 {% endblock %}

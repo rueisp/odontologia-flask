@@ -264,7 +264,7 @@
         <!-- COLUMNA 4: Evolución y Otras Acciones (Nueva Columna) -->
         <!-- ======================================================= -->
         <div class="column-fourth">
-            <div class="card-custom">
+            <div class="card-custom mb-4">
                 <h3><i data-lucide="trending-up" class="card-icon"></i>Evolución</h3>
                 <div class="evolucion-list mb-4">
                     {% for evolucion in evoluciones_ordenadas %}
@@ -289,6 +289,11 @@
             <div class="card-custom">
                 <h3><i data-lucide="menu-square" class="card-icon"></i>Otras Acciones</h3>
                 <div class="d-grid gap-2">
+                    {# ESTE ES EL NUEVO BOTÓN QUE DEBES AGREGAR #}
+                    <a href="{{ url_for('calendario.historial_citas_paciente', paciente_id=paciente.id) }}" class="btn-custom btn-primary-custom">
+                        <i data-lucide="history" class="btn-icon"></i> Ver Historial de Citas para Facturar
+                    </a>
+                    
                     <a href="{{ url_for('export.exportar_excel', id=paciente.id) }}" class="btn-custom btn-success-custom"><i data-lucide="file-spreadsheet" class="btn-icon"></i> Exportar a Excel</a>
                     <a href="{{ url_for('export.exportar_word', id=paciente.id) }}" class="btn-custom btn-info-custom"><i data-lucide="file-text" class="btn-icon"></i> Exportar a Word</a>
                 </div>

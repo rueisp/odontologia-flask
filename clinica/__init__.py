@@ -9,6 +9,7 @@ import logging
 import datetime
 from flask.json import dumps as json_dumps
 
+
 # --- IMPORTANTE: Cargar dotenv solo si estamos en un contexto local y .env existe ---
 # Esto evita que Render intente cargar un .env que no existe.
 if os.path.exists('.env'):
@@ -140,6 +141,12 @@ def create_app():
         from .routes.calendario import calendario_bp
         from .routes.export import export_bp
         from .routes.papelera import papelera_bp
+        from .routes.reportes import reportes_bp
+        from .routes.facturacion import facturacion_bp
+        from .routes.procedimientos import procedimientos_bp
+
+
+
 
         app.register_blueprint(main_bp)
         app.register_blueprint(pacientes_bp)
@@ -149,6 +156,10 @@ def create_app():
         app.register_blueprint(calendario_bp, url_prefix='/calendario')
         app.register_blueprint(export_bp, url_prefix='/export')
         app.register_blueprint(papelera_bp, url_prefix='/papelera')
+        app.register_blueprint(reportes_bp)
+        app.register_blueprint(facturacion_bp)
+        app.register_blueprint(procedimientos_bp)
+        
 
         # ==============================================================
         # *** NUEVO: RUTA PARA MANTENER LA APP VIVA (PING) ***

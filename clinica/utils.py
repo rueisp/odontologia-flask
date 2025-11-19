@@ -190,3 +190,41 @@ def extract_public_id_from_url(url):
     except (ValueError, IndexError, TypeError) as e:
         logger.warning(f"Error al extraer el public_id de la URL '{url}'. Error: {e}", exc_info=True)
         return None
+    
+
+
+
+# clinica/utils.py
+
+# ... (tus imports y funciones existentes) ...
+
+# Función auxiliar para borrar archivos de Cloudinary
+def delete_from_cloudinary(url):
+    """Borra un recurso de Cloudinary dada su URL."""
+    if url:
+        public_id = extract_public_id_from_url(url)
+        current_app.logger.debug(f"CLOUDINARY_DELETE_DEBUG: Intentando borrar URL: {url}, Public ID extraído: {public_id}") # <-- NUEVO LOG
+        if public_id:
+            try:
+                result = cloudinary.uploader.destroy(public_id) # Captura el resultado de la destrucción
+                current_app.logger.debug(f"CLOUDINARY_DELETE_DEBUG: Resultado de Cloudinary.destroy para {public_id}: {result}") # <-- NUEVO LOG
+
+                # Cloudinary devuelve un diccionario, y "result":"ok" es el éxito.
+                if result and result.get("result") == "ok":
+                    current_app.logger.info(f"CLOUDINARY: Recurso {public_id} eliminado exitosamente.")
+                    return True
+                else:
+                    # Si no es "ok", es un fallo o un error diferente.
+                    error_message = result.get("error", {}).get("message", "Mensaje de error no disponible") if result and "error" in result else "Error desconocido"
+                    current_app.logger.warning(f"CLOUDINARY: Fallo al eliminar recurso {public_id} de Cloudinary. Resultado: {result}. Error: {error_message}") # <-- MEJOR LOG
+                    return False
+            except Exception as e:
+                current_app.logger.error(f"CLOUDINARY_DELETE_ERROR: Excepción al intentar eliminar recurso {public_id} de Cloudinary: {e}", exc_info=True) # <-- LOG MÁS ESPECÍFICO
+                return False
+        else:
+            current_app.logger.warning(f"CLOUDINARY_DELETE_WARNING: No se pudo extraer public_id de la URL: {url}. No se intentó eliminar.") # <-- NUEVO LOG
+            return False # No hay public_id para borrar
+    current_app.logger.debug("CLOUDINARY_DELETE_DEBUG: URL de imagen vacía o None, no hay nada que borrar.") # <-- NUEVO LOG
+    return False # La URL estaba vacía
+
+# ... (resto de tu utils.py) ...

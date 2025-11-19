@@ -8,7 +8,7 @@ from flask_login import login_required, current_user
 from sqlalchemy.orm import joinedload
 from ..utils import extract_public_id_from_url
 from ..extensions import db
-from ..models import Paciente, Cita, Evolucion, AuditLog
+from ..models import Paciente, Cita, Evolucion, AuditLog, Procedimiento, Factura
 try:
     from . import utils
 except ImportError:
@@ -180,10 +180,28 @@ def eliminar_permanentemente():
                             # Si falla, solo lo registramos, pero no detenemos el proceso
                             current_app.logger.error(f"Fallo al eliminar de Cloudinary {public_id}: {e_cloud}")
             
-            # Eliminar en cascada las evoluciones y citas asociadas (esta parte estaba bien)
-            Evolucion.query.filter_by(paciente_id=target_id).delete()
-            Cita.query.filter_by(paciente_id=target_id).delete()
-        # --- ▲▲▲ FIN DEL BLOQUE MODIFICADO ▲▲▲ ---
+            # --- 👇▼▼▼ INICIO DEL BLOQUE DE ELIMINACIÓN EN CASCADA CORREGIDO ▼▼▼👇 ---
+
+        # 1. Eliminar TODOS los PROCEDIMIENTOS asociados a las citas del paciente
+        cita_ids_del_paciente = db.session.query(Cita.id).filter_by(paciente_id=target_id).subquery()
+        Procedimiento.query.filter(Procedimiento.cita_id.in_(cita_ids_del_paciente)).delete(synchronize_session=False)
+        current_app.logger.info(f"Eliminados procedimientos asociados a citas del paciente {target_id}.")
+
+        # 2. Eliminar TODAS las EVOLUCIONES asociadas al paciente
+        Evolucion.query.filter_by(paciente_id=target_id).delete(synchronize_session=False)
+        current_app.logger.info(f"Eliminadas evoluciones del paciente {target_id}.")
+
+        # 3. Eliminar TODAS las CITAS asociadas al paciente
+        # ESTE PASO VA AHORA, ANTES DE ELIMINAR LAS FACTURAS
+        Cita.query.filter_by(paciente_id=target_id).delete(synchronize_session=False)
+        current_app.logger.info(f"Eliminadas citas del paciente {target_id}.")
+
+        # 4. Eliminar TODAS las FACTURAS asociadas al paciente
+        # ESTE PASO VA AHORA, DESPUÉS DE ELIMINAR LAS CITAS
+        Factura.query.filter_by(paciente_id=target_id).delete(synchronize_session=False)
+        current_app.logger.info(f"Eliminadas facturas del paciente {target_id}.")
+
+        # --- ▲▲▲ FIN DEL BLOQUE DE ELIMINACIÓN EN CASCADA CORREGIDO ▲▲▲ ---
 
         # Eliminar el objeto de la DB (Hard Delete)
         db.session.delete(objeto_a_eliminar)

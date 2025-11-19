@@ -398,27 +398,44 @@ def editar_cita(cita_id):
     return render_template('editar_cita.html', cita=cita_obj, pacientes=todos_los_pacientes, form_data=form_data_edit)
 
 
-# --- NUEVA RUTA: Historial de Citas por Paciente ---
+# --- RUTA: Historial de Citas por Paciente (CON MODIFICACIONES) ---
 @calendario_bp.route('/historial_citas_paciente/<int:paciente_id>', methods=['GET'])
 @login_required
 def historial_citas_paciente(paciente_id):
-    # 1. Verificar si el paciente existe y si el usuario tiene permisos
+    # 1. Verificar si el paciente existe (esto ya lo haces y está perfecto)
     paciente = Paciente.query.filter_by(id=paciente_id, is_deleted=False).first_or_404()
 
     if not current_user.is_admin and paciente.odontologo_id != current_user.id:
-        flash("Acceso denegado. No tienes permiso para ver el historial de este paciente.", "danger")
+        flash("Acceso denegado...", "danger")
         return redirect(url_for('pacientes.lista_pacientes'))
 
-    # 2. Obtener todas las citas (no eliminadas) para este paciente, ordenadas por fecha y hora
-    citas = Cita.query.filter(
+    # 2. Obtener todas las citas (esto también está perfecto)
+    citas_query = Cita.query.filter(
         Cita.paciente_id == paciente_id,
         Cita.is_deleted == False
-    ).order_by(Cita.fecha.desc(), Cita.hora.desc()).all()
+    ).order_by(Cita.fecha.desc(), Cita.hora.desc())
+    
+    # Ejecutamos la consulta para tener la lista de citas
+    citas_del_paciente = citas_query.all()
 
-    # 3. Preparar los datos de las citas para el template
+
+    # ===============================================================
+    # ▼▼▼ LÓGICA AÑADIDA PARA VERIFICAR CITAS PENDIENTES ▼▼▼
+    # ===============================================================
+    # Hacemos una consulta eficiente para saber si existe al menos una cita
+    # para este paciente que todavía no tiene una factura asignada (factura_id is None).
+    hay_citas_pendientes = db.session.query(
+        Cita.query.filter_by(paciente_id=paciente_id, factura_id=None, is_deleted=False).exists()
+    ).scalar()
+    # La variable 'hay_citas_pendientes' será True si hay al menos una, o False si no hay ninguna.
+    # ===============================================================
+    # ▲▲▲ FIN DE LA LÓGICA AÑADIDA ▲▲▲
+    # ===============================================================
+
+
+    # 3. Preparar los datos de las citas para el template (tu código original, perfecto)
     citas_procesadas = []
-    for cita_obj in citas:
-        # Aquí puedes formatear cualquier dato adicional que necesites en el template
+    for cita_obj in citas_del_paciente: # Usamos la lista que ya consultamos
         citas_procesadas.append({
             'id': cita_obj.id,
             'fecha': cita_obj.fecha.strftime('%d/%m/%Y'),
@@ -427,13 +444,17 @@ def historial_citas_paciente(paciente_id):
             'doctor': cita_obj.doctor or 'N/A',
             'observaciones': cita_obj.observaciones or '',
             'estado': cita_obj.estado or 'Pendiente',
+            'factura_id': cita_obj.factura_id, # <-- (Opcional pero útil) Pasamos el factura_id
             'edit_url': url_for('calendario.editar_cita', cita_id=cita_obj.id, next=request.full_path),
             'delete_url': url_for('calendario.eliminar_cita', cita_id=cita_obj.id, next=request.full_path),
         })
 
     return render_template('historial_citas_paciente.html', 
                            paciente=paciente, 
-                           citas=citas_procesadas)
+                           citas=citas_procesadas,
+                           hay_citas_pendientes=hay_citas_pendientes) # <-- ¡PASAMOS LA NUEVA VARIABLE!
+
+
 
 
 # --- FUNCIÓN ELIMINAR CITA ---

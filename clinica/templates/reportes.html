@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Reportes - Clínica{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-screen overflow-x-hidden">
+    <!-- Contenedor principal del dashboard -->
+    <div class="dashboard flex flex-col lg:flex-row gap-4 p-4 lg:p-10 mx-auto w-full">
+        
+        <!-- =================================================================== -->
+        <!-- NOTA: El panel izquierdo ya se hereda de base.html, no lo necesitas aquí -->
+        <!-- =================================================================== -->
+        
+        <!-- Panel central para la página de Reportes -->
+        <div class="middle-panel bg-white px-4 py-6 sm:px-6 lg:p-8 rounded-xl shadow-lg mx-auto w-full">
+            
+            <!-- Encabezado de la página -->
+            <div class="mb-8 border-b border-gray-200 pb-4">
+                <h1 class="text-2xl sm:text-3xl font-semibold text-gray-800 flex items-center">
+                    <i data-lucide="file-text" class="w-7 h-7 mr-3 text-gray-600"></i>
+                    Centro de Reportes
+                </h1>
+                <p class="text-gray-500 text-sm mt-1">
+                    Genera y descarga los reportes administrativos y clínicos.
+                </p>
+            </div>
+
+            <!-- Contenido principal -->
+            <div class="space-y-8">
+
+                <!-- Sección para Generación de RIPS -->
+                <div class="bg-gray-50 border border-gray-200 rounded-2xl p-6">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-1">Generación de RIPS</h2>
+                    <p class="text-sm text-gray-500 mb-6">Selecciona un rango de fechas para generar los archivos RIPS correspondientes a ese período.</p>
+                    
+                    <!-- Formulario de generación -->
+                    {# Añade un ID al formulario para poder referenciarlo con JavaScript #}
+                    <form id="ripsForm" action="{{ url_for('reportes.vista_reportes') }}" method="POST" class="space-y-4">
+                        {# CSRF Token es importante para la seguridad de los formularios en Flask #}
+                        {{ form.csrf_token if form }}
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Selector de Fecha de Inicio -->
+                            <div>
+                                <label for="fecha_inicio_display" class="block text-sm font-medium text-gray-700 mb-1">Fecha de Inicio</label>
+                                {# Este input será el visible para el usuario (type="date" para el calendario) #}
+                                <input type="date" id="fecha_inicio_display" 
+                                       class="w-full border border-gray-300 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                                {# Este input HIDDEN es el que enviará el formato mm/dd/yyyy #}
+                                <input type="hidden" id="fecha_inicio" name="fecha_inicio" required>
+                            </div>
+                            <!-- Selector de Fecha de Fin -->
+                            <div>
+                                <label for="fecha_fin_display" class="block text-sm font-medium text-gray-700 mb-1">Fecha de Fin</label>
+                                {# Este input será el visible para el usuario (type="date" para el calendario) #}
+                                <input type="date" id="fecha_fin_display" 
+                                       class="w-full border border-gray-300 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                                {# Este input HIDDEN es el que enviará el formato mm/dd/yyyy #}
+                                <input type="hidden" id="fecha_fin" name="fecha_fin" required>
+                            </div>
+                        </div>
+
+                        <!-- Botón de Acción -->
+                        <div class="pt-4 text-right">
+                            <button type="submit"
+                                    class="bg-black text-white px-6 py-2.5 rounded-xl hover:bg-gray-800 transition flex items-center justify-center gap-2 text-sm font-semibold ml-auto">
+                                <i data-lucide="download" class="w-4 h-4"></i>
+                                <span>Generar y Descargar RIPS</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Sección para Historial de RIPS (funcionalidad futura) -->
+                <div class="bg-white rounded-2xl p-6">
+                     <h2 class="text-xl font-semibold text-gray-700 mb-4">Historial de Generaciones</h2>
+                     <div class="text-center py-8 text-gray-500">
+                        <i data-lucide="archive" class="w-12 h-12 text-gray-300 mx-auto mb-2"></i>
+                        <p>Aún no se han generado reportes.</p>
+                        <p class="text-xs mt-1">Los reportes que generes aparecerán aquí.</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ripsForm = document.getElementById('ripsForm');
+        const fechaInicioDisplay = document.getElementById('fecha_inicio_display');
+        const fechaFinDisplay = document.getElementById('fecha_fin_display');
+        const fechaInicioHidden = document.getElementById('fecha_inicio');
+        const fechaFinHidden = document.getElementById('fecha_fin');
+
+        ripsForm.addEventListener('submit', function(event) {
+            // Evita que el formulario se envíe inmediatamente
+            event.preventDefault();
+
+            // Función para formatear YYYY-MM-DD a MM/DD/YYYY
+            function formatToMMDDYYYY(dateString) {
+                if (!dateString) return '';
+                const [year, month, day] = dateString.split('-');
+                return `${month}/${day}/${year}`;
+            }
+
+            // Toma los valores de los inputs visibles (que están en YYYY-MM-DD)
+            const formattedFechaInicio = formatToMMDDYYYY(fechaInicioDisplay.value);
+            const formattedFechaFin = formatToMMDDYYYY(fechaFinDisplay.value);
+
+            // Asigna los valores formateados a los inputs ocultos
+            fechaInicioHidden.value = formattedFechaInicio;
+            fechaFinHidden.value = formattedFechaFin;
+
+            // Ahora sí, envía el formulario
+            ripsForm.submit();
+        });
+    });
+</script>
+{% endblock %}

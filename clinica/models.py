@@ -95,6 +95,7 @@ class Cita(db.Model):
     doctor = db.Column(db.String(100), nullable=False)
     observaciones = db.Column(db.Text, nullable=True)
     estado = db.Column(db.String(20), default='pendiente', nullable=False)
+    factura_id = db.Column(db.Integer, db.ForeignKey('facturas.id'), nullable=True)
 
     # --- CAMPOS PARA SOFT DELETE (mantener) ---
     is_deleted = db.Column(db.Boolean, default=False, nullable=False, index=True)
@@ -138,3 +139,59 @@ class AuditLog(db.Model):
 
     def __repr__(self):
         return f'<AuditLog {self.id} - {self.action_type} por {self.user_username or "Sistema"} en {self.timestamp}>'
+    
+
+class Factura(db.Model):
+    __tablename__ = 'facturas'
+
+    id = db.Column(db.Integer, primary_key=True)
+    # --- Datos para RIPS Archivo de Transacciones (AF) ---
+    numero_factura = db.Column(db.String(20), unique=True, nullable=False)
+    fecha_factura = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(pytz.utc))
+    valor_total = db.Column(db.Float, nullable=False, default=0.0)
+    # Puedes añadir más campos como copago, etc. si los necesitas.
+
+    # --- Relaciones (La clave para conectar todo) ---
+    paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=False)
+    paciente = db.relationship('Paciente', backref=db.backref('facturas', lazy=True))
+
+    # Esta relación es importante: una factura puede tener muchas citas/procedimientos.
+    # Si guardas procedimientos en el modelo 'Cita', la relación sería con 'Cita'.
+    # Si tienes un modelo 'Procedimiento', la relación sería con él.
+    # Asumiré que lo tienes en 'Cita' por ahora. Ajusta 'citas' si tu modelo se llama diferente.
+    citas = db.relationship('Cita', backref='factura', lazy='dynamic')
+
+    def __repr__(self):
+        return f"<Factura No: {self.numero_factura}>"
+    
+
+class Procedimiento(db.Model):
+    __tablename__ = 'procedimientos'
+
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # --- Relación con la Cita ---
+    # Cada procedimiento pertenece a UNA cita.
+    cita_id = db.Column(db.Integer, db.ForeignKey('cita.id'), nullable=False)
+    cita = db.relationship('Cita', backref=db.backref('procedimientos', lazy='dynamic', cascade="all, delete-orphan"))
+
+    # --- DATOS CRUCIALES PARA RIPS (Archivo AP) ---
+    codigo_cups = db.Column(db.String(20), nullable=False)
+    diagnostico_cie10 = db.Column(db.String(20), nullable=False)
+    
+    # --- Datos adicionales (muy útiles) ---
+    descripcion = db.Column(db.String(255), nullable=True) # Ej: "Resina compuesta en pieza 24"
+    valor = db.Column(db.Float, nullable=False, default=0.0)
+
+    def __repr__(self):
+        return f"<Procedimiento CUPS: {self.codigo_cups} en Cita ID: {self.cita_id}>"
+
+
+class CUPSCode(db.Model):
+    __tablename__ = 'cups_codes'
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(20), unique=True, nullable=False) # Para el código CUPS
+    description = db.Column(db.String(255), nullable=False) # Para el nombre del procedimiento
+
+    def __repr__(self):
+        return f"<CUPSCode {self.code}: {self.description}>"

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Registrar Procedimiento{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-6">
+    <div class="bg-white p-8 rounded-xl shadow-lg max-w-2xl mx-auto">
+        
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">Registrar Procedimiento</h1>
+        <p class="text-gray-600 mb-6">
+            Para la cita del <span class="font-semibold">{{ cita.fecha.strftime('%d/%m/%Y') }}</span>
+            para el paciente <span class="font-semibold">{{ cita.paciente.nombre_completo if cita.paciente else cita.paciente_nombres_str }}</span>.
+        </p>
+
+        <form method="POST" action="{{ url_for('procedimientos.registrar_procedimiento', cita_id=cita.id) }}" class="space-y-6">
+            
+            <div>
+                <label for="codigo_cups" class="block text-sm font-medium text-gray-700">Código CUPS (*)</label>
+                <input type="text" id="codigo_cups" name="codigo_cups" required
+                       value="{{ form_data.get('codigo_cups', '') }}"
+                       placeholder="Ej: 237101 (Detartraje Supragingival)"
+                       class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <div>
+                <label for="diagnostico_cie10" class="block text-sm font-medium text-gray-700">Diagnóstico Principal CIE-10 (*)</label>
+                <input type="text" id="diagnostico_cie10" name="diagnostico_cie10" required
+                       value="{{ form_data.get('diagnostico_cie10', '') }}"
+                       placeholder="Ej: K036 (Depósitos en los dientes)"
+                       class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <div>
+                <label for="descripcion" class="block text-sm font-medium text-gray-700">Descripción (Opcional)</label>
+                <textarea id="descripcion" name="descripcion" rows="3"
+                          placeholder="Notas adicionales sobre el procedimiento. Ej: En cuadrante superior derecho."
+                          class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500">{{ form_data.get('descripcion', '') }}</textarea>
+            </div>
+            
+            <div>
+                <label for="valor" class="block text-sm font-medium text-gray-700">Valor (*)</label>
+                <div class="relative mt-1">
+                    <div class="pointer-events-none absolute inset-y-0 left-0 pl-3 flex items-center">
+                        <span class="text-gray-500 sm:text-sm">$</span>
+                    </div>
+                    <input type="number" id="valor" name="valor" step="0.01" required
+                           value="{{ form_data.get('valor', '') }}"
+                           placeholder="50000"
+                           class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 pl-7 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-4 pt-4">
+                <a href="{{ url_for('calendario.editar_cita', cita_id=cita.id) }}" 
+                   class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition">
+                    Cancelar
+                </a>
+                <button type="submit"
+                        class="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition flex items-center gap-2">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    Guardar Procedimiento
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
