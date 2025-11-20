@@ -58,7 +58,7 @@ def index():
     try:
         # Consulta las últimas 5 facturas, ordenadas por fecha de creación descendente
         # Asegúrate de que 'fecha_creacion' sea un campo datetime en tu modelo Factura
-        facturas_recientes = Factura.query.order_by(Factura.fecha_creacion.desc()).limit(5).all()
+        facturas_recientes = Factura.query.order_by(Factura.fecha_factura.desc()).limit(5).all()
     except Exception as e:
         current_app.logger.error(f"Error al obtener las facturas recientes: {e}", exc_info=True)
         # No flasheamos un mensaje de error aquí para no sobrecargar al usuario si la actividad reciente ya falló,
