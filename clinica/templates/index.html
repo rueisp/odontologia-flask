@@ -87,81 +87,71 @@
         </div>
 
         <!-- =================================================================== -->
-        <!-- ▼▼▼ SECCIÓN DE DOS COLUMNAS: ACTIVIDAD RECIENTE Y FACTURAS RECIENTES (MODIFICADA) ▼▼▼ -->
+        <!-- ▼▼▼ SECCIÓN: FACTURAS RECIENTES (ÚNICA COLUMNA) ▼▼▼ -->
         <!-- =================================================================== -->
-        <div class="mt-6 lg:mt-8 grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
-            <!-- Columna para Actividad Reciente -->
+        <div class="mt-6 lg:mt-8">
             <div>
-                <div class="max-w-lg mx-auto md:mx-0"> {# Añadido mx-auto md:mx-0 para centrado en móviles y alineación en desktop #}
-                    <div class="activity-log-card-header px-4 py-3 sm:px-6 sm:py-4 flex items-center rounded-2xl shadow-md">
-                        <i data-lucide="history" class="w-5 h-5 mr-3 text-white"></i>
-                        <h3 class="text-lg font-semibold text-white mb-0">Actividad Reciente</h3>
-                    </div>
+                <!-- Encabezado -->
+                <div class="facturas-card-header px-4 py-3 sm:px-6 sm:py-4 flex items-center rounded-t-2xl shadow-md bg-black text-white">
+                    <i data-lucide="receipt-text" class="w-5 h-5 mr-3"></i>
+                    <h3 class="text-lg font-semibold mb-0">Facturas Recientes</h3>
                 </div>
-                <div class="bg-white rounded-3xl shadow-lg">
-                    {% if ultimas_acciones %}
-                    <ul class="divide-y divide-gray-200">
-                        {% for accion in ultimas_acciones %}
-                        <li class="px-4 py-3 sm:px-6 sm:py-4 hover:bg-gray-50 transition-colors duration-150">
-                            <div class="flex items-center justify-between mb-1">
-                                <div class="flex items-center">
-                                    {% set action_prefix = accion.action_type.split('_')[0] %}
-                                    <span class="action-type-badge {% if action_prefix == 'ELIMINAR' %}badge-delete{% elif action_prefix == 'SOFT DELETE' %}badge-delete{% elif action_prefix == 'EDITAR' %}badge-edit{% elif action_prefix == 'CREAR' %}badge-create{% else %}badge-default{% endif %}">{{ action_prefix | upper }}</span>
-                                    <span class="text-sm font-medium text-gray-800">{{ accion.action_type.split('_')[1:] | join(' ') | title if '_' in accion.action_type else accion.action_type | title }}</span>
-                                </div>
-                                <span class="text-xs text-gray-500">{{ accion.timestamp.strftime('%d/%m/%y %H:%M') }}</span>
-                            </div>
-                            <p class="text-sm text-gray-600 leading-relaxed">{{ accion.description }}</p>
-                            {% if accion.user_username and accion.user_username != "Sistema/Desconocido" %}
-                            <p class="text-xs text-gray-400 mt-1">Realizado por: {{ accion.user_username }}</p>
-                            {% endif %}
-                        </li>
-                        {% endfor %}
-                    </ul>
-                    {% else %}
-                    <div class="px-4 py-6 sm:px-6 text-center text-gray-500">
-                        <i data-lucide="info" class="w-8 h-8 text-gray-400 mx-auto mb-2"></i>
-                        <p>No hay actividad reciente para mostrar.</p>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Columna para Facturas Recientes -->
-            <div>
-                <div class="max-w-lg mx-auto md:mx-0"> {# Añadido mx-auto md:mx-0 para centrado en móviles y alineación en desktop #}
-                    <div class="facturas-card-header px-4 py-3 sm:px-6 sm:py-4 flex items-center rounded-2xl shadow-md">
-                        <i data-lucide="receipt-text" class="w-5 h-5 mr-3 text-white"></i> {# Icono para facturas #}
-                        <h3 class="text-lg font-semibold text-white mb-0">Facturas Recientes</h3>
-                    </div>
-                </div>
-                <div class="bg-white rounded-3xl shadow-lg">
+                
+                <!-- Cuerpo de la tarjeta -->
+                <div class="bg-white rounded-b-3xl shadow-lg overflow-hidden border-x border-b border-gray-200">
                     {% if facturas_recientes %}
+                    <!-- Lista de Facturas (Versión Diccionario - Infalible) -->
                     <ul class="divide-y divide-gray-200">
                         {% for factura in facturas_recientes %}
                         <li class="px-4 py-3 sm:px-6 sm:py-4 hover:bg-gray-50 transition-colors duration-150">
                             <div class="flex items-center justify-between mb-1">
-                                <div class="flex items-center">
-                                    <span class="text-sm font-medium text-gray-800">Factura #{{ factura.id }}</span>
+                                <div class="flex flex-col">
+                                    
+                                    <!-- 1. NOMBRE DEL PACIENTE -->
+                                    <!-- Ahora leemos directamente la variable de texto que creamos en Python -->
+                                    <a href="{{ url_for('pacientes.editar_paciente', id=factura.paciente_id) }}" class="text-sm font-bold text-blue-600 hover:text-blue-800 hover:underline">
+                                        {{ factura.nombre_paciente }}
+                                    </a>
+                                    
+                                    <!-- 2. NÚMERO DE FACTURA -->
+                                    <span class="text-xs text-gray-500 font-medium mt-0.5">
+                                        Factura #{{ factura.id }}
+                                    </span>
                                 </div>
-                                <span class="text-xs text-gray-500">{{ factura.fecha_creacion.strftime('%d/%m/%y %H:%M') }}</span>
+
+                                <!-- FECHA -->
+                                <span class="text-xs text-gray-400">
+                                    {{ factura.fecha_obj.strftime('%d/%m/%y') }}
+                                </span>
                             </div>
-                            <p class="text-sm text-gray-600 leading-relaxed">Agrupa {{ factura.citas | length }} cita(s)</p> {# Asumiendo que `factura.citas` es una lista de citas asociadas #}
-                            {# Puedes añadir un enlace para ver los detalles de la factura o sus citas #}
-                            <a href="{{ url_for('facturacion.ver_detalles_factura', factura_id=factura.id) }}" class="text-xs text-blue-500 hover:text-blue-700 hover:underline mt-1 block">Ver detalles</a>
+                            
+                            <div class="flex justify-between items-center mt-2 border-t border-gray-100 pt-2">
+                                <p class="text-xs text-gray-600">
+                                    <!-- Leemos el conteo que calculamos en Python -->
+                                    <span class="font-medium text-gray-800">{{ factura.citas_count }}</span> cita(s)
+                                </p>
+                                
+                                {% if factura.total %}
+                                <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md">
+                                    ${{ "{:,.0f}".format(factura.total) }}
+                                </span>
+                                {% endif %}
+                            </div>
                         </li>
                         {% endfor %}
                     </ul>
                     {% else %}
-                    <div class="px-4 py-6 sm:px-6 text-center text-gray-500">
-                        <i data-lucide="info" class="w-8 h-8 text-gray-400 mx-auto mb-2"></i>
-                        <p>No hay facturas recientes para mostrar.</p>
-                        <a href="{{ url_for('reportes.vista_reportes') }}" class="text-blue-500 hover:underline text-sm mt-2 block">Generar una nueva factura</a>
+                    <div class="px-4 py-8 text-center text-gray-500">
+                        <i data-lucide="info" class="w-10 h-10 text-gray-400 mx-auto mb-3"></i>
+                        <p class="text-base">No hay facturas recientes.</p>
+                        <a href="{{ url_for('pacientes.lista_pacientes') }}" class="text-blue-500 hover:underline text-sm mt-2 block font-medium">
+                            Ir a Pacientes para Facturar
+                        </a>
                     </div>
                     {% endif %}
                 </div>
             </div>
-        </div> {# FIN de la sección de dos columnas #}
+        </div>
 
     </div>
     

@@ -1,74 +1,75 @@
-# clinica/routes/main.py
+# ▼▼▼ IMPORTACIONES COMPLETAS (Incluyendo request, redirect, url_for) ▼▼▼
+from flask import Blueprint, render_template, current_app, flash, request, redirect, url_for
+from flask_login import login_required, current_user, login_user, logout_user
+from datetime import datetime
+import pytz
+from clinica.utils import get_index_panel_data
+# Importamos los modelos
+from clinica.models import Cita, Paciente, Factura, Usuario# Asegúrate de importar User si lo usas en login
 
-from flask import (
-    Blueprint, render_template, redirect, url_for, flash, request, current_app
-)
-from flask_login import login_user, logout_user, login_required, current_user
-from ..models import db, Usuario, AuditLog, Factura # Asegúrate de que 'db' esté importado
-from ..extensions import db # Esta línea es redundante si ya importas db desde models, pero no hace daño
-from ..utils import get_index_panel_data
-from datetime import datetime, date # <--- ¡Asegúrate de que datetime está importado!
-import pytz # <--- ¡IMPORTAR pytz!
-# Creamos el Blueprint
-main_bp = Blueprint('main', __name__) 
-
-# --- Rutas Principales ---
+# ▼▼▼ ESTA ES LA LÍNEA QUE FALTABA ▼▼▼
+main_bp = Blueprint('main', __name__)
 
 @main_bp.route("/")
 @login_required
 def index():
-    # --- MODIFICACIONES CLAVE PARA ZONA HORARIA ---
-    # 1. Define la zona horaria de tu clínica
-    local_timezone = pytz.timezone('America/Bogota') # <--- ¡CAMBIA ESTO SI TU ZONA HORARIA ES DIFERENTE!
-
-    # 2. Obtiene la fecha y hora actuales en esa zona horaria
+    # --- 1. CONFIGURACIÓN BÁSICA ---
+    local_timezone = pytz.timezone('America/Bogota')
     now_in_local_tz = datetime.now(local_timezone)
-
-    # --- AÑADE ESTAS LÍNEAS DE DEBUG AQUÍ ---
-    print(f"DEBUG_DASHBOARD: Hora UTC en el servidor (main.py): {datetime.utcnow()}")
-    print(f"DEBUG_DASHBOARD: Hora localizada (America/Bogota) en main.py: {now_in_local_tz}")
-    print(f"DEBUG_DASHBOARD: Dia Hoy Local en main.py: {now_in_local_tz.day}/{now_in_local_tz.month}/{now_in_local_tz.year}")
-    # --- FIN DE LÍNEAS DE DEBUG ---
-
-    # 3. Formatea la fecha localizada para mostrarla en el dashboard
+    
     fecha_actual_formateada = now_in_local_tz.strftime('%A, %d de %B de %Y')
     fecha_actual_corta = now_in_local_tz.strftime('%d %B')
-    # --- FIN MODIFICACIONES CLAVE PARA ZONA HORARIA ---
 
+    # --- 2. DATOS DEL PANEL ---
     try:
-        # ¡IMPORTANTE! Pasamos la fecha localizada a la función que obtiene los datos
         panel_data = get_index_panel_data(now_in_local_tz.date(), now_in_local_tz.time())
     except Exception as e:
-        current_app.logger.error(f"Error al obtener datos del panel para el index: {e}", exc_info=True)
+        current_app.logger.error(f"Error panel: {e}")
         panel_data = {}
-        flash("Ocurrió un error al cargar los datos del panel.", "danger")
 
+    # --- 3. LÓGICA DE FACTURAS (LIMPIA) ---
+    lista_facturas_simple = []
+    
     try:
-        if current_user.is_admin:
-            ultimas_acciones = AuditLog.query.order_by(AuditLog.timestamp.desc()).limit(5).all()
-        else:
-            ultimas_acciones = AuditLog.query.filter_by(user_id=current_user.id).order_by(AuditLog.timestamp.desc()).limit(5).all()
-
+        facturas_db = Factura.query.order_by(Factura.fecha_factura.desc()).limit(5).all()
+        
+        for f in facturas_db:
+            # 1. Buscar Paciente y Nombre de forma segura (Singular o Plural)
+            try:
+                paciente = Paciente.query.get(f.paciente_id)
+                if paciente:
+                    # Intenta 'nombres', si falla intenta 'nombre', si falla pone 'Desconocido'
+                    p_nombre = getattr(paciente, 'nombres', getattr(paciente, 'nombre', ''))
+                    p_apellido = getattr(paciente, 'apellidos', getattr(paciente, 'apellido', ''))
+                    nombre_completo = f"{p_nombre} {p_apellido}".strip() or "Paciente Sin Nombre"
+                else:
+                    nombre_completo = "Paciente Eliminado"
+            except:
+                nombre_completo = "Error de Datos"
+            
+            # 2. Contar citas de forma segura
+            try:
+                num_citas = f.citas.count() 
+            except:
+                num_citas = 0
+                
+            # 3. Crear diccionario simple
+            datos = {
+                'id': f.id,
+                'paciente_id': f.paciente_id,
+                'nombre_paciente': nombre_completo,
+                'fecha_obj': f.fecha_factura,
+                'citas_count': num_citas,
+                'total': f.valor_total
+            }
+            lista_facturas_simple.append(datos)
+            
     except Exception as e:
-        current_app.logger.error(f"Error al obtener las últimas acciones de auditoría: {e}", exc_info=True)
-        ultimas_acciones = []
-
-    # --- NUEVA LÓGICA PARA FACTURAS RECIENTES ---
-    facturas_recientes = [] # Inicializar como lista vacía para evitar errores si la consulta falla
-    try:
-        # Consulta las últimas 5 facturas, ordenadas por fecha de creación descendente
-        # Asegúrate de que 'fecha_creacion' sea un campo datetime en tu modelo Factura
-        facturas_recientes = Factura.query.order_by(Factura.fecha_factura.desc()).limit(5).all()
-    except Exception as e:
-        current_app.logger.error(f"Error al obtener las facturas recientes: {e}", exc_info=True)
-        # No flasheamos un mensaje de error aquí para no sobrecargar al usuario si la actividad reciente ya falló,
-        # pero es importante que el log registre el problema.
-    # --- FIN LÓGICA FACTURAS RECIENTES ---
+        current_app.logger.error(f"Error al cargar facturas: {e}")
 
     return render_template(
         "index.html",
-        ultimas_acciones=ultimas_acciones,
-        facturas_recientes=facturas_recientes, # <--- ¡Pasa esta nueva variable a la plantilla!
+        facturas_recientes=lista_facturas_simple,
         fecha_actual_formateada=fecha_actual_formateada,
         fecha_actual_corta=fecha_actual_corta,
         **panel_data
