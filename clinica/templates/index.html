@@ -90,47 +90,40 @@
         <!-- ▼▼▼ SECCIÓN: FACTURAS RECIENTES (ÚNICA COLUMNA) ▼▼▼ -->
         <!-- =================================================================== -->
         <div class="mt-6 lg:mt-8">
-            <div>
-                <!-- Encabezado -->
-                <div class="facturas-card-header px-4 py-3 sm:px-6 sm:py-4 flex items-center rounded-t-2xl shadow-md bg-black text-white">
+            
+            <!-- CONTENEDOR PADRE: Sin borde gris, solo sombra y redondeo superior (si existe) -->
+            <div class="shadow-lg overflow-hidden"> 
+                
+                <!-- Encabezado NEGRO: Ahora es una pastilla redondeada independiente con bg-black -->
+                <div class="facturas-card-header px-4 py-3 sm:px-6 sm:py-4 flex items-center rounded-xl bg-black text-white">
                     <i data-lucide="receipt-text" class="w-5 h-5 mr-3"></i>
                     <h3 class="text-lg font-semibold mb-0">Facturas Recientes</h3>
                 </div>
                 
-                <!-- Cuerpo de la tarjeta -->
-                <div class="bg-white rounded-b-3xl shadow-lg overflow-hidden border-x border-b border-gray-200">
+                <!-- Cuerpo de la tarjeta: Redondeado solo abajo, y SIN BORDES internos -->
+                <div class="bg-white rounded-b-3xl overflow-hidden"> 
                     {% if facturas_recientes %}
-                    <!-- Lista de Facturas (Versión Diccionario - Infalible) -->
+                    <!-- Lista de Facturas -->
                     <ul class="divide-y divide-gray-200">
                         {% for factura in facturas_recientes %}
                         <li class="px-4 py-3 sm:px-6 sm:py-4 hover:bg-gray-50 transition-colors duration-150">
                             <div class="flex items-center justify-between mb-1">
                                 <div class="flex flex-col">
-                                    
-                                    <!-- 1. NOMBRE DEL PACIENTE -->
-                                    <!-- Ahora leemos directamente la variable de texto que creamos en Python -->
                                     <a href="{{ url_for('pacientes.editar_paciente', id=factura.paciente_id) }}" class="text-sm font-bold text-blue-600 hover:text-blue-800 hover:underline">
                                         {{ factura.nombre_paciente }}
                                     </a>
-                                    
-                                    <!-- 2. NÚMERO DE FACTURA -->
                                     <span class="text-xs text-gray-500 font-medium mt-0.5">
                                         Factura #{{ factura.id }}
                                     </span>
                                 </div>
-
-                                <!-- FECHA -->
                                 <span class="text-xs text-gray-400">
                                     {{ factura.fecha_obj.strftime('%d/%m/%y') }}
                                 </span>
                             </div>
-                            
                             <div class="flex justify-between items-center mt-2 border-t border-gray-100 pt-2">
                                 <p class="text-xs text-gray-600">
-                                    <!-- Leemos el conteo que calculamos en Python -->
                                     <span class="font-medium text-gray-800">{{ factura.citas_count }}</span> cita(s)
                                 </p>
-                                
                                 {% if factura.total %}
                                 <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md">
                                     ${{ "{:,.0f}".format(factura.total) }}
