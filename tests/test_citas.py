@@ -56,7 +56,7 @@ class TestCitas:
                 'doctor': 'Dr. Test'
             }
             
-            response = authenticated_client.post('/calendario/cita/crear',
+            response = authenticated_client.post('/calendario/registrar_cita',
                                                 data=data,
                                                 follow_redirects=True)
             
@@ -152,5 +152,5 @@ class TestCitas:
                 db.session.add(cita)
             db.session.commit()
         
-        response = authenticated_client.get(f'/pacientes/{paciente_id}/citas')
+        response = authenticated_client.get(f'/calendario/historial_citas_paciente/{paciente_id}')
         assert response.status_code == 200

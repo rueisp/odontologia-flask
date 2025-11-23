@@ -1,4 +1,19 @@
+#!/usr/bin/env python3
 """
+Script para refactorizar pacientes.py para usar los servicios
+"""
+
+import re
+from pathlib import Path
+
+def refactorizar_pacientes_usar_servicios():
+    """Refactoriza pacientes.py para usar pacientes_services.py"""
+    
+    archivo = Path("clinica/routes/pacientes.py")
+    contenido = archivo.read_text(encoding='utf-8')
+    
+    # Nuevo contenido del archivo
+    nuevo_contenido = '''"""
 Rutas HTTP para el módulo de pacientes.
 
 Este módulo contiene solo las rutas HTTP, delegando la lógica de negocio
@@ -143,3 +158,21 @@ def upload_dentigrama():
         return jsonify({'url': resultado['url'], 'message': resultado['message']}), 200
     else:
         return jsonify({'error': resultado['message']}), 400 if 'datos' in resultado['message'] else 500
+'''
+    
+    # Guardar el nuevo contenido
+    archivo.write_text(nuevo_contenido, encoding='utf-8')
+    
+    print("✅ pacientes.py refactorizado exitosamente")
+    print(f"   Líneas antes: {len(contenido.splitlines())}")
+    print(f"   Líneas después: {len(nuevo_contenido.splitlines())}")
+    print(f"   Reducción: {len(contenido.splitlines()) - len(nuevo_contenido.splitlines())} líneas")
+    
+    return True
+
+if __name__ == "__main__":
+    try:
+        refactorizar_pacientes_usar_servicios()
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        raise

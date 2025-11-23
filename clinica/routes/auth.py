@@ -1,4 +1,4 @@
-# clinica/routes/main.py
+# clinica/routes/auth.py
 
 from flask import (
     Blueprint, render_template, request, redirect, url_for, flash, current_app
@@ -33,34 +33,26 @@ def get_index_panel_data():
     hoy = date.today()
     datos_panel = {}
 
-    # 1. Fecha actual formateada
-    # Esta lógica de locale es compleja, la mantenemos como la tenías
-    fecha_formateada_buffer = None 
-    locale_original_time = locale.getlocale(locale.LC_TIME)
+    # 1. Fecha actual formateada (simplificada)
+    meses = {
+        1: 'enero', 2: 'febrero', 3: 'marzo', 4: 'abril',
+        5: 'mayo', 6: 'junio', 7: 'julio', 8: 'agosto',
+        9: 'septiembre', 10: 'octubre', 11: 'noviembre', 12: 'diciembre'
+    }
+    dias = {
+        0: 'lunes', 1: 'martes', 2: 'miércoles', 3: 'jueves',
+        4: 'viernes', 5: 'sábado', 6: 'domingo'
+    }
+    
     try:
-        locales_a_intentar_es = ['es_ES.UTF-8', 'es_ES', 'es', 'Spanish_Spain.1252', 'Spanish']
-        configurado_es = False
-        for loc_es in locales_a_intentar_es:
-            try:
-                locale.setlocale(locale.LC_TIME, loc_es)
-                fecha_formateada_buffer = hoy.strftime("%A, %d de %B de %Y").capitalize()
-                configurado_es = True
-                break
-            except locale.Error:
-                continue
-        if not configurado_es: 
-            locale.setlocale(locale.LC_TIME, '') 
-            fecha_formateada_buffer = hoy.strftime("%A, %d de %B de %Y").capitalize()
+        dia_semana = dias[hoy.weekday()]
+        mes = meses[hoy.month]
+        fecha_formateada = f"{dia_semana.capitalize()}, {hoy.day} de {mes} de {hoy.year}"
     except Exception as e:
-        current_app.logger.error(f"Error excepcional al formatear fecha_actual_formateada: {e}")
-        fecha_formateada_buffer = hoy.strftime("%A, %d %B %Y").capitalize()
-    finally:
-        if locale_original_time != (None, None):
-            try:
-                locale.setlocale(locale.LC_TIME, locale_original_time)
-            except locale.Error:
-                pass
-    datos_panel['fecha_actual_formateada'] = fecha_formateada_buffer
+        current_app.logger.error(f"Error al formatear fecha: {e}")
+        fecha_formateada = hoy.strftime("%Y-%m-%d")
+    
+    datos_panel['fecha_actual_formateada'] = fecha_formateada
 
     # 2. Estadísticas: Citas de hoy
     citas_hoy_count = db.session.query(func.count(Cita.id))\
@@ -145,12 +137,19 @@ def login():
         
         if usuario_encontrado and usuario_encontrado.check_password(contrasena):
             login_user(usuario_encontrado, remember=remember_me)
+            
+            # Log de seguridad: login exitoso
+            current_app.logger.info(f"Login exitoso: usuario='{usuario_encontrado.username}', IP={request.remote_addr}")
+            
             flash('Has iniciado sesión correctamente.', 'success')
             
             next_page = request.args.get('next')
             # Redirigir a 'next_page' o al index si no hay 'next'
             return redirect(next_page or url_for('main.index'))
         else:
+            # Log de seguridad: login fallido
+            current_app.logger.warning(f"Intento de login fallido: usuario/email='{username_o_email}', IP={request.remote_addr}")
+            
             flash('Credenciales inválidas. Por favor, verifica tu usuario y contraseña.', 'danger')
 
     return render_template('login.html')
