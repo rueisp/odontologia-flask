@@ -5,14 +5,14 @@ import { initializePatientSearch, preloadPatient } from './search_utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Definimos la variable de estado al principio, accesible para todas las funciones dentro del DOMContentLoaded
-    let pacienteSeleccionado = null; 
+    let pacienteSeleccionado = null;
 
     // ==================================================================
     // SECCIÓN: BÚSQUEDA DE PACIENTES Y PANEL DERECHO
     // ==================================================================
     const inputBusqueda = document.getElementById('busquedaPaciente');
     const contenedorSugerencias = document.getElementById('sugerencias');
-    
+
     // --- Referencias a los botones y su contenedor ---
     const panelControles = document.getElementById('panel-controles');
     const btnEditarPacienteEl = document.getElementById('btnEditarPaciente');
@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const telefonoPacienteHeader = document.getElementById('telefonoPaciente');
 
     // Elementos del DOM en el panel derecho (sección "Datos")
-    const estadoPacienteSpan = document.getElementById('estadoPaciente'); // Se usará para estado_civil
+    const estadoPacienteSpan = document.getElementById('estadoPaciente');
     const generoEdadSpan = document.getElementById('generoEdad');
     const fechaNacimientoSpan = document.getElementById('fechaNacimiento');
     const direccionPacienteSpan = document.getElementById('direccionPaciente');
@@ -51,11 +51,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const imagen2DisplayContainer = document.getElementById('imagen2DisplayContainer');
     const imagen2Display = document.getElementById('imagen2Display');
     const noImagen2 = document.getElementById('noImagen2');
-    
+
     // --- Funciones auxiliares para mostrar/ocultar imágenes ---
     function displayImage(container, imgElement, noImgElement, imageUrl) {
-        if (imageUrl) {
+        if (!container || !imgElement || !noImgElement) {
+            console.warn('displayImage: Elementos no encontrados');
+            return;
+        }
+
+        if (imageUrl && imageUrl.trim() !== '') {
             imgElement.src = imageUrl;
+            imgElement.onerror = function() {
+                console.error(`Error al cargar imagen: ${imageUrl}`);
+                hideImage(container, imgElement, noImgElement);
+            };
             container.classList.remove('hidden');
             imgElement.classList.remove('hidden');
             noImgElement.classList.add('hidden');
@@ -65,56 +74,59 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function hideImage(container, imgElement, noImgElement) {
+        if (!container || !imgElement || !noImgElement) return;
+        
         container.classList.add('hidden');
-        imgElement.src = ''; // Limpia la fuente
+        imgElement.src = '';
         imgElement.classList.add('hidden');
         noImgElement.classList.remove('hidden');
     }
 
-    // Función para limpiar o resetear el panel derecho (AHORA TAMBIÉN LIMPIA EL INPUT DE BÚSQUEDA)
+    // Función para limpiar o resetear el panel derecho
     function clearRightPanel() {
-        nombrePacienteHeader.textContent = 'No especificado';
-        documentoPacienteHeader.textContent = 'No especificado';
-        telefonoPacienteHeader.textContent = 'No especificado';
+        const setText = (element, text) => {
+            if (element) element.textContent = text;
+        };
+
+        setText(nombrePacienteHeader, 'No especificado');
+        setText(documentoPacienteHeader, 'No especificado');
+        setText(telefonoPacienteHeader, 'No especificado');
 
         // Sección "Datos"
-        estadoPacienteSpan.textContent = 'No especificado';
-        generoEdadSpan.textContent = 'N/A • No especificada';
-        fechaNacimientoSpan.textContent = 'No especificado';
-        direccionPacienteSpan.textContent = 'No especificado';
-        emailPacienteSpan.textContent = 'No especificado';
-        ocupacionPacienteSpan.textContent = 'No especificado';
-        aseguradoraPacienteSpan.textContent = 'No especificado';
-        alergiasPacienteSpan.textContent = 'No especificado';
-        enfermedadPacienteSpan.textContent = 'No especificado';
+        setText(estadoPacienteSpan, 'No especificado');
+        setText(generoEdadSpan, 'N/A • No especificada');
+        setText(fechaNacimientoSpan, 'No especificado');
+        setText(direccionPacienteSpan, 'No especificado');
+        setText(emailPacienteSpan, 'No especificado');
+        setText(ocupacionPacienteSpan, 'No especificado');
+        setText(aseguradoraPacienteSpan, 'No especificado');
+        setText(alergiasPacienteSpan, 'No especificado');
+        setText(enfermedadPacienteSpan, 'No especificado');
 
         // Sección "Citas"
-        ultimaCitaSpan.textContent = 'No hay citas anteriores registradas';
-        proximaCitaPanelDerechoSpan.textContent = 'No tiene próximas citas';
-        motivoFrecuenteSpan.textContent = 'No especificado';
+        setText(ultimaCitaSpan, 'No hay citas anteriores registradas');
+        setText(proximaCitaPanelDerechoSpan, 'No tiene próximas citas');
+        setText(motivoFrecuenteSpan, 'No especificado');
 
         // Sección "Imágenes"
         hideImage(dentigramaDisplayContainer, dentigramaDisplay, noDentigrama);
         hideImage(imagen1DisplayContainer, imagen1Display, noImagen1);
         hideImage(imagen2DisplayContainer, imagen2Display, noImagen2);
-        
-        panelControles.style.display = 'none'; // Oculta los botones de acción
-        pacienteSeleccionado = null; // Reinicia el paciente seleccionado
-        inputBusqueda.value = ''; // Limpia el campo de búsqueda del dashboard
+
+        if (panelControles) panelControles.style.display = 'none';
+        pacienteSeleccionado = null;
+        if (inputBusqueda) inputBusqueda.value = '';
     }
 
 
-    // Función para actualizar el panel derecho con los datos del paciente (callback para search_utils)
+    // Función para actualizar el panel derecho con los datos del paciente
     function actualizarPanelDerechoConPaciente(datos) {
-        if (!datos) { // Si no se pasaron datos, limpiar el panel
+        if (!datos) {
             clearRightPanel();
             return;
         }
-        
-        pacienteSeleccionado = datos; // Almacenamos los datos en la variable de estado
 
-        // Rellenar el input de búsqueda (ya lo hace initializePatientSearch o preloadPatient)
-        // inputBusqueda.value = datos.nombre; 
+        pacienteSeleccionado = datos;
 
         const setText = (id_element, value, defaultValue = 'No especificado') => {
             const el = document.getElementById(id_element);
@@ -125,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const edadDisplay = datos.edad === 'No especificada' ? 'No especificada' : `${datos.edad} años`;
         setText('generoEdad', `${datos.genero || 'N/A'} • ${edadDisplay}`);
         setText('fechaNacimiento', datos.fecha_nacimiento);
-        setText('estadoPaciente', datos.estado); // 'estado' aquí es el del paciente, ej. estado_civil
+        setText('estadoPaciente', datos.estado);
         setText('documentoPaciente', datos.documento);
         setText('telefonoPaciente', datos.telefono);
         setText('direccionPaciente', datos.direccion);
@@ -143,43 +155,51 @@ document.addEventListener('DOMContentLoaded', () => {
         displayImage(imagen1DisplayContainer, imagen1Display, noImagen1, datos.imagen_1);
         displayImage(imagen2DisplayContainer, imagen2Display, noImagen2, datos.imagen_2);
 
-        panelControles.style.display = 'flex';
+        if (panelControles) {
+            panelControles.style.display = 'flex';
 
-        const editUrlBase = panelControles.dataset.editUrlBase;
-        const citasUrlBase = panelControles.dataset.citasUrlBase;
+            const editUrlBase = panelControles.dataset.editUrlBase;
+            const citasUrlBase = panelControles.dataset.citasUrlBase;
 
-        btnEditarPacienteEl.onclick = function() { // Usar btnEditarPacienteEl
-            if (pacienteSeleccionado && pacienteSeleccionado.id) {
-                window.location.href = editUrlBase.replace('0', pacienteSeleccionado.id);
-            } else {
-                alert('Por favor, selecciona un paciente válido.');
+            if (btnEditarPacienteEl) {
+                btnEditarPacienteEl.onclick = function () {
+                    if (pacienteSeleccionado && pacienteSeleccionado.id) {
+                        window.location.href = editUrlBase.replace('0', pacienteSeleccionado.id);
+                    } else {
+                        alert('Por favor, selecciona un paciente válido.');
+                    }
+                };
             }
-        };
-        btnVerCitasHistorialEl.onclick = function() { // Usar btnVerCitasHistorialEl
-            if (pacienteSeleccionado && pacienteSeleccionado.id) {
-                window.location.href = citasUrlBase.replace('0', pacienteSeleccionado.id);
-            } else {
-                alert('Por favor, selecciona un paciente válido.');
-            }
-        };
 
-        mostrarSeccion('datos'); // Asegurarse de que la pestaña "Datos" esté activa
+            if (btnVerCitasHistorialEl) {
+                btnVerCitasHistorialEl.onclick = function () {
+                    if (pacienteSeleccionado && pacienteSeleccionado.id) {
+                        window.location.href = citasUrlBase.replace('0', pacienteSeleccionado.id);
+                    } else {
+                        alert('Por favor, selecciona un paciente válido.');
+                    }
+                };
+            }
+        }
+
+        mostrarSeccion('datos');
     }
 
+    // Variable para el input temporal (MOVIDA FUERA DEL BLOQUE IF)
+    let tempHiddenPatientIdInput = null;
 
     // --- Inicialización de la búsqueda de pacientes para el dashboard ---
     if (inputBusqueda && contenedorSugerencias) {
-        // Un hidden input temporal para initializePatientSearch, ya que no necesitamos enviar su ID al formulario principal.
-        const tempHiddenPatientIdInput = document.createElement('input');
+        tempHiddenPatientIdInput = document.createElement('input');
         tempHiddenPatientIdInput.type = 'hidden';
-        tempHiddenPatientIdInput.id = 'temp_dashboard_patient_id'; // Un ID único
+        tempHiddenPatientIdInput.id = 'temp_dashboard_patient_id';
 
-        initializePatientSearch(inputBusqueda, contenedorSugerencias, tempHiddenPatientIdInput, 
-                                actualizarPanelDerechoConPaciente, clearRightPanel);
+        initializePatientSearch(inputBusqueda, contenedorSugerencias, tempHiddenPatientIdInput,
+            actualizarPanelDerechoConPaciente, clearRightPanel);
     }
-    
+
     // Al cargar la página, limpia el panel derecho
-    clearRightPanel(); 
+    clearRightPanel();
 
     // --- Lógica para el cambio de pestañas en el panel derecho ---
     const tabButtons = document.querySelectorAll('.tab-btn-panel-derecho');
@@ -190,9 +210,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function mostrarSeccion(seccionIdActiva) {
-        // IDs de las secciones del panel derecho que se pueden mostrar/ocultar
         const idsSeccionesPanelDerecho = ['datos', 'citas', 'imagenes'];
-        
+
         idsSeccionesPanelDerecho.forEach(idPanel => {
             const el = document.getElementById(`seccion-${idPanel}`);
             if (el) el.classList.add('hidden');
@@ -206,7 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.classList.remove('border-black', 'text-black', 'font-semibold');
             btn.classList.add('text-gray-600', 'border-transparent');
         });
-        
+
         // Activar el botón correspondiente a la sección activa
         const btnActiva = document.querySelector(`.tab-btn-panel-derecho[data-seccion="${seccionIdActiva}"]`);
         if (btnActiva) {
@@ -217,98 +236,118 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Añadir event listeners a los botones de pestañas del panel derecho
     tabButtons.forEach(button => {
-        button.addEventListener('click', function() {
+        button.addEventListener('click', function () {
             const seccion = this.dataset.seccion;
             if (seccion) {
                 mostrarSeccion(seccion);
             }
         });
     });
-    
+
     // Llamada inicial para mostrar la sección de 'datos' en el panel derecho
     const primerTabPanelDerecho = document.querySelector('.tab-btn-panel-derecho[data-seccion="datos"]');
-    if(primerTabPanelDerecho) mostrarSeccion('datos'); 
+    if (primerTabPanelDerecho) mostrarSeccion('datos');
 
 
     // --- Lógica principal al cargar la página: Cargar paciente por defecto si el ID está presente ---
-    // La variable DEFAULT_PATIENT_ID se define en index.html a través de Jinja2
-    if (typeof DEFAULT_PATIENT_ID !== 'undefined' && DEFAULT_PATIENT_ID !== null) {
-        // Usamos preloadPatient para cargar el paciente por defecto
+    if (typeof DEFAULT_PATIENT_ID !== 'undefined' && DEFAULT_PATIENT_ID !== null && tempHiddenPatientIdInput) {
         preloadPatient(DEFAULT_PATIENT_ID, inputBusqueda, tempHiddenPatientIdInput, actualizarPanelDerechoConPaciente)
             .catch(error => {
                 console.error('Error al cargar paciente por defecto en dashboard:', error);
                 clearRightPanel();
-                // Puedes mostrar un mensaje al usuario si la carga del paciente por defecto falla
             });
     }
 
     // ==================================================================
     // SECCIÓN: CITAS DE HOY (PANEL CENTRAL) - MANEJO DE ESTADOS Y FILTROS
-    // (TU CÓDIGO EXISTENTE AQUÍ)
     // ==================================================================
     const listaCitasContainer = document.getElementById('lista-citas-hoy');
-    const noAppointmentsMessageCitasHoy = document.querySelector(".no-appointments-message"); 
+    const noAppointmentsMessageCitasHoy = document.querySelector(".no-appointments-message");
 
     if (listaCitasContainer) {
-        listaCitasContainer.addEventListener('click', function(event) {
+        listaCitasContainer.addEventListener('click', function (event) {
             const botonCambiarEstado = event.target.closest('.btn-cambiar-estado');
             if (botonCambiarEstado) {
                 event.preventDefault();
                 const tarjetaCita = botonCambiarEstado.closest('.appointment-card');
+                if (!tarjetaCita) return;
+
                 const citaId = tarjetaCita.dataset.citaId;
                 const nuevoEstado = botonCambiarEstado.dataset.nuevoEstado;
                 const estadoActual = tarjetaCita.dataset.estado;
 
                 if (estadoActual === nuevoEstado) return;
-                
+
+                // Crear un AbortController para timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos timeout
+
                 fetch(`/calendario/cita/actualizar_estado/${citaId}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' /*, 'X-CSRFToken': TU_CSRF_TOKEN */ },
-                    body: JSON.stringify({ estado: nuevoEstado })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ estado: nuevoEstado }),
+                    signal: controller.signal
                 })
-                .then(response => {
-                    if (!response.ok) return response.json().then(err => { throw new Error(err.message || `Error: ${response.status}`) });
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        tarjetaCita.dataset.estado = data.nuevo_estado;
-                        const estadoSpan = tarjetaCita.querySelector('.cita-estado-badge');
-                        if (estadoSpan) {
-                            estadoSpan.textContent = data.nuevo_estado.charAt(0).toUpperCase() + data.nuevo_estado.slice(1);
-                            estadoSpan.className = 'cita-estado-badge text-xs px-2 py-0.5 rounded-full mt-1 inline-block';
-                            if (data.nuevo_estado === 'completada') estadoSpan.classList.add('bg-green-100', 'text-green-700');
-                            else if (data.nuevo_estado === 'cancelada') estadoSpan.classList.add('bg-red-100', 'text-red-700');
-                            else estadoSpan.classList.add('bg-yellow-100', 'text-yellow-700');
-                        }
-
-                        const accionesDiv = tarjetaCita.querySelector('.appointment-actions');
-                        if (accionesDiv) {
-                            accionesDiv.querySelectorAll('.btn-cambiar-estado').forEach(btn => {
-                                btn.style.display = 'inline-block';
-                                if (data.nuevo_estado === 'completada' && btn.dataset.nuevoEstado !== 'completada' && btn.dataset.nuevoEstado !== 'cancelada') {
-                                    btn.style.display = 'none';
-                                } else if (data.nuevo_estado === 'cancelada' && btn.dataset.nuevoEstado !== 'cancelada') {
-                                    btn.style.display = 'none';
-                                } else if (btn.dataset.nuevoEstado === data.nuevo_estado) {
-                                     btn.style.display = 'none';
-                                }
+                    .then(response => {
+                        clearTimeout(timeoutId);
+                        if (!response.ok) {
+                            return response.json().then(err => { 
+                                throw new Error(err.message || `Error del servidor: ${response.status}`) 
+                            }).catch(() => {
+                                throw new Error(`Error del servidor: ${response.status}`);
                             });
                         }
-                        
-                        actualizarContadoresPestañasCitasHoy();
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            tarjetaCita.dataset.estado = data.nuevo_estado;
+                            const estadoSpan = tarjetaCita.querySelector('.cita-estado-badge');
+                            if (estadoSpan) {
+                                estadoSpan.textContent = data.nuevo_estado.charAt(0).toUpperCase() + data.nuevo_estado.slice(1);
+                                estadoSpan.className = 'cita-estado-badge text-xs px-2 py-0.5 rounded-full mt-1 inline-block';
+                                if (data.nuevo_estado === 'completada') estadoSpan.classList.add('bg-green-100', 'text-green-700');
+                                else if (data.nuevo_estado === 'cancelada') estadoSpan.classList.add('bg-red-100', 'text-red-700');
+                                else estadoSpan.classList.add('bg-yellow-100', 'text-yellow-700');
+                            }
 
-                        const filtroActivo = document.querySelector('.tab-appointment-filter[data-active="true"]');
-                        if (filtroActivo && filtroActivo.dataset.status !== 'todas' && filtroActivo.dataset.status !== data.nuevo_estado) {
-                            tarjetaCita.style.display = 'none';
-                            verificarMensajeNoCitas(filtroActivo.dataset.status);
+                            const accionesDiv = tarjetaCita.querySelector('.appointment-actions');
+                            if (accionesDiv) {
+                                accionesDiv.querySelectorAll('.btn-cambiar-estado').forEach(btn => {
+                                    btn.style.display = 'inline-block';
+                                    if (data.nuevo_estado === 'completada' && btn.dataset.nuevoEstado !== 'completada' && btn.dataset.nuevoEstado !== 'cancelada') {
+                                        btn.style.display = 'none';
+                                    } else if (data.nuevo_estado === 'cancelada' && btn.dataset.nuevoEstado !== 'cancelada') {
+                                        btn.style.display = 'none';
+                                    } else if (btn.dataset.nuevoEstado === data.nuevo_estado) {
+                                        btn.style.display = 'none';
+                                    }
+                                });
+                            }
+
+                            actualizarContadoresPestañasCitasHoy();
+
+                            const filtroActivo = document.querySelector('.tab-appointment-filter[data-active="true"]');
+                            if (filtroActivo && filtroActivo.dataset.status !== 'todas' && filtroActivo.dataset.status !== data.nuevo_estado) {
+                                tarjetaCita.style.display = 'none';
+                                // Recalcular contadores después de ocultar
+                                const todasLasTarjetas = document.querySelectorAll(".appointment-card");
+                                const visibles = Array.from(todasLasTarjetas).filter(card => card.style.display !== 'none').length;
+                                verificarMensajeNoCitas(filtroActivo.dataset.status, visibles, todasLasTarjetas.length);
+                            }
+                        } else { 
+                            alert("Error al actualizar: " + (data.message || 'Error desconocido')); 
                         }
-                    } else { alert("Error al actualizar: " + data.message); }
-                })
-                .catch(error => {
-                    console.error('Error en fetch:', error);
-                    alert('Error de red al actualizar cita: ' + error.message);
-                });
+                    })
+                    .catch(error => {
+                        clearTimeout(timeoutId);
+                        console.error('Error en fetch:', error);
+                        if (error.name === 'AbortError') {
+                            alert('La solicitud tardó demasiado. Por favor, verifica tu conexión e intenta nuevamente.');
+                        } else {
+                            alert('Error al actualizar cita: ' + error.message);
+                        }
+                    });
             }
         });
     }
@@ -334,7 +373,7 @@ document.addEventListener('DOMContentLoaded', () => {
             filtrarTarjetasCita(statusToShow);
         });
     });
-    
+
     function filtrarTarjetasCita(statusToShow) {
         const todasLasTarjetasCitas = document.querySelectorAll(".appointment-card");
         let visibleCount = 0;
@@ -349,29 +388,29 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         verificarMensajeNoCitas(statusToShow, visibleCount, todasLasTarjetasCitas.length);
     }
-    
+
     function verificarMensajeNoCitas(statusMostrando, conteoVisible, conteoTotal) {
-        if (noAppointmentsMessageCitasHoy) {
-            if (conteoVisible === 0) {
-                noAppointmentsMessageCitasHoy.style.display = '';
-                const textoMensajeP = noAppointmentsMessageCitasHoy.querySelector('p');
-                if (textoMensajeP) {
-                    let texto = `No hay citas ${statusMostrando === 'todas' ? 'programadas' : statusMostrando} para hoy.`;
-                    if (statusMostrando !== 'todas' && conteoTotal > 0) {
-                        texto = `No hay citas que coincidan con el filtro '${statusMostrando}'.`;
-                    } else if (statusMostrando === 'todas' && conteoTotal === 0) {
-                        texto = 'No hay citas programadas para hoy.';
-                    }
-                    textoMensajeP.textContent = texto;
+        if (!noAppointmentsMessageCitasHoy) return;
+
+        if (conteoVisible === 0) {
+            noAppointmentsMessageCitasHoy.style.display = '';
+            const textoMensajeP = noAppointmentsMessageCitasHoy.querySelector('p');
+            if (textoMensajeP) {
+                let texto = `No hay citas ${statusMostrando === 'todas' ? 'programadas' : statusMostrando} para hoy.`;
+                if (statusMostrando !== 'todas' && conteoTotal > 0) {
+                    texto = `No hay citas que coincidan con el filtro '${statusMostrando}'.`;
+                } else if (statusMostrando === 'todas' && conteoTotal === 0) {
+                    texto = 'No hay citas programadas para hoy.';
                 }
-            } else {
-                noAppointmentsMessageCitasHoy.style.display = 'none';
+                textoMensajeP.textContent = texto;
             }
+        } else {
+            noAppointmentsMessageCitasHoy.style.display = 'none';
         }
     }
 
     const todasLasTarjetasIniciales = document.querySelectorAll(".appointment-card");
-    if (listaCitasContainer && todasLasTarjetasIniciales.length > 0) { 
+    if (listaCitasContainer && todasLasTarjetasIniciales.length > 0) {
         actualizarContadoresPestañasCitasHoy();
         const tabTodas = document.querySelector('.tab-appointment-filter[data-status="todas"]');
         if (tabTodas) {
@@ -382,6 +421,6 @@ document.addEventListener('DOMContentLoaded', () => {
         noAppointmentsMessageCitasHoy.style.display = '';
         const textoMensajeP = noAppointmentsMessageCitasHoy.querySelector('p');
         if (textoMensajeP) textoMensajeP.textContent = 'No hay citas programadas para hoy.';
-        actualizarContadoresPestañasCitasHoy(); 
+        actualizarContadoresPestañasCitasHoy();
     }
 });

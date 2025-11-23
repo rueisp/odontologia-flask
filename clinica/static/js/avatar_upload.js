@@ -1,6 +1,6 @@
 // static/js/avatar_upload.js
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     console.log("Avatar Upload Script: DOMContentLoaded fired.");
 
     const profilePictureInput = document.getElementById('imagen_perfil_input');
@@ -12,48 +12,67 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log("Avatar Upload Script: Elements found. Initializing listeners.");
 
         // Guardar la URL original del placeholder o imagen actual
-        // Para que si el usuario cancela la selección, se mantenga la imagen original.
-        // Solo para 'registrar_paciente.html' esta será el placeholder.
-        // Para 'editar_paciente.html' podría ser la imagen existente del paciente.
-        profilePicturePreview.dataset.originalSrc = profilePicturePreview.src;
+        if (profilePicturePreview.src) {
+            profilePicturePreview.dataset.originalSrc = profilePicturePreview.src;
+        }
 
         // Función para actualizar la previsualización de la imagen
-        profilePictureInput.addEventListener('change', function() {
+        profilePictureInput.addEventListener('change', function () {
             if (this.files && this.files[0]) {
+                const file = this.files[0];
+                
+                // Validar que sea una imagen
+                if (!file.type.startsWith('image/')) {
+                    alert('Por favor, selecciona un archivo de imagen válido.');
+                    this.value = ''; // Limpiar el input
+                    profilePicturePreview.src = profilePicturePreview.dataset.originalSrc;
+                    return;
+                }
+                
+                // Validar tamaño (máximo 5MB)
+                const maxSize = 5 * 1024 * 1024; // 5MB
+                if (file.size > maxSize) {
+                    alert('La imagen es demasiado grande. El tamaño máximo es 5MB.');
+                    this.value = '';
+                    profilePicturePreview.src = profilePicturePreview.dataset.originalSrc;
+                    return;
+                }
+                
                 const reader = new FileReader();
-                reader.onload = function(e) {
+                reader.onload = function (e) {
                     profilePicturePreview.src = e.target.result;
                 };
-                reader.readAsDataURL(this.files[0]);
+                reader.onerror = function () {
+                    console.error("Avatar Upload Script: Error al leer el archivo de imagen.");
+                    alert("Error al cargar la imagen. Por favor, intenta con otro archivo.");
+                };
+                reader.readAsDataURL(file);
             } else {
-                // Si no se selecciona ningún archivo o se cancela, restaurar la imagen existente o el placeholder
+                // Si no se selecciona archivo, restaurar la imagen original
                 profilePicturePreview.src = profilePicturePreview.dataset.originalSrc;
             }
         });
 
         // Al hacer clic en el botón de cámara
-        cameraButton.addEventListener('click', function() {
+        cameraButton.addEventListener('click', function () {
             console.log("Avatar Upload Script: Camera button clicked.");
             // Establece el atributo 'capture' para sugerir el uso de la cámara
             profilePictureInput.setAttribute('capture', 'environment');
-            profilePictureInput.click(); // Abre el selector de archivos/cámara
+            profilePictureInput.click();
         });
 
         // Al hacer clic en el botón de subir
-        uploadButton.addEventListener('click', function() {
+        uploadButton.addEventListener('click', function () {
             console.log("Avatar Upload Script: Upload button clicked.");
             // Remueve el atributo 'capture' para permitir la navegación de archivos
             profilePictureInput.removeAttribute('capture');
-            profilePictureInput.click(); // Abre el selector de archivos
+            profilePictureInput.click();
         });
-        
-        // Es importante volver a crear los iconos de Lucide si se han añadido nuevos elementos con data-lucide
-        // Si tu script principal ya llama a lucide.createIcons() después del DOMContentLoaded,
-        // puedes omitir esta línea si los elementos ya existen en el DOM al cargar.
-        // Pero si los elementos se añaden dinámicamente o por un include, puede ser necesario.
+
+        // Recrear iconos de Lucide si están disponibles
         if (typeof lucide !== 'undefined' && lucide.createIcons) {
-             lucide.createIcons();
-             console.log("Avatar Upload Script: Lucide icons re-created for new buttons.");
+            lucide.createIcons();
+            console.log("Avatar Upload Script: Lucide icons re-created for new buttons.");
         } else {
             console.warn("Avatar Upload Script: Lucide library not found or createIcons not available.");
         }
@@ -63,14 +82,26 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // --- Lógica para Ampliar Imagen de Perfil ---
-    const avatarZoomModal = new bootstrap.Modal(document.getElementById('avatarZoomModal'));
+    let avatarZoomModal = null;
+    if (typeof bootstrap !== 'undefined') {
+        const modalEl = document.getElementById('avatarZoomModal');
+        if (modalEl) {
+            try {
+                avatarZoomModal = new bootstrap.Modal(modalEl);
+            } catch (error) {
+                console.error("Avatar Upload Script: Error al inicializar el modal de Bootstrap:", error);
+            }
+        } else {
+            console.warn("Avatar Upload Script: Modal element 'avatarZoomModal' not found in DOM.");
+        }
+    }
     const zoomedAvatarImage = document.getElementById('zoomedAvatarImage');
 
     if (profilePicturePreview && avatarZoomModal && zoomedAvatarImage) {
-        profilePicturePreview.style.cursor = 'pointer'; // Para indicar que es clickeable
-        profilePicturePreview.addEventListener('click', function() {
-            zoomedAvatarImage.src = this.src; // Establece la fuente de la imagen ampliada a la fuente actual del avatar
-            avatarZoomModal.show(); // Muestra el modal
+        profilePicturePreview.style.cursor = 'pointer';
+        profilePicturePreview.addEventListener('click', function () {
+            zoomedAvatarImage.src = this.src;
+            avatarZoomModal.show();
             console.log("Avatar Upload Script: Avatar image clicked, showing zoom modal.");
         });
     } else {

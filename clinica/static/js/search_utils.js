@@ -32,13 +32,13 @@ export function initializePatientSearch(searchInput, suggestionsContainer, hidde
 
         // Si el usuario empieza a escribir después de haber seleccionado un paciente (y el query es diferente al nombre seleccionado)
         if (lastSelectedPatientId !== null && query !== searchInput.dataset.lastSelectedName) {
-             hiddenPatientIdInput.value = ''; // Limpiar el ID oculto
-             lastSelectedPatientId = null; // Resetear el control de selección
-             if (onSearchClearedCallback) { // Notificar que el paciente seleccionado se ha "deseleccionado"
-                 onSearchClearedCallback();
-             }
+            hiddenPatientIdInput.value = ''; // Limpiar el ID oculto
+            lastSelectedPatientId = null; // Resetear el control de selección
+            if (onSearchClearedCallback) { // Notificar que el paciente seleccionado se ha "deseleccionado"
+                onSearchClearedCallback();
+            }
         }
-        
+
         if (query.length < 2) {
             suggestionsContainer.innerHTML = '';
             suggestionsContainer.classList.add('hidden');
@@ -49,6 +49,9 @@ export function initializePatientSearch(searchInput, suggestionsContainer, hidde
             try {
                 // Asumiendo que esta es tu ruta AJAX para sugerencias
                 const response = await fetch(`/pacientes/buscar_sugerencias_ajax?q=${encodeURIComponent(query)}`);
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
                 const data = await response.json();
                 suggestionsContainer.innerHTML = '';
 
@@ -122,8 +125,8 @@ export async function preloadPatient(patientId, searchInput, hiddenPatientIdInpu
             searchInput.value = patientData.nombre; // Rellenar el input visible
             hiddenPatientIdInput.value = patientId; // Asegurar que el ID oculto esté seteado
             // Guarda el nombre seleccionado para que la lógica de 'input' no lo limpie inmediatamente
-            searchInput.dataset.lastSelectedName = patientData.nombre; 
-            
+            searchInput.dataset.lastSelectedName = patientData.nombre;
+
             if (onPatientSelectedCallback) {
                 onPatientSelectedCallback(patientData);
             }

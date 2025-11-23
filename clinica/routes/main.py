@@ -5,8 +5,8 @@ from datetime import datetime
 import pytz
 from clinica.utils import get_index_panel_data
 # Importamos los modelos
-from clinica.models import Cita, Paciente, Factura, Usuario# Asegúrate de importar User si lo usas en login
-
+from clinica.models import Cita, Paciente, Factura, Usuario # Asegúrate de importar User si lo usas en login
+from clinica import db
 # ▼▼▼ ESTA ES LA LÍNEA QUE FALTABA ▼▼▼
 main_bp = Blueprint('main', __name__)
 
@@ -44,13 +44,13 @@ def index():
                     nombre_completo = f"{p_nombre} {p_apellido}".strip() or "Paciente Sin Nombre"
                 else:
                     nombre_completo = "Paciente Eliminado"
-            except:
+            except AttributeError:
                 nombre_completo = "Error de Datos"
             
             # 2. Contar citas de forma segura
             try:
                 num_citas = f.citas.count() 
-            except:
+            except AttributeError:
                 num_citas = 0
                 
             # 3. Crear diccionario simple
