@@ -160,12 +160,12 @@
 </div> 
 
 <!-- ======================================================================= -->
-<!-- _accordion_registro_paciente.html (VERSIÓN FINAL Y CORREGIDA) -->
+<!-- _accordion_registro_paciente.html (VERSIÓN FINAL CON SCRIPT INTEGRADO) -->
 <!-- ======================================================================= -->
 
-<!-- ... (Aquí irían tus otros acordeones como "Datos Personales", etc.) ... -->
+<!-- ... (Aquí van tus otros acordeones como "Datos Personales", etc.) ... -->
 
-<!-- =========== SECCIÓN 1.5: INFORMACIÓN PARA RIPS (CON LÓGICA DE SELECCIÓN) =========== -->
+<!-- =========== SECCIÓN 1.5: INFORMACIÓN PARA RIPS =========== -->
 <div class="accordion-item card-custom mb-3">
     <h2 class="accordion-header" id="headingRIPS">
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRIPS" aria-expanded="false" aria-controls="collapseRIPS">
@@ -173,24 +173,20 @@
             <strong>Información RIPS</strong>
         </button>
     </h2>
-    <div id="collapseRIPS" class="accordion-collapse collapse show" aria-labelledby="headingRIPS" data-bs-parent="#accordionRegistroPaciente">
+    <div id="collapseRIPS" class="accordion-collapse collapse" aria-labelledby="headingRIPS" data-bs-parent="#accordionRegistroPaciente">
         <div class="accordion-body">
             <div class="alert alert-info" role="alert">
                 <i data-lucide="info" style="width: 16px; height: 16px;"></i>
                 <small>Esta información es necesaria para generar los archivos RIPS.</small>
             </div>
             
-            <!-- Fila 1: EPS, Tipo Usuario, Condición -->
+            <!-- Fila 1 -->
             <div class="row g-3 mb-3">
                 <div class="col-md-4">
                     <label for="codigo_aseguradora" class="form-label">EPS/Aseguradora <span class="text-danger">*</span></label>
                     <select class="form-select" id="codigo_aseguradora" name="codigo_aseguradora" required>
                         <option value="">Seleccione una EPS</option>
-                        {% for eps in eps_list %}
-                            <option value="{{ eps.codigo }}" {% if paciente.codigo_aseguradora == eps.codigo %}selected{% endif %}>
-                                {{ eps.codigo }} - {{ eps.nombre }}
-                            </option>
-                        {% endfor %}
+                        {% for eps in eps_list %}<option value="{{ eps.codigo }}" {% if paciente.codigo_aseguradora == eps.codigo %}selected{% endif %}>{{ eps.codigo }} - {{ eps.nombre }}</option>{% endfor %}
                     </select>
                 </div>
                 <div class="col-md-4">
@@ -212,7 +208,7 @@
                 </div>
             </div>
 
-            <!-- Fila 2: Zona, Departamento, Municipio -->
+            <!-- Fila 2 -->
             <div class="row g-3 mb-3">
                  <div class="col-md-4">
                     <label for="zona_residencial" class="form-label">Zona de Residencia <span class="text-danger">*</span></label>
@@ -222,29 +218,79 @@
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label for="codigo_departamento" class="form-label">Departamento <span class="text-danger">*</span></label>
-                    <select class="form-select" id="codigo_departamento" name="codigo_departamento" required>
+                    <label for="codigo_dpto" class="form-label">Departamento <span class="text-danger">*</span></label>
+                    <select class="form-select" id="codigo_dpto" name="codigo_dpto" required>
                         <option value="">Seleccione un departamento</option>
-                        {% for depto in departamentos_list %}
-                            <option value="{{ depto.codigo }}" {% if paciente.codigo_departamento == depto.codigo %}selected{% endif %}>
-                                {{ depto.nombre }}
-                            </option>
-                        {% endfor %}
+                        {% for depto in departamentos_list %}<option value="{{ depto.codigo }}" {% if paciente.codigo_dpto == depto.codigo %}selected{% endif %}>{{ depto.nombre }}</option>{% endfor %}
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label for="codigo_municipio" class="form-label">Municipio <span class="text-danger">*</span></label>
-                    <select class="form-select" id="codigo_municipio" name="codigo_municipio" required disabled>
+                    <label for="codigo_mpio" class="form-label">Municipio <span class="text-danger">*</span></label>
+                    <select class="form-select" id="codigo_mpio" name="codigo_mpio" required disabled>
                         <option value="">Primero seleccione un departamento</option>
                     </select>
                 </div>
             </div>
-            
-            <!-- ... (Aquí irían el resto de tus acordeones) ... -->
-
         </div>
     </div>
 </div>
+
+<!-- =================================================================== -->
+<!-- ▼▼▼ SCRIPT DE MUNICIPIOS AHORA VIVE AQUÍ ▼▼▼ -->
+<!-- =================================================================== -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Envolvemos todo en un chequeo para asegurarnos que solo se ejecute una vez
+        if (!window.municipiosScriptLoaded) {
+            window.municipiosScriptLoaded = true;
+            try {
+                const departamentoSelect = document.getElementById('codigo_dpto');
+                const municipioSelect = document.getElementById('codigo_mpio');
+                
+                if (!departamentoSelect || !municipioSelect) {
+                    console.error('No se encontraron los selectores de departamento o municipio en el acordeón.');
+                    return;
+                }
+                
+                const todosLosMunicipios = JSON.parse('{{ municipios_json | default("[]") | safe }}');
+                const municipioInicial = "{{ paciente.codigo_mpio or '' }}";
+                
+                function cargarMunicipios(codigoDepto) {
+                    municipioSelect.innerHTML = '<option value="">Seleccione un municipio</option>';
+                    if (!codigoDepto) {
+                        municipioSelect.disabled = true;
+                        return;
+                    }
+                    
+                    const municipiosFiltrados = todosLosMunicipios.filter(m => m.codigo_departamento === codigoDepto);
+                    
+                    if (municipiosFiltrados.length > 0) {
+                        municipioSelect.disabled = false;
+                        municipiosFiltrados.forEach(muni => {
+                            const option = document.createElement('option');
+                            option.value = muni.codigo;
+                            option.textContent = muni.nombre;
+                            if (muni.codigo === municipioInicial) {
+                                option.selected = true;
+                            }
+                            municipioSelect.appendChild(option);
+                        });
+                    } else {
+                        municipioSelect.disabled = true;
+                    }
+                }
+                
+                departamentoSelect.addEventListener('change', () => cargarMunicipios(departamentoSelect.value));
+                
+                if (departamentoSelect.value) {
+                    cargarMunicipios(departamentoSelect.value);
+                }
+            } catch(e) {
+                console.error("ERROR en el script de carga de municipios:", e);
+            }
+        }
+    });
+</script>
     <!-- =========== SECCIÓN 2: DATOS DEL RESPONSABLE =========== -->
     <div class="accordion-item card-custom mb-3">
         <h2 class="accordion-header" id="headingResponsable">
