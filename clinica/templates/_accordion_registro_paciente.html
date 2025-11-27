@@ -127,39 +127,124 @@
     <!-- =========== FIN SECCIÓN 0: DATOS PERSONALES =========== -->
 
     <!-- =========== SECCIÓN 1: DIRECCIÓN Y ASEGURADORA =========== -->
-    <div class="accordion-item card-custom mb-3">
-        <h2 class="accordion-header" id="headingDireccionAseguradora">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDireccionAseguradora" aria-expanded="false" aria-controls="collapseDireccionAseguradora">
-                <i data-lucide="map-pin" class="accordion-icon"></i>
-                <strong>Dirección y Aseguradora</strong>
-            </button>
-        </h2>
-        {# data-bs-parent apunta al ID del primer accordion-item, lo que simula un grupo de acordeones. #}
-        <div id="collapseDireccionAseguradora" class="accordion-collapse collapse" aria-labelledby="headingDireccionAseguradora" data-bs-parent="#accordionRegistroPaciente">
-            <div class="accordion-body">
-                <div class="row mb-3">
-                    {{ render_campo('Dirección', 'direccion', paciente) }}
-                    {{ render_campo('Barrio', 'barrio', paciente) }}
-                    {{ render_campo('Municipio', 'municipio', paciente) }}
-                    {{ render_campo('Departamento', 'departamento', paciente) }}
+<div class="accordion-item card-custom mb-3">
+    <h2 class="accordion-header" id="headingDireccionAseguradora">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDireccionAseguradora" aria-expanded="false" aria-controls="collapseDireccionAseguradora">
+            <i data-lucide="map-pin" class="accordion-icon"></i>
+            <strong>Dirección y Aseguradora</strong>
+        </button>
+    </h2>
+    <div id="collapseDireccionAseguradora" class="accordion-collapse collapse" aria-labelledby="headingDireccionAseguradora" data-bs-parent="#accordionRegistroPaciente">
+        <div class="accordion-body">
+            <div class="row mb-3">
+                {{ render_campo('Dirección', 'direccion', paciente) }}
+                {{ render_campo('Barrio', 'barrio', paciente) }}
+                {{ render_campo('Municipio', 'municipio', paciente) }}
+                {{ render_campo('Departamento', 'departamento', paciente) }}
+            </div>
+            <div class="row mb-3">
+                {{ render_campo('Nombre de Aseguradora', 'aseguradora', paciente) }}
+                <div class="col-md-3">
+                    <label for="tipo_vinculacion" class="form-label">Tipo de Vinculación</label>
+                    <select class="form-select" id="tipo_vinculacion" name="tipo_vinculacion">
+                        <option value="" {% if paciente and paciente.tipo_vinculacion == '' %}selected{% endif %}>Seleccione</option>
+                        <option value="Contribuyente" {% if paciente and paciente.tipo_vinculacion == 'Contribuyente' %}selected{% endif %}>Contribuyente</option>
+                        <option value="Beneficiario" {% if paciente and paciente.tipo_vinculacion == 'Beneficiario' %}selected{% endif %}>Beneficiario</option>
+                        <option value="Subsidiado" {% if paciente and paciente.tipo_vinculacion == 'Subsidiado' %}selected{% endif %}>Subsidiado</option>
+                    </select>
                 </div>
-                <div class="row mb-3">
-                    {{ render_campo('Nombre de Aseguradora', 'aseguradora', paciente) }}
-                    <div class="col-md-3">
-                        <label for="tipo_vinculacion" class="form-label">Tipo de Vinculación</label>
-                        <select class="form-select" id="tipo_vinculacion" name="tipo_vinculacion">
-                            <option value="" {% if paciente and paciente.tipo_vinculacion == '' %}selected{% endif %}>Seleccione</option>
-                            <option value="Contribuyente" {% if paciente and paciente.tipo_vinculacion == 'Contribuyente' %}selected{% endif %}>Contribuyente</option>
-                            <option value="Beneficiario" {% if paciente and paciente.tipo_vinculacion == 'Beneficiario' %}selected{% endif %}>Beneficiario</option>
-                            <option value="Subsidiado" {% if paciente and paciente.tipo_vinculacion == 'Subsidiado' %}selected{% endif %}>Subsidiado</option>
-                        </select>
-                    </div>
-                    {{ render_campo('Ocupación', 'ocupacion', paciente) }}
-                </div>
+                {{ render_campo('Ocupación', 'ocupacion', paciente) }}
             </div>
         </div>
-    </div> 
+    </div>
+</div> 
 
+<!-- ======================================================================= -->
+<!-- _accordion_registro_paciente.html (VERSIÓN FINAL Y CORREGIDA) -->
+<!-- ======================================================================= -->
+
+<!-- ... (Aquí irían tus otros acordeones como "Datos Personales", etc.) ... -->
+
+<!-- =========== SECCIÓN 1.5: INFORMACIÓN PARA RIPS (CON LÓGICA DE SELECCIÓN) =========== -->
+<div class="accordion-item card-custom mb-3">
+    <h2 class="accordion-header" id="headingRIPS">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRIPS" aria-expanded="false" aria-controls="collapseRIPS">
+            <i data-lucide="clipboard-check" class="accordion-icon"></i>
+            <strong>Información RIPS</strong>
+        </button>
+    </h2>
+    <div id="collapseRIPS" class="accordion-collapse collapse show" aria-labelledby="headingRIPS" data-bs-parent="#accordionRegistroPaciente">
+        <div class="accordion-body">
+            <div class="alert alert-info" role="alert">
+                <i data-lucide="info" style="width: 16px; height: 16px;"></i>
+                <small>Esta información es necesaria para generar los archivos RIPS.</small>
+            </div>
+            
+            <!-- Fila 1: EPS, Tipo Usuario, Condición -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <label for="codigo_aseguradora" class="form-label">EPS/Aseguradora <span class="text-danger">*</span></label>
+                    <select class="form-select" id="codigo_aseguradora" name="codigo_aseguradora" required>
+                        <option value="">Seleccione una EPS</option>
+                        {% for eps in eps_list %}
+                            <option value="{{ eps.codigo }}" {% if paciente.codigo_aseguradora == eps.codigo %}selected{% endif %}>
+                                {{ eps.codigo }} - {{ eps.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="tipo_usuario_rips" class="form-label">Tipo de Usuario</label>
+                    <select class="form-select" id="tipo_usuario_rips" name="tipo_usuario_rips">
+                        <option value="">Seleccione</option>
+                        <option value="1" {% if paciente.tipo_usuario_rips == '1' %}selected{% endif %}>1 - Contributivo</option>
+                        <option value="2" {% if paciente.tipo_usuario_rips == '2' %}selected{% endif %}>2 - Subsidiado</option>
+                        <option value="3" {% if paciente.tipo_usuario_rips == '3' %}selected{% endif %}>3 - Vinculado</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="tipo_afiliado" class="form-label">Condición (Afiliado)</label>
+                    <select class="form-select" id="tipo_afiliado" name="tipo_afiliado">
+                        <option value="">Seleccione</option>
+                        <option value="C" {% if paciente.tipo_afiliado == 'C' %}selected{% endif %}>Cotizante</option>
+                        <option value="B" {% if paciente.tipo_afiliado == 'B' %}selected{% endif %}>Beneficiario</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Fila 2: Zona, Departamento, Municipio -->
+            <div class="row g-3 mb-3">
+                 <div class="col-md-4">
+                    <label for="zona_residencial" class="form-label">Zona de Residencia <span class="text-danger">*</span></label>
+                    <select class="form-select" id="zona_residencial" name="zona_residencial" required>
+                        <option value="U" {% if not paciente.zona_residencial or paciente.zona_residencial == 'U' %}selected{% endif %}>Urbano</option>
+                        <option value="R" {% if paciente.zona_residencial == 'R' %}selected{% endif %}>Rural</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="codigo_departamento" class="form-label">Departamento <span class="text-danger">*</span></label>
+                    <select class="form-select" id="codigo_departamento" name="codigo_departamento" required>
+                        <option value="">Seleccione un departamento</option>
+                        {% for depto in departamentos_list %}
+                            <option value="{{ depto.codigo }}" {% if paciente.codigo_departamento == depto.codigo %}selected{% endif %}>
+                                {{ depto.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="codigo_municipio" class="form-label">Municipio <span class="text-danger">*</span></label>
+                    <select class="form-select" id="codigo_municipio" name="codigo_municipio" required disabled>
+                        <option value="">Primero seleccione un departamento</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- ... (Aquí irían el resto de tus acordeones) ... -->
+
+        </div>
+    </div>
+</div>
     <!-- =========== SECCIÓN 2: DATOS DEL RESPONSABLE =========== -->
     <div class="accordion-item card-custom mb-3">
         <h2 class="accordion-header" id="headingResponsable">
@@ -408,4 +493,6 @@
         </div>
     </div>
 </div>
+
+
 

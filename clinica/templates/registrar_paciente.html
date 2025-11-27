@@ -49,7 +49,6 @@
     </div>
 </div>
 {% endblock %}
-
 {% block scripts %}
     <!-- ... tu script de flash messages ... -->
 
@@ -110,24 +109,19 @@
 
                         console.log("MAIN PAGE SCRIPT: About to submit main form via fetch with dentigrama_canvas:", formData.get('dentigrama_canvas'));
                         
-                        // *** MODIFICACIÓN CLAVE AQUÍ: AÑADIR LA CABECERA X-Requested-With ***
                         const response = await fetch(mainForm.action, {
                             method: mainForm.method, 
                             body: formData,
                             headers: {
-                                'X-Requested-With': 'XMLHttpRequest' // Indica que es una solicitud AJAX
+                                'X-Requested-With': 'XMLHttpRequest'
                             }
                         });
-                        // ********************************************************************
 
                         if (!response.ok) {
-                            // Si la respuesta no es OK (ej. 400, 409, 500), intenta leer el error como JSON
-                            // Aseguramos que se intente leer como JSON incluso si la respuesta no es 2xx
-                            const errorData = await response.json(); // Intentará leer JSON
+                            const errorData = await response.json();
                             throw new Error(`Error HTTP: ${response.status} - ${errorData.error || 'Error desconocido del servidor.'}`);
                         }
 
-                        // Esperamos JSON del backend
                         const result = await response.json(); 
                         console.log("MAIN PAGE SCRIPT: Server responded:", result);
 
@@ -135,7 +129,6 @@
                             alert(result.message || "Paciente guardado exitosamente. Redirigiendo...");
                             window.location.href = result.redirect_url; 
                         } else {
-                            // Esto podría ocurrir si Flask devuelve un 200 OK pero con success: false (ej. validación compleja)
                             throw new Error(result.error || "Error desconocido al guardar el paciente.");
                         }
 
@@ -173,6 +166,63 @@
             }
             // --- FIN Lógica de inicialización del dentigrama ---
 
-        }); 
+        });
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                console.log("Iniciando script de municipios...");
+                const departamentoSelect = document.getElementById('codigo_dpto');
+                const municipioSelect = document.getElementById('codigo_mpio');
+                
+                if (!departamentoSelect || !municipioSelect) {
+                    console.error('ERROR: No se encontraron los selectores de departamento o municipio.');
+                    return;
+                }
+                
+                // Imprime el JSON en la consola para depurar
+                const municipiosJsonString = '{{ municipios_json | safe }}';
+                console.log("JSON de municipios recibido del backend:", municipiosJsonString);
+                
+                const todosLosMunicipios = JSON.parse(municipiosJsonString);
+                
+                function cargarMunicipios(codigoDepto) {
+                    console.log("Cargando municipios para el depto:", codigoDepto);
+                    municipioSelect.innerHTML = '<option value="">Seleccione un municipio</option>';
+                    
+                    if (!codigoDepto) {
+                        municipioSelect.disabled = true;
+                        return;
+                    }
+                    
+                    const municipiosFiltrados = todosLosMunicipios.filter(m => m.codigo_departamento === codigoDepto);
+                    console.log("Municipios encontrados:", municipiosFiltrados.length);
+                    
+                    if (municipiosFiltrados.length > 0) {
+                        municipioSelect.disabled = false;
+                        municipiosFiltrados.forEach(muni => {
+                            const option = document.createElement('option');
+                            option.value = muni.codigo;
+                            option.textContent = muni.nombre;
+                            municipioSelect.appendChild(option);
+});
+                    } else {
+                        municipioSelect.disabled = true;
+                    }
+                }
+                
+                departamentoSelect.addEventListener('change', function() {
+                    cargarMunicipios(this.value);
+                });
+                
+                // Carga inicial (por si se edita, aunque aquí es 'crear')
+                if (departamentoSelect.value) {
+                    cargarMunicipios(departamentoSelect.value);
+                } else {
+                    municipioSelect.disabled = true;
+                }
+
+            } catch(e) {
+                console.error("ERROR FATAL en el script de carga de municipios:", e);
+            }
+        });
     </script>
 {% endblock %}

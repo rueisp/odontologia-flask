@@ -5,25 +5,29 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from .extensions import db
 
 class Paciente(db.Model):
-    __tablename__ = 'paciente' # Es buena práctica definir explícitamente el nombre de la tabla
+    __tablename__ = 'paciente'
 
     id = db.Column(db.Integer, primary_key=True)
+    
+    # ============================================================
+    # CAMPOS ORIGINALES - NO TOCAR (Mantienen tu interfaz actual)
+    # ============================================================
     nombres = db.Column(db.String(100), nullable=False)
     apellidos = db.Column(db.String(100), nullable=False)
-    tipo_documento = db.Column(db.String(50), nullable=True) # Permitir NULL
-    documento = db.Column(db.String(50), unique=True, nullable=True) # Permitir NULL, pero si existe debe ser único
-    fecha_nacimiento = db.Column(db.Date, nullable=True) # Permitir NULL
+    tipo_documento = db.Column(db.String(50), nullable=True)  # ORIGINAL - Se mantiene
+    documento = db.Column(db.String(50), unique=True, nullable=True)
+    fecha_nacimiento = db.Column(db.Date, nullable=True)
     edad = db.Column(db.Integer, nullable=True)
     email = db.Column(db.String(100), nullable=True)
-    telefono = db.Column(db.String(50), nullable=False) # Asumimos que teléfono es obligatorio
-    genero = db.Column(db.String(50), nullable=True)
+    telefono = db.Column(db.String(50), nullable=False)
+    genero = db.Column(db.String(50), nullable=True)  # ORIGINAL - Se mantiene
     estado_civil = db.Column(db.String(50), nullable=True)
     direccion = db.Column(db.String(200), nullable=True)
     barrio = db.Column(db.String(100), nullable=True)
     municipio = db.Column(db.String(100), nullable=True)
     departamento = db.Column(db.String(100), nullable=True)
-    aseguradora = db.Column(db.String(100), nullable=True)
-    tipo_vinculacion = db.Column(db.String(50), nullable=True)
+    aseguradora = db.Column(db.String(100), nullable=True)  # ORIGINAL - Se mantiene
+    tipo_vinculacion = db.Column(db.String(50), nullable=True)  # ORIGINAL - Se mantiene
     ocupacion = db.Column(db.String(100), nullable=True)
     referido_por = db.Column(db.String(100), nullable=True)
     nombre_responsable = db.Column(db.String(100), nullable=True)
@@ -47,48 +51,114 @@ class Paciente(db.Model):
     imagen_1 = db.Column(db.String(200), nullable=True)
     imagen_2 = db.Column(db.String(200), nullable=True)
     dentigrama_canvas = db.Column(db.String(255), nullable=True)
+    imagen_perfil_url = db.Column(db.String(255), nullable=True)
     odontologo_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
-    odontologo = db.relationship('Usuario', back_populates='pacientes')
-    imagen_perfil_url = db.Column(db.String(255), nullable=True) # Nuevo campo para la URL de la imagen de perfil
-    # --- CAMPOS PARA SOFT DELETE ---
     is_deleted = db.Column(db.Boolean, default=False, nullable=False, index=True)
     deleted_at = db.Column(db.DateTime, nullable=True)
-    # --- FIN CAMPOS SOFT DELETE ---
+    
+    # ============================================================
+    # CAMPOS NUEVOS EXCLUSIVOS PARA RIPS (No afectan la interfaz)
+    # ============================================================
+    
+    # --- Campos de ubicación RIPS ---
+    codigo_municipio = db.Column(db.String(5), nullable=True)  # Código DIVIPOLA
+    codigo_departamento = db.Column(db.String(2), nullable=True)  # Código DIVIPOLA
+    zona_residencia = db.Column(db.String(1), nullable=True, default='U')  # U=Urbano, R=Rural
+    pais_residencia = db.Column(db.String(3), nullable=True, default='170')  # 170=Colombia
+    
+    # --- Campos de aseguramiento RIPS ---
+    codigo_aseguradora = db.Column(db.String(6), nullable=True)  # Código oficial de la EPS
+    tipo_usuario_rips = db.Column(db.String(2), nullable=True)  # 01=Cotizante, 02=Beneficiario, etc.
+    tipo_afiliado = db.Column(db.String(1), nullable=True)
+    # --- Campos normalizados para RIPS (se calculan automáticamente) ---
+    tipo_documento_rips = db.Column(db.String(2), nullable=True)  # CC, TI, RC, CE, PA
+    genero_rips = db.Column(db.String(1), nullable=True)  # M, F
+    tipo_vinculacion_rips = db.Column(db.String(1), nullable=True)  # C, S, P, O
+    
+    # --- RELACIONES ORIGINALES ---
+    odontologo = db.relationship('Usuario', back_populates='pacientes')
+    evoluciones = db.relationship('Evolucion', backref='paciente', lazy='dynamic')
+    
+    # ============================================================
+    # MÉTODOS HELPER PARA CONVERTIR A FORMATO RIPS
+    # ============================================================
+    
+    def get_tipo_documento_rips(self):
+        """Convierte el tipo de documento a formato RIPS (2 caracteres)"""
+        if not self.tipo_documento:
+            return None
+        
+        mapeo = {
+            'CC': 'CC', 'CEDULA': 'CC', 'CÉDULA': 'CC', 'CEDULA DE CIUDADANIA': 'CC',
+            'TI': 'TI', 'TARJETA DE IDENTIDAD': 'TI',
+            'RC': 'RC', 'REGISTRO CIVIL': 'RC',
+            'CE': 'CE', 'CEDULA DE EXTRANJERIA': 'CE',
+            'PA': 'PA', 'PASAPORTE': 'PA',
+            'MS': 'MS', 'MENOR SIN IDENTIFICACION': 'MS',
+            'AS': 'AS', 'ADULTO SIN IDENTIFICACION': 'AS'
+        }
+        
+        tipo_upper = self.tipo_documento.upper().strip()
+        return mapeo.get(tipo_upper, 'CC')  # Por defecto CC
+    
+    def get_genero_rips(self):
+        """Convierte el género a formato RIPS (1 carácter)"""
+        if not self.genero:
+            return None
+        
+        genero_upper = self.genero.upper().strip()
+        if genero_upper in ['M', 'MASCULINO', 'HOMBRE', 'MALE']:
+            return 'M'
+        elif genero_upper in ['F', 'FEMENINO', 'MUJER', 'FEMALE']:
+            return 'F'
+        return 'M'  # Por defecto
+    
+    def get_tipo_vinculacion_rips(self):
+        """Convierte el tipo de vinculación a formato RIPS (1 carácter)"""
+        if not self.tipo_vinculacion:
+            return 'P'  # Por defecto Particular
+        
+        mapeo = {
+            'CONTRIBUTIVO': 'C', 'C': 'C',
+            'SUBSIDIADO': 'S', 'S': 'S',
+            'PARTICULAR': 'P', 'P': 'P', 'PREPAGADA': 'P',
+            'OTRO': 'O', 'O': 'O', 'VINCULADO': 'O'
+        }
+        
+        tipo_upper = self.tipo_vinculacion.upper().strip()
+        return mapeo.get(tipo_upper, 'P')
+    
+    def actualizar_campos_rips(self):
+        """
+        Actualiza automáticamente los campos RIPS calculados.
+        Llamar este método antes de guardar el paciente.
+        """
+        self.tipo_documento_rips = self.get_tipo_documento_rips()
+        self.genero_rips = self.get_genero_rips()
+        self.tipo_vinculacion_rips = self.get_tipo_vinculacion_rips()
 
-    # Relaciones:
-    # Para soft delete, la cascada a nivel de DB con 'delete-orphan' o 'ondelete=CASCADE'
-    # no se activará como se espera. El borrado en cascada de relacionados (soft delete)
-    # deberá manejarse en la lógica de la aplicación si es necesario.
-    evoluciones = db.relationship('Evolucion', backref='paciente', lazy='dynamic') # cascade removido temporalmente
-    # La relación con Citas se define a través del backref en el modelo Cita.
-    # Si Paciente.citas existe por el backref de Cita.paciente, está bien.
 
 class Evolucion(db.Model):
-    __tablename__ = 'evolucion' # Buena práctica
+    __tablename__ = 'evolucion'
 
     id = db.Column(db.Integer, primary_key=True)
     descripcion = db.Column(db.Text, nullable=False)
-    fecha = db.Column(db.DateTime, nullable=False) # <--- ¡CAMBIO CLAVE: ELIMINADO EL DEFAULT!
-    paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=False) # ondelete='CASCADE' no tiene efecto con soft delete del padre
-    
-    # --- OPCIONAL: CAMPOS PARA SOFT DELETE EN EVOLUCION (si quieres que se puedan borrar evoluciones individualmente) ---
-    # is_deleted = db.Column(db.Boolean, default=False, nullable=False, index=True)
-    # deleted_at = db.Column(db.DateTime, nullable=True)
-    # --- FIN CAMPOS SOFT DELETE ---
-    
+    fecha = db.Column(db.DateTime, nullable=False)
+    paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=False)        
+
+
 class Cita(db.Model):
     __tablename__ = 'cita'
 
     id = db.Column(db.Integer, primary_key=True)
-    # --- ¡RESTABLECIDA LA LÍNEA paciente_id! Y es nullable=True ---
+    
+    # ============================================================
+    # CAMPOS ORIGINALES - NO TOCAR
+    # ============================================================
     paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=True) 
-
-    # --- ¡MODIFICACIÓN FINAL AQUÍ! ---
     paciente_nombres_str = db.Column(db.String(100), nullable=False, default='Paciente sin registrar') 
     paciente_apellidos_str = db.Column(db.String(100), nullable=False, default='') 
-    # --- FIN MODIFICACIÓN FINAL ---
-    paciente_telefono_str = db.Column(db.String(50), nullable=True, default='') # Asumimos que puede ser opcional
-
+    paciente_telefono_str = db.Column(db.String(50), nullable=True, default='')
     fecha = db.Column(db.Date, nullable=False)
     hora = db.Column(db.Time, nullable=False)
     motivo = db.Column(db.String(255), nullable=True)
@@ -96,13 +166,84 @@ class Cita(db.Model):
     observaciones = db.Column(db.Text, nullable=True)
     estado = db.Column(db.String(20), default='pendiente', nullable=False)
     factura_id = db.Column(db.Integer, db.ForeignKey('facturas.id'), nullable=True)
-
-    # --- CAMPOS PARA SOFT DELETE (mantener) ---
     is_deleted = db.Column(db.Boolean, default=False, nullable=False, index=True)
     deleted_at = db.Column(db.DateTime, nullable=True)
-    # --- FIN CAMPOS SOFT DELETE ---
-
+    
+    # ============================================================
+    # CAMPOS NUEVOS EXCLUSIVOS PARA RIPS (Archivo AC - Consultas)
+    # ============================================================
+    
+    # Estos campos se llenan SOLO cuando se vaya a generar RIPS
+    finalidad_consulta = db.Column(db.String(2), nullable=True)  # 10, 20, 30, etc.
+    causa_externa = db.Column(db.String(2), nullable=True, default='15')  # 15=Ninguna
+    diagnostico_principal = db.Column(db.String(4), nullable=True)  # CIE-10
+    diagnostico_relacionado1 = db.Column(db.String(4), nullable=True)
+    diagnostico_relacionado2 = db.Column(db.String(4), nullable=True)
+    diagnostico_relacionado3 = db.Column(db.String(4), nullable=True)
+    tipo_diagnostico_principal = db.Column(db.String(1), nullable=True, default='1')
+    
+    # --- RELACIONES ORIGINALES ---
     paciente = db.relationship('Paciente', backref=db.backref('citas', lazy='dynamic'))
+
+
+# ============================================================
+# TABLAS DE CÓDIGOS (NUEVAS - No afectan nada existente)
+# ============================================================
+
+class CIE10(db.Model):
+    """Tabla de códigos de diagnósticos CIE-10"""
+    __tablename__ = 'cie10_codes'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    codigo = db.Column(db.String(4), unique=True, nullable=False)  # Ej: K02, K04
+    descripcion = db.Column(db.String(255), nullable=False)
+    categoria = db.Column(db.String(100), nullable=True)  # Ej: "Enfermedades bucales"
+    
+    def __repr__(self):
+        return f"<CIE10 {self.codigo}: {self.descripcion}>"
+
+
+# En clinica/models.py
+
+class Municipio(db.Model):
+    """Tabla de municipios con códigos DIVIPOLA"""
+    __tablename__ = 'municipios'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    codigo = db.Column(db.String(5), unique=True, nullable=False)  # Código DIVIPOLA
+    nombre = db.Column(db.String(100), nullable=False)
+    codigo_departamento = db.Column(db.String(2), nullable=False)
+    nombre_departamento = db.Column(db.String(100), nullable=False)
+    
+    def __repr__(self):
+        return f"<Municipio {self.codigo}: {self.nombre}>"
+
+    # =======================================================
+    # ▼▼▼ ¡AÑADE ESTA FUNCIÓN AQUÍ! ▼▼▼
+    # =======================================================
+    def to_dict(self):
+        """Convierte el objeto Municipio a un diccionario para usarlo con JSON."""
+        return {
+            'codigo': self.codigo,
+            'nombre': self.nombre,
+            'codigo_departamento': self.codigo_departamento
+        }
+    # =======================================================
+    # ▲▲▲ FIN DE LA FUNCIÓN AÑADIDA ▲▲▲
+    # =======================================================
+
+class EPS(db.Model):
+    """Tabla de EPS/Aseguradoras con códigos oficiales"""
+    __tablename__ = 'eps'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    codigo = db.Column(db.String(6), unique=True, nullable=False)  # Código oficial
+    nombre = db.Column(db.String(150), nullable=False)
+    activa = db.Column(db.Boolean, default=True)
+    
+    def __repr__(self):
+        return f"<EPS {self.codigo}: {self.nombre}>"
+    
 
 class Usuario(UserMixin, db.Model):
     __tablename__ = 'usuarios'

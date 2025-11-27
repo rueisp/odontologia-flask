@@ -8,6 +8,9 @@ a pacientes_services.py para mejor mantenibilidad.
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
 from datetime import date, datetime
+from clinica.models import Paciente, EPS, Municipio
+from ..extensions import db
+import json 
 
 # Importar servicios
 from .pacientes_services import (
@@ -53,47 +56,86 @@ def mostrar_paciente(id):
                           current_full_path=request.full_path)
 
 
+# En clinica/routes/pacientes.py
+
+# ... (asegúrate de tener todas tus importaciones al principio: Blueprint, jsonify, etc.)
+
 @pacientes_bp.route('/crear', methods=['GET', 'POST'])
 @login_required
 def crear_paciente():
-    """Crea un nuevo paciente"""
+    """Crea un nuevo paciente y maneja respuestas tanto AJAX como normales."""
+
+    # --- LÓGICA PARA CARGAR DATOS (tu código original, perfecto) ---
+    eps_list = EPS.query.filter_by(activa=True).order_by(EPS.nombre).all()
+    departamentos_query = db.session.query(
+        Municipio.codigo_departamento, 
+        Municipio.nombre_departamento
+    ).distinct().order_by(Municipio.nombre_departamento).all()
+    departamentos_list = [{'codigo': d.codigo_departamento, 'nombre': d.nombre_departamento} for d in departamentos_query]
+    
+    municipios = Municipio.query.order_by(Municipio.nombre).all()
+    municipios_json = json.dumps([m.to_dict() for m in municipios])
+
+
+    # ===================================================================
+    # ▼▼▼ SECCIÓN POST MODIFICADA PARA RESPONDER JSON ▼▼▼
+    # ===================================================================
     if request.method == 'POST':
-        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-        
+        # Llamamos a tu servicio, que ya funciona y guarda los datos
         resultado = crear_paciente_service(request.form, request.files, current_user)
         
-        if is_ajax:
-            if resultado['success']:
-                return jsonify({
-                    'success': True,
-                    'message': resultado['message'],
-                    'redirect_url': url_for('pacientes.lista_pacientes')
-                }), 200
-            else:
-                return jsonify({'success': False, 'error': resultado['message']}), 400
-        
         if resultado['success']:
-            flash(resultado['message'], 'success')
-            return redirect(url_for('pacientes.lista_pacientes'))
+            # Si el guardado fue exitoso, creamos una respuesta JSON de éxito.
+            # El JavaScript usará 'redirect_url' para saber a dónde ir.
+            return jsonify({
+                'success': True,
+                'message': resultado['message'],
+                'redirect_url': url_for('pacientes.lista_pacientes')
+            }), 200
         else:
-            flash(resultado['message'], 'danger')
-            # Mantener los datos del formulario en caso de error
-            from ..models import Paciente
-            paciente_temporal = Paciente()
-            return render_template('registrar_paciente.html', paciente=paciente_temporal)
+            # Si el servicio devolvió un error, creamos una respuesta JSON de error.
+            # El JavaScript mostrará el 'error' en un alert.
+            return jsonify({
+                'success': False,
+                'error': resultado['message']
+            }), 400 # 400 es un código de "Bad Request", apropiado para un error de formulario.
 
-    # GET request
-    from ..models import Paciente
+    # ===================================================================
+    # ▲▲▲ FIN DE LA SECCIÓN POST MODIFICADA ▲▲▲
+    # ===================================================================
+
+    # --- MANEJO DE LA PETICIÓN GET (tu código original, perfecto) ---
     paciente_vacio = Paciente()
-    paciente_vacio.fecha_nacimiento = ''
-    return render_template('registrar_paciente.html', paciente=paciente_vacio)
+    return render_template('registrar_paciente.html', 
+                         paciente=paciente_vacio,
+                         eps_list=eps_list,
+                         departamentos_list=departamentos_list,
+                         municipios_json=municipios_json)
 
 
 @pacientes_bp.route('/<int:id>/editar', methods=['GET', 'POST'])
 @login_required
 def editar_paciente(id):
     """Edita un paciente existente"""
+
+    # --- LÓGICA PARA CARGAR DATOS DE LOS SELECTORES (AÑADIDA) ---
+    # La necesitamos en el GET para mostrar el formulario y en el POST si hubiera un error que re-renderice
+    eps_list = EPS.query.filter_by(activa=True).order_by(EPS.nombre).all()
+    departamentos_query = db.session.query(
+        Municipio.codigo_departamento, 
+        Municipio.nombre_departamento
+    ).distinct().order_by(Municipio.nombre_departamento).all()
+    departamentos_list = [{'codigo': d.codigo_departamento, 'nombre': d.nombre_departamento} for d in departamentos_query]
+    
+    municipios = Municipio.query.order_by(Municipio.nombre).all()
+    # Asumiendo que tienes un método to_dict() en el modelo Municipio
+    municipios_json = json.dumps([m.to_dict() for m in municipios])
+
+
+    # --- LÓGICA POST (sin cambios) ---
     if request.method == 'POST':
+        # Tu lógica de servicio se encarga de procesar los datos, incluyendo los nuevos campos
+        # 'codigo_dpto' y 'codigo_mpio' que vendrán en request.form
         resultado = editar_paciente_service(id, request.form, request.files, current_user)
         
         if resultado['success']:
@@ -105,22 +147,25 @@ def editar_paciente(id):
         else:
             return jsonify({'error': resultado['message']}), 500
 
-    # GET request
-    from ..models import Paciente
+    # --- LÓGICA GET (MODIFICADA) ---
+    # Buscamos al paciente a editar
     query = Paciente.query.filter_by(id=id, is_deleted=False)
     if not current_user.is_admin:
         query = query.filter_by(odontologo_id=current_user.id)
     paciente = query.first_or_404()
     
-    # Formatear fecha para el formulario
+    # Formatear fecha para el formulario (tu código original)
     if isinstance(paciente.fecha_nacimiento, (date, datetime)):
         paciente.fecha_nacimiento = paciente.fecha_nacimiento.strftime('%Y-%m-%d')
     else:
         paciente.fecha_nacimiento = ''
 
-    return render_template('editar_paciente.html', paciente=paciente)
-
-
+    # --- Renderizamos la plantilla pasando TODOS los datos necesarios ---
+    return render_template('editar_paciente.html', 
+                           paciente=paciente,
+                           eps_list=eps_list,
+                           departamentos_list=departamentos_list,
+                           municipios_json=municipios_json)
 @pacientes_bp.route('/<int:id>/borrar', methods=['POST'])
 @login_required
 def borrar_paciente(id):
