@@ -3,31 +3,12 @@
     --font-primary: 'Roboto', sans-serif;
     --color-bg-body: #f2f2f2;
     --color-text-body: #333;
-
-    --color-bg-sidebar: #f5f5f5;
-    --color-sidebar-link-text: #000;
-    --color-sidebar-link-bg: #fff;
-    --color-sidebar-link-bg-hover: #e0e0e0;
-
-    --color-bg-middle-panel: #ffffff;
-    --color-bg-right-panel: #fafafa;
-    --color-panel-title: #000;
-
     --highlight-color-start: rgba(34, 197, 94, 0.6);
     --highlight-color-end: rgba(34, 197, 94, 0);
-
-    --sidebar-width-desktop: 15%;
-    --middle-panel-width-desktop: 62%;
-    --right-panel-width-desktop: 23%; /* 15 + 62 + 23 = 100% */
-
-    --border-radius-default: 20px;
-    --padding-sidebar-link: 12px 16px;
 }
 
-/* --- Reseteo Básico y Estilos Base --- */
-*,
-*::before,
-*::after {
+/* --- Reseteo Básico --- */
+*, *::before, *::after {
     box-sizing: border-box;
 }
 
@@ -36,76 +17,16 @@ body {
     font-family: var(--font-primary);
     background-color: var(--color-bg-body);
     color: var(--color-text-body);
-    line-height: 1.6; /* Mejora la legibilidad general */
+    line-height: 1.6;
 }
 
-/* --- Layout del Dashboard --- */
-.dashboard {
-    display: flex; /* IMPORTANTE: para que los paneles se alineen horizontalmente */
-    min-height: 100vh;
-    width: 100%;
-}
+/* 
+   IMPORTANTE: Hemos eliminado las clases .dashboard, .sidebar, .middle-panel 
+   y .right-panel de aquí porque ahora sus estilos (ancho, color, bordes redondos) 
+   se controlan directamente en el HTML con Tailwind para lograr el efecto cápsula.
+*/
 
-/* --- Sidebar --- */
-.sidebar {
-    /*width: var(--sidebar-width-desktop);*/
-    background-color: var(--color-bg-sidebar);
-    /*display: flex;
-    flex-direction: column;
-    gap: 20px;
-    padding: 20px;*/ /* Añadido un padding general al sidebar para espaciar los elementos de los bordes */
-    border-right: 1px solid #e0e0e0; /* Un borde sutil para separar visualmente */
-}
-
-.sidebar a {
-    text-decoration: none;
-    color: var(--color-sidebar-link-text);
-    background: var(--color-sidebar-link-bg);
-    padding: var(--padding-sidebar-link);
-    border-radius: var(--border-radius-default);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 500;
-    transition: background 0.3s ease, box-shadow 0.3s ease; /* Transición suave para hover y focus */
-}
-
-.sidebar a:hover,
-.sidebar a:focus { /* :focus para accesibilidad */
-    background: var(--color-sidebar-link-bg-hover);
-    outline: none; /* Quitar el outline por defecto si se añade uno custom */
-}
-
-.sidebar a:focus-visible { /* Estilo de foco visible solo para navegación por teclado */
-    box-shadow: 0 0 0 2px var(--highlight-color-start);
-}
-
-/* --- Paneles Central y Derecho --- */
-.middle-panel {
-    width: var(--middle-panel-width-desktop);
-    background-color: var(--color-bg-middle-panel);
-    padding: 20px 30px; /* Padding interno para el contenido */
-    overflow-y: auto; /* Si el contenido es muy largo */
-}
-
-.right-panel {
-    width: var(--right-panel-width-desktop);
-    background-color: var(--color-bg-right-panel);
-    padding: 20px 30px; /* Padding interno */
-    border-left: 1px solid #e0e0e0; /* Un borde sutil */
-    overflow-y: auto;
-}
-
-/* --- Título del Panel --- */
-.panel-title {
-    font-size: 20px; /* Considerar usar rem/em para escalabilidad */
-    margin-top: 0; /* Si es el primer elemento, quitar margen superior */
-    margin-bottom: 30px; /* Ajustado ligeramente */
-    font-weight: 600;
-    color: var(--color-panel-title);
-}
-
-/* --- Animación de Resaltado --- */
+/* --- Animación de Resaltado (Se mantiene para la lógica de JS) --- */
 @keyframes resaltar {
     0% { box-shadow: 0 0 0 0 var(--highlight-color-start); }
     100% { box-shadow: 0 0 0 10px var(--highlight-color-end); }
@@ -115,99 +36,27 @@ body {
     animation: resaltar 2s ease-out;
 }
 
+/* --- Botones de Estado (Se mantienen) --- */
 .btn-cambiar-estado[data-nuevo-estado="completada"] {
-    background-color: #000000; /* Negro */
+    background-color: #000000;
     color: #ffffff;
 }
 .btn-cambiar-estado[data-nuevo-estado="completada"]:hover {
     background-color: #333333;
 }
 
-/* --- Estilos Responsivos --- */
-@media screen and (max-width: 1023px) {
-    .dashboard {
-        flex-direction: column; /* Paneles se apilan verticalmente */
-    }
-
-    .sidebar,
-    .middle-panel,
-    .right-panel {
-        width: 100%; /* Cada panel ocupa el ancho completo */
-        border-right: none;
-        border-left: none; /* Quitar borde izquierdo también si existe */
-        border-bottom: 1px solid #e0e0e0; /* Separar paneles apilados */
-    }
-    .right-panel {
-        border-bottom: none; /* El último panel no necesita borde inferior */
-    }
-
-    /*
-    .sidebar {
-        flex-direction: row; /* Los items del sidebar en fila 
-        overflow-x: auto; /* Permitir scroll horizontal si hay muchos items 
-        overflow-y: hidden;
-        padding: 10px; Padding reducido para móvil 
-        gap: 10px; Espacio entre items reducido 
-        align-items: center; /* Centrar items verticalmente 
-        white-space: nowrap; /* Evitar que los items del sidebar se rompan en múltiples líneas 
-        border-bottom: 1px solid #e0e0e0; /* Separador del contenido de abajo 
-    }*/
-
-    /*.sidebar a {
-        padding: 10px 12px; /* Padding ajustado para items en fila 
-        flex-shrink: 0; /* Evitar que los items se encojan si no caben 
-    }
-
-    /* Ajustes para la cabecera negra DENTRO del sidebar en móvil 
-    .sidebar .bg-black { /* Selector más específico 
-        flex-shrink: 0;
-        margin-bottom: 0;
-        padding: 8px 12px;
-        border-radius: var(--border-radius-default); /* Mantener consistencia */
-        /* display: none;  Opcional: Ocultar la cabecera en móvil si ocupa mucho espacio */
-    }
-
-    /*.sidebar .bg-black h2,
-    .sidebar .bg-black p {
-        font-size: 0.8rem;
-        margin-top: 2px;
-        margin-bottom: 2px; /* Añadido para controlar espacio vertical 
-        line-height: 1.2;
-    }
-
-    /*.sidebar .bg-black h2 {
-        font-size: 0.9rem;
-    }
-
-    /*.sidebar a i[data-lucide] {
-        width: 16px;
-        height: 16px;
-        margin-right: 6px;
-    }*/
-
-    .panel-title {
-        font-size: 18px;
-        margin-bottom: 20px;
-    }
-
-    .middle-panel, .right-panel {
-        padding: 15px; /* Padding reducido para los paneles en móvil */
-    }
-
-/* Opcional: Estilizar la barra de scroll del sidebar en móvil (Webkit) */
-/*
-.sidebar::-webkit-scrollbar {
-    height: 6px;
+/* --- Scrollbars Personalizados (Opcional, para que se vean mejor) --- */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
 }
-.sidebar::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
+::-webkit-scrollbar-track {
+    background: transparent; 
 }
-.sidebar::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 10px;
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1; /* Gris suave */
+    border-radius: 4px;
 }
-.sidebar::-webkit-scrollbar-thumb:hover {
-    background: #bbb;
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
 }
-*/

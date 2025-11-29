@@ -1,13 +1,13 @@
-# ▼▼▼ IMPORTACIONES COMPLETAS (Incluyendo request, redirect, url_for) ▼▼▼
+# ▼▼▼ IMPORTACIONES COMPLETAS ▼▼▼
 from flask import Blueprint, render_template, current_app, flash, request, redirect, url_for
 from flask_login import login_required, current_user, login_user, logout_user
 from datetime import datetime
 import pytz
 from clinica.utils import get_index_panel_data
-# Importamos los modelos
-from clinica.models import Cita, Paciente, Factura, Usuario # Asegúrate de importar User si lo usas en login
+# Importamos los modelos (Ya no necesitamos AuditLog aquí)
+from clinica.models import Cita, Paciente, Factura, Usuario
 from clinica import db
-# ▼▼▼ ESTA ES LA LÍNEA QUE FALTABA ▼▼▼
+
 main_bp = Blueprint('main', __name__)
 
 @main_bp.route("/")
@@ -34,11 +34,9 @@ def index():
         facturas_db = Factura.query.order_by(Factura.fecha_factura.desc()).limit(5).all()
         
         for f in facturas_db:
-            # 1. Buscar Paciente y Nombre de forma segura (Singular o Plural)
             try:
                 paciente = Paciente.query.get(f.paciente_id)
                 if paciente:
-                    # Intenta 'nombres', si falla intenta 'nombre', si falla pone 'Desconocido'
                     p_nombre = getattr(paciente, 'nombres', getattr(paciente, 'nombre', ''))
                     p_apellido = getattr(paciente, 'apellidos', getattr(paciente, 'apellido', ''))
                     nombre_completo = f"{p_nombre} {p_apellido}".strip() or "Paciente Sin Nombre"
@@ -47,13 +45,11 @@ def index():
             except AttributeError:
                 nombre_completo = "Error de Datos"
             
-            # 2. Contar citas de forma segura
             try:
                 num_citas = f.citas.count() 
             except AttributeError:
                 num_citas = 0
                 
-            # 3. Crear diccionario simple
             datos = {
                 'id': f.id,
                 'paciente_id': f.paciente_id,
@@ -67,9 +63,12 @@ def index():
     except Exception as e:
         current_app.logger.error(f"Error al cargar facturas: {e}")
 
+    # --- (SECCIÓN ACTIVIDAD RECIENTE ELIMINADA) ---
+
     return render_template(
         "index.html",
         facturas_recientes=lista_facturas_simple,
+        # Ya no pasamos 'ultimas_acciones'
         fecha_actual_formateada=fecha_actual_formateada,
         fecha_actual_corta=fecha_actual_corta,
         **panel_data
@@ -98,22 +97,17 @@ def login():
 
     return render_template('login.html')
 
-
-# --- ▼▼▼ INICIO DE LA NUEVA RUTA DE REGISTRO ▼▼▼ ---
 @main_bp.route('/registro', methods=['GET', 'POST'])
 def registro():
-    # Si el usuario ya está logueado, que no pueda acceder a la página de registro
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
 
     if request.method == 'POST':
-        # 1. Obtener datos del formulario de registro
         username = request.form.get('username', '').strip()
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
 
-        # 2. Validaciones de los datos
         if not all([username, email, password, confirm_password]):
             flash('Todos los campos son obligatorios.', 'danger')
             return render_template('registro.html')
@@ -130,16 +124,13 @@ def registro():
             flash('El correo electrónico ya está registrado.', 'danger')
             return render_template('registro.html')
 
-        # 3. Si todo es válido, crear el nuevo usuario
-        # Por defecto, los nuevos usuarios no son administradores (is_admin=False)
         nuevo_usuario = Usuario(
             username=username, 
             email=email, 
-            is_admin=False # Importante: no permitir que los usuarios se hagan admin a sí mismos
+            is_admin=False 
         )
-        nuevo_usuario.set_password(password) # Encriptar la contraseña
+        nuevo_usuario.set_password(password) 
 
-        # 4. Guardar en la base de datos
         try:
             db.session.add(nuevo_usuario)
             db.session.commit()
@@ -149,14 +140,10 @@ def registro():
             flash("Ocurrió un error al crear la cuenta. Por favor, inténtalo más tarde.", 'danger')
             return render_template('registro.html')
 
-        # 5. Informar al usuario y redirigir a la página de login
         flash('¡Tu cuenta ha sido creada exitosamente! Ahora puedes iniciar sesión.', 'success')
         return redirect(url_for('main.login'))
 
-    # Si el método es GET, simplemente muestra la página de registro
     return render_template('registro.html')
-# --- ▲▲▲ FIN DE LA NUEVA RUTA DE REGISTRO ▲▲▲ ---
-
 
 @main_bp.route('/logout')
 @login_required
@@ -165,43 +152,30 @@ def logout():
     flash('Has cerrado sesión correctamente.', 'info')
     return redirect(url_for('main.login'))
 
-
-# Esta ruta es redundante, pero se mantiene por si se usa en algún lado
 @main_bp.route('/home') 
 def ruta_a_inicio(): 
     return redirect(url_for('main.index'))
 
-# En routes/main.py
-
-# ... (importaciones existentes) ...
-
-# --- NUEVA RUTA PARA EL PERFIL DEL USUARIO ---
 @main_bp.route('/perfil', methods=['GET', 'POST'])
-@login_required # Solo usuarios logueados pueden ver su perfil
+@login_required 
 def perfil():
-    # No necesitamos un ID, 'current_user' ya nos dice quién es el usuario
     usuario_a_editar = current_user
 
     if request.method == 'POST':
-        # 1. Obtener los datos del formulario
         nombre_completo = request.form.get('nombre_completo', '').strip()
         email = request.form.get('email', '').strip().lower()
         
-        # 2. Validaciones
         if not nombre_completo or not email:
             flash('El nombre y el email no pueden estar vacíos.', 'danger')
             return render_template('perfil.html', usuario=usuario_a_editar)
 
-        # Verificar si el nuevo email ya está en uso por OTRO usuario
         if email != usuario_a_editar.email and Usuario.query.filter_by(email=email).first():
             flash('Ese correo electrónico ya está en uso por otra cuenta.', 'danger')
             return render_template('perfil.html', usuario=usuario_a_editar)
 
-        # 3. Actualizar los datos del usuario
         usuario_a_editar.nombre_completo = nombre_completo
         usuario_a_editar.email = email
         
-        # Opcional: Cambiar contraseña
         password_actual = request.form.get('password_actual')
         password_nueva = request.form.get('password_nueva')
         if password_actual and password_nueva:
@@ -212,7 +186,6 @@ def perfil():
                 flash('La contraseña actual es incorrecta.', 'danger')
                 return render_template('perfil.html', usuario=usuario_a_editar)
 
-        # 4. Guardar en la base de datos
         try:
             db.session.commit()
             flash('Perfil actualizado exitosamente.', 'success')
@@ -222,5 +195,4 @@ def perfil():
         
         return redirect(url_for('main.perfil'))
 
-    # Para el método GET, simplemente muestra la plantilla con los datos del usuario
     return render_template('perfil.html', usuario=usuario_a_editar)

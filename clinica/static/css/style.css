@@ -1,101 +1,20 @@
-/* ========== Estilos generales ========== */
+/* ========== Estilos Generales ========== */
+/* Dejamos el reset básico, pero quitamos el fondo para que mande el diseño nuevo */
 body {
     margin: 0;
-    font-family: Arial, sans-serif;
-    background-color: #f8f9fa;
+    /* font-family: Arial, sans-serif; <-- Dejamos que Tailwind decida la fuente para que se vea más moderno */
 }
 
-/* ========== Solo para LOGIN o formularios centrados ========== */
-.login-body {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-}
-
-/* Contenedor centrado */
-.container-login {
-    text-align: center;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-}
-
-/* Logo */
-.login-header img {
-    width: 20vw;
-    max-width: 100px;
-    height: auto;
-}
-
-/* Formulario tipo Google */
-.formulario-google {
-    border: 3px solid #4285F4;
-    border-radius: 12px;
-    padding: 20px;
-    background-color: white;
-    box-shadow: 0px 2px 12px rgba(0, 0, 0, 0.1);
-    margin-top: 20px;
-}
-
-/* Campos */
-.form-control {
-    border: 0;
-    border-bottom: 2px solid #ccc;
-    border-radius: 0;
-    box-shadow: none;
-    background-color: transparent;
-    transition: border-color 0.3s;
-}
-
-.form-control:focus {
-    border-bottom: 2px solid #4285F4;
-    outline: none;
-    box-shadow: none;
-}
-
-/* Labels */
-.form-label {
-    font-weight: 500;
-    color: #555;
-}
-
-
-Estilo general de los paneles verticales */
-.panel {
-    padding: 30px;
-    border-right: 1px solid #ccc;
-    overflow-y: auto;
-}
-
-/* Último panel sin borde derecho */
-.panel:last-child {
-    border-right: none;
-}
-
-/* Fondo gris claro */
-.panel {
-    background-color: #f2f2f2;
-}
-
-/* Footer */
-footer {
-    height: 80px;
-    position: absolute;
-    bottom: 0;
-    width: 100%;
-    text-align: center;
-    padding: 10px;
-    background-color: #f1f1f1;
-    color: #555;
-    font-size: 14px;
-}
-
-/* Imagen dentigrama */
+/* ========== Dentigrama (IMPORTANTE: MANTENER) ========== */
+/* Estilos específicos para el canvas del dentigrama que no debemos tocar */
 #dentigrama_canvas {
     display: block;
     border: 1px solid #ccc;
+    border-radius: 8px; /* Un toque estético extra */
 }
+
+/* ========== Botones Legacy ========== */
+/* Si usas la clase .btn-glass en otros lados del sistema, la dejamos */
 .btn-glass {
     background-color: #007bff;
     color: white;
@@ -114,3 +33,21 @@ footer {
     background-color: #0056b3;
     color: white;
 }
+
+/* 
+   ========== ZONA ELIMINADA / COMENTADA ========== 
+   Todo lo de abajo se ha comentado porque causaba conflictos 
+   con el nuevo diseño de cápsulas y vidrio.
+*/
+
+/*
+.panel {
+    background-color: #f2f2f2;
+    padding: 30px;
+    border-right: 1px solid #ccc;
+}
+
+.login-body, .container-login, .formulario-google {
+   ... (Estilos del login antiguo) ...
+}
+*/
