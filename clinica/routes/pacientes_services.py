@@ -200,6 +200,10 @@ def obtener_paciente_service(paciente_id, usuario):
         'id': paciente.id,
         'nombres': paciente.nombres or 'N/A',
         'apellidos': paciente.apellidos or 'N/A',
+        'primer_nombre': paciente.primer_nombre or '',
+        'segundo_nombre': paciente.segundo_nombre or '',
+        'primer_apellido': paciente.primer_apellido or '',
+        'segundo_apellido': paciente.segundo_apellido or '',
         'tipo_documento': paciente.tipo_documento or '',
         'documento': paciente.documento or 'N/A',
         'telefono': paciente.telefono or 'N/A',
@@ -323,10 +327,23 @@ def crear_paciente_service(form_data, files, usuario):
         return {'success': False, 'message': f'Ya existe un paciente registrado con el documento {documento}.'}
     
     try:
+        # Preparar nombres y apellidos concatenados para compatibilidad
+        primer_nombre = form_data.get('primer_nombre', '').strip()
+        segundo_nombre = form_data.get('segundo_nombre', '').strip()
+        primer_apellido = form_data.get('primer_apellido', '').strip()
+        segundo_apellido = form_data.get('segundo_apellido', '').strip()
+        
+        nombres_concatenados = f"{primer_nombre} {segundo_nombre}".strip()
+        apellidos_concatenados = f"{primer_apellido} {segundo_apellido}".strip()
+
         # Crear paciente con datos del formulario
         nuevo_paciente = Paciente(
-            nombres=form_data.get('nombres'),
-            apellidos=form_data.get('apellidos'),
+            nombres=nombres_concatenados,
+            apellidos=apellidos_concatenados,
+            primer_nombre=primer_nombre,
+            segundo_nombre=segundo_nombre,
+            primer_apellido=primer_apellido,
+            segundo_apellido=segundo_apellido,
             tipo_documento=form_data.get('tipo_documento'),
             documento=documento,
             fecha_nacimiento=convertir_a_fecha(form_data.get('fecha_nacimiento')),
@@ -411,8 +428,19 @@ def editar_paciente_service(paciente_id, form_data, files, usuario):
     
     try:
         # Actualizar campos de texto
-        paciente.nombres = form_data.get('nombres')
-        paciente.apellidos = form_data.get('apellidos')
+        primer_nombre = form_data.get('primer_nombre', '').strip()
+        segundo_nombre = form_data.get('segundo_nombre', '').strip()
+        primer_apellido = form_data.get('primer_apellido', '').strip()
+        segundo_apellido = form_data.get('segundo_apellido', '').strip()
+
+        paciente.primer_nombre = primer_nombre
+        paciente.segundo_nombre = segundo_nombre
+        paciente.primer_apellido = primer_apellido
+        paciente.segundo_apellido = segundo_apellido
+        
+        # Actualizar campos concatenados para compatibilidad
+        paciente.nombres = f"{primer_nombre} {segundo_nombre}".strip()
+        paciente.apellidos = f"{primer_apellido} {segundo_apellido}".strip()
         paciente.tipo_documento = form_data.get('tipo_documento')
         paciente.documento = form_data.get('documento')
         paciente.email = form_data.get('email')

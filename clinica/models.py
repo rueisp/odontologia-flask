@@ -3,6 +3,7 @@ from datetime import datetime, date
 from flask_login import UserMixin 
 from werkzeug.security import generate_password_hash, check_password_hash
 from .extensions import db
+import pytz
 
 class Paciente(db.Model):
     __tablename__ = 'paciente'
@@ -14,6 +15,13 @@ class Paciente(db.Model):
     # ============================================================
     nombres = db.Column(db.String(100), nullable=False)
     apellidos = db.Column(db.String(100), nullable=False)
+    
+    # --- Campos de Nombres Separados para RIPS ---
+    primer_nombre = db.Column(db.String(60), nullable=True)
+    segundo_nombre = db.Column(db.String(60), nullable=True)
+    primer_apellido = db.Column(db.String(60), nullable=True)
+    segundo_apellido = db.Column(db.String(60), nullable=True)
+
     tipo_documento = db.Column(db.String(50), nullable=True)  # ORIGINAL - Se mantiene
     documento = db.Column(db.String(50), unique=True, nullable=True)
     fecha_nacimiento = db.Column(db.Date, nullable=True)
@@ -182,6 +190,9 @@ class Cita(db.Model):
     diagnostico_relacionado3 = db.Column(db.String(4), nullable=True)
     tipo_diagnostico_principal = db.Column(db.String(1), nullable=True, default='1')
     
+    # --- Campo para Código de Consulta (RIPS) ---
+    codigo_consulta_cups = db.Column(db.String(20), nullable=True) # Ej: 890201
+    
     # --- RELACIONES ORIGINALES ---
     paciente = db.relationship('Paciente', backref=db.backref('citas', lazy='dynamic'))
 
@@ -203,8 +214,6 @@ class CIE10(db.Model):
         return f"<CIE10 {self.codigo}: {self.descripcion}>"
 
 
-# En clinica/models.py
-
 class Municipio(db.Model):
     """Tabla de municipios con códigos DIVIPOLA"""
     __tablename__ = 'municipios'
@@ -218,9 +227,6 @@ class Municipio(db.Model):
     def __repr__(self):
         return f"<Municipio {self.codigo}: {self.nombre}>"
 
-    # =======================================================
-    # ▼▼▼ ¡AÑADE ESTA FUNCIÓN AQUÍ! ▼▼▼
-    # =======================================================
     def to_dict(self):
         """Convierte el objeto Municipio a un diccionario para usarlo con JSON."""
         return {
@@ -228,9 +234,6 @@ class Municipio(db.Model):
             'nombre': self.nombre,
             'codigo_departamento': self.codigo_departamento
         }
-    # =======================================================
-    # ▲▲▲ FIN DE LA FUNCIÓN AÑADIDA ▲▲▲
-    # =======================================================
 
 class EPS(db.Model):
     """Tabla de EPS/Aseguradoras con códigos oficiales"""
@@ -255,7 +258,6 @@ class Usuario(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
     pacientes = db.relationship('Paciente', back_populates='odontologo', lazy='dynamic', cascade="all, delete-orphan")
     
-    # El resto de tus métodos están perfectos
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
@@ -290,16 +292,22 @@ class Factura(db.Model):
     numero_factura = db.Column(db.String(20), unique=True, nullable=False)
     fecha_factura = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(pytz.utc))
     valor_total = db.Column(db.Float, nullable=False, default=0.0)
-    # Puedes añadir más campos como copago, etc. si los necesitas.
+    
+    # --- Campos de Valor Detallados para RIPS ---
+    valor_copago = db.Column(db.Float, nullable=True, default=0.0)
+    valor_cuota_moderadora = db.Column(db.Float, nullable=True, default=0.0)
+    valor_comision = db.Column(db.Float, nullable=True, default=0.0)
+    valor_descuentos = db.Column(db.Float, nullable=True, default=0.0)
+    
+    # Fechas del periodo de facturación (Opcionales, pero útiles para RIPS)
+    fecha_inicio_periodo = db.Column(db.Date, nullable=True)
+    fecha_final_periodo = db.Column(db.Date, nullable=True)
 
     # --- Relaciones (La clave para conectar todo) ---
     paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=False)
     paciente = db.relationship('Paciente', backref=db.backref('facturas', lazy=True))
 
     # Esta relación es importante: una factura puede tener muchas citas/procedimientos.
-    # Si guardas procedimientos en el modelo 'Cita', la relación sería con 'Cita'.
-    # Si tienes un modelo 'Procedimiento', la relación sería con él.
-    # Asumiré que lo tienes en 'Cita' por ahora. Ajusta 'citas' si tu modelo se llama diferente.
     citas = db.relationship('Cita', backref='factura', lazy='dynamic')
 
     def __repr__(self):

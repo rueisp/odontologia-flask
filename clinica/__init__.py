@@ -4,14 +4,13 @@ import os
 from flask import Flask, request
 from .extensions import db, migrate, login_manager 
 import cloudinary
-from dotenv import load_dotenv # <--- Lo usaremos solo para el .env local
+from dotenv import load_dotenv
 import logging
 import datetime
 from flask.json import dumps as json_dumps
 
 
 # --- IMPORTANTE: Cargar dotenv solo si estamos en un contexto local y .env existe ---
-# Esto evita que Render intente cargar un .env que no existe.
 if os.path.exists('.env'):
     load_dotenv()
 
@@ -107,7 +106,7 @@ def create_app():
 
     # --- 2. INICIALIZAR EXTENSIONES CON LA APP ---
     db.init_app(app)
-    migrate.init_app(app, db) # Flask-Migrate con Alembic
+    migrate.init_app(app, db)
     login_manager.init_app(app)
 
     from .models import Usuario 
@@ -132,7 +131,6 @@ def create_app():
 
     # --- 3. REGISTRAR BLUEPRINTS (RUTAS) ---
     with app.app_context(): 
-        # db.create_all() # <--- ¡AHORA SÍ, COMENTA ESTA LÍNEA!
         from .routes.main import main_bp
         from .routes.pacientes import pacientes_bp
         from .routes.pacientes_evoluciones import evoluciones_bp
@@ -144,9 +142,7 @@ def create_app():
         from .routes.reportes import reportes_bp
         from .routes.facturacion import facturacion_bp
         from .routes.procedimientos import procedimientos_bp
-
-
-
+        from .routes.api import api_bp
 
         app.register_blueprint(main_bp)
         app.register_blueprint(pacientes_bp)
@@ -159,18 +155,16 @@ def create_app():
         app.register_blueprint(reportes_bp)
         app.register_blueprint(facturacion_bp)
         app.register_blueprint(procedimientos_bp)
+        app.register_blueprint(api_bp)
         
 
-        # ==============================================================
-        # *** NUEVO: RUTA PARA MANTENER LA APP VIVA (PING) ***
-        # ==============================================================
+        # Ruta para mantener la app viva (ping)
         @app.route('/awake')
         def awake():
-            # Este endpoint responderá a GitHub Actions para mantener Render activo
             return "Render App Awake", 200
-        # ==============================================================
         
         
     return app
+
 
 app = create_app()
