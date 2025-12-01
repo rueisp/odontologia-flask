@@ -2,60 +2,111 @@
 
 {% block title %}Reportes - Clínica{% endblock %}
 
+{% block head_extra %}
+    <style>
+        /* --- ESTILOS GLASS CAPSULE (Coherencia con Dashboard) --- */
+        @keyframes blob {
+            0% { transform: translate(0px, 0px) scale(1); }
+            33% { transform: translate(20px, -30px) scale(1.05); }
+            66% { transform: translate(-10px, 10px) scale(0.95); }
+            100% { transform: translate(0px, 0px) scale(1); }
+        }
+        .animate-blob {
+            animation: blob 25s infinite;
+        }
+        .animation-delay-2000 { animation-delay: 5s; }
+        .animation-delay-4000 { animation-delay: 10s; }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            border-radius: 3rem; /* Bordes de cápsula grandes */
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        /* Inputs redondeados */
+        .input-capsule {
+            background-color: #ffffff;
+            border: 1px solid transparent;
+            border-radius: 1rem;
+            padding: 0.75rem 1rem;
+            width: 100%;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+        .input-capsule:focus {
+            outline: none;
+            border-color: #000;
+            box-shadow: 0 0 0 2px rgba(0,0,0,0.05);
+        }
+    </style>
+{% endblock %}
+
 {% block content %}
-<div class="w-full max-w-screen overflow-x-hidden">
-    <!-- Contenedor principal del dashboard -->
-    <div class="dashboard flex flex-col lg:flex-row gap-4 p-4 lg:p-10 mx-auto w-full">
+
+<!-- CONTENEDOR FONDO ANIMADO -->
+<div class="relative min-h-screen bg-gray-100 overflow-x-hidden font-sans">
+    
+    <!-- Elementos Decorativos de Fondo (Blobs) -->
+    <div class="absolute top-0 left-0 w-96 h-96 bg-gray-300 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-blob"></div>
+    <div class="absolute top-0 right-0 w-96 h-96 bg-gray-200 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-blob animation-delay-2000"></div>
+    <div class="absolute bottom-0 left-20 w-96 h-96 bg-gray-300 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-blob animation-delay-4000"></div>
+
+    <!-- CONTENIDO REAL (Z-INDEX SUPERIOR) -->
+    <div class="relative z-10 w-full max-w-screen overflow-x-hidden p-4 lg:p-10">
         
-        <!-- =================================================================== -->
-        <!-- NOTA: El panel izquierdo ya se hereda de base.html, no lo necesitas aquí -->
-        <!-- =================================================================== -->
-        
-        <!-- Panel central para la página de Reportes -->
-        <div class="middle-panel bg-white px-4 py-6 sm:px-6 lg:p-8 rounded-xl shadow-lg mx-auto w-full">
+        <!-- Panel central GLASS -->
+        <div class="middle-panel glass-panel px-6 py-8 sm:px-8 lg:p-10 mx-auto w-full lg:max-w-5xl">
             
-            <!-- Encabezado de la página -->
-            <div class="mb-8 border-b border-gray-200 pb-4">
-                <h1 class="text-2xl sm:text-3xl font-semibold text-gray-800 flex items-center">
-                    <i data-lucide="file-text" class="w-7 h-7 mr-3 text-gray-600"></i>
-                    Centro de Reportes
-                </h1>
-                <p class="text-gray-500 text-sm mt-1">
-                    Genera y descarga los reportes administrativos y clínicos.
-                </p>
+            <!-- Encabezado de la página con Botón Volver -->
+            <div class="mb-8 border-b border-gray-200/50 pb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 flex items-center tracking-tight">
+                        <i data-lucide="file-text" class="w-8 h-8 mr-3 text-gray-700"></i>
+                        Centro de Reportes
+                    </h1>
+                    <p class="text-gray-500 mt-1 font-medium">
+                        Genera y descarga los reportes administrativos y clínicos.
+                    </p>
+                </div>
+                
+                <!-- ▼▼▼ AQUÍ ESTÁ EL BOTÓN DE VOLVER ▼▼▼ -->
+                <a href="{{ url_for('main.index') }}" class="bg-white text-gray-800 px-5 py-2.5 rounded-full font-bold shadow-sm hover:bg-gray-50 transition border border-gray-200 flex items-center gap-2 hover:scale-105 transform duration-200">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i> Volver al Inicio
+                </a>
             </div>
 
             <!-- Contenido principal -->
             <div class="space-y-8">
 
                 <!-- Sección para Generación de RIPS -->
-                <div class="bg-gray-50 border border-gray-200 rounded-2xl p-6">
-                    <h2 class="text-xl font-semibold text-gray-700 mb-1">Generación de RIPS</h2>
-                    <p class="text-sm text-gray-500 mb-6">Selecciona un rango de fechas para generar los archivos RIPS correspondientes a ese período.</p>
+                <div class="bg-white/50 border border-white/60 rounded-[2rem] p-8 shadow-sm">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="bg-black text-white p-2 rounded-full">
+                            <i data-lucide="file-json" class="w-5 h-5"></i>
+                        </div>
+                        <h2 class="text-xl font-bold text-gray-800">Generación de RIPS</h2>
+                    </div>
+                    
+                    <p class="text-sm text-gray-600 mb-6 font-medium">Selecciona un rango de fechas para generar los archivos RIPS (.JSON) correspondientes a ese período.</p>
                     
                     <!-- Formulario de generación -->
-                    {# Añade un ID al formulario para poder referenciarlo con JavaScript #}
-                    <form id="ripsForm" action="{{ url_for('reportes.vista_reportes') }}" method="POST" class="space-y-4">
-                        {# CSRF Token es importante para la seguridad de los formularios en Flask #}
+                    <form id="ripsForm" action="{{ url_for('reportes.vista_reportes') }}" method="POST" class="space-y-6">
                         {{ form.csrf_token if form }}
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <!-- Selector de Fecha de Inicio -->
                             <div>
-                                <label for="fecha_inicio_display" class="block text-sm font-medium text-gray-700 mb-1">Fecha de Inicio</label>
-                                {# Este input será el visible para el usuario (type="date" para el calendario) #}
-                                <input type="date" id="fecha_inicio_display" 
-                                       class="w-full border border-gray-300 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                                {# Este input HIDDEN es el que enviará el formato mm/dd/yyyy #}
+                                <label for="fecha_inicio_display" class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 ml-1">Fecha de Inicio</label>
+                                <input type="date" id="fecha_inicio_display" class="input-capsule">
                                 <input type="hidden" id="fecha_inicio" name="fecha_inicio" required>
                             </div>
                             <!-- Selector de Fecha de Fin -->
                             <div>
-                                <label for="fecha_fin_display" class="block text-sm font-medium text-gray-700 mb-1">Fecha de Fin</label>
-                                {# Este input será el visible para el usuario (type="date" para el calendario) #}
-                                <input type="date" id="fecha_fin_display" 
-                                       class="w-full border border-gray-300 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                                {# Este input HIDDEN es el que enviará el formato mm/dd/yyyy #}
+                                <label for="fecha_fin_display" class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 ml-1">Fecha de Fin</label>
+                                <input type="date" id="fecha_fin_display" class="input-capsule">
                                 <input type="hidden" id="fecha_fin" name="fecha_fin" required>
                             </div>
                         </div>
@@ -63,20 +114,22 @@
                         <!-- Botón de Acción -->
                         <div class="pt-4 text-right">
                             <button type="submit"
-                                    class="bg-black text-white px-6 py-2.5 rounded-xl hover:bg-gray-800 transition flex items-center justify-center gap-2 text-sm font-semibold ml-auto">
-                                <i data-lucide="download" class="w-4 h-4"></i>
+                                    class="bg-black text-white px-8 py-3 rounded-full hover:bg-gray-900 transition flex items-center justify-center gap-2 text-sm font-bold ml-auto shadow-lg hover:scale-[1.02] transform duration-200">
+                                <i data-lucide="download" class="w-5 h-5"></i>
                                 <span>Generar y Descargar RIPS</span>
                             </button>
                         </div>
                     </form>
                 </div>
 
-                <!-- Sección para Historial de RIPS (funcionalidad futura) -->
-                <div class="bg-white rounded-2xl p-6">
-                     <h2 class="text-xl font-semibold text-gray-700 mb-4">Historial de Generaciones</h2>
-                     <div class="text-center py-8 text-gray-500">
-                        <i data-lucide="archive" class="w-12 h-12 text-gray-300 mx-auto mb-2"></i>
-                        <p>Aún no se han generado reportes.</p>
+                <!-- Sección para Historial (Visual) -->
+                <div class="bg-white/40 border border-white/40 rounded-[2rem] p-8">
+                     <h2 class="text-xl font-bold text-gray-700 mb-4 flex items-center gap-2">
+                        <i data-lucide="history" class="w-5 h-5"></i> Historial de Generaciones
+                     </h2>
+                     <div class="text-center py-10 text-gray-400">
+                        <i data-lucide="archive" class="w-16 h-16 text-gray-300 mx-auto mb-3 opacity-50"></i>
+                        <p class="font-medium">Aún no se han generado reportes.</p>
                         <p class="text-xs mt-1">Los reportes que generes aparecerán aquí.</p>
                     </div>
                 </div>
@@ -91,34 +144,55 @@
 {{ super() }}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar Iconos
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+
         const ripsForm = document.getElementById('ripsForm');
         const fechaInicioDisplay = document.getElementById('fecha_inicio_display');
         const fechaFinDisplay = document.getElementById('fecha_fin_display');
         const fechaInicioHidden = document.getElementById('fecha_inicio');
         const fechaFinHidden = document.getElementById('fecha_fin');
 
-        ripsForm.addEventListener('submit', function(event) {
-            // Evita que el formulario se envíe inmediatamente
-            event.preventDefault();
+        if (ripsForm) {
+            ripsForm.addEventListener('submit', function(event) {
+                event.preventDefault();
 
-            // Función para formatear YYYY-MM-DD a MM/DD/YYYY
-            function formatToMMDDYYYY(dateString) {
-                if (!dateString) return '';
-                const [year, month, day] = dateString.split('-');
-                return `${month}/${day}/${year}`;
-            }
+                // Validación simple
+                if(!fechaInicioDisplay.value || !fechaFinDisplay.value) {
+                    alert("Por favor selecciona ambas fechas.");
+                    return;
+                }
 
-            // Toma los valores de los inputs visibles (que están en YYYY-MM-DD)
-            const formattedFechaInicio = formatToMMDDYYYY(fechaInicioDisplay.value);
-            const formattedFechaFin = formatToMMDDYYYY(fechaFinDisplay.value);
+                function formatToMMDDYYYY(dateString) {
+                    if (!dateString) return '';
+                    const [year, month, day] = dateString.split('-');
+                    return `${month}/${day}/${year}`;
+                }
 
-            // Asigna los valores formateados a los inputs ocultos
-            fechaInicioHidden.value = formattedFechaInicio;
-            fechaFinHidden.value = formattedFechaFin;
+                const formattedFechaInicio = formatToMMDDYYYY(fechaInicioDisplay.value);
+                const formattedFechaFin = formatToMMDDYYYY(fechaFinDisplay.value);
 
-            // Ahora sí, envía el formulario
-            ripsForm.submit();
-        });
+                fechaInicioHidden.value = formattedFechaInicio;
+                fechaFinHidden.value = formattedFechaFin;
+
+                // Feedback visual en el botón
+                const btn = ripsForm.querySelector('button[type="submit"]');
+                const originalContent = btn.innerHTML;
+                btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Generando...';
+                lucide.createIcons();
+                
+                // Enviar
+                ripsForm.submit();
+
+                // Restaurar botón después de unos segundos (para permitir nueva descarga)
+                setTimeout(() => {
+                    btn.innerHTML = originalContent;
+                    lucide.createIcons();
+                }, 3000);
+            });
+        }
     });
 </script>
 {% endblock %}

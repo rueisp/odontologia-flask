@@ -11,6 +11,7 @@ from datetime import date, datetime
 from clinica.models import Paciente, EPS, Municipio
 from ..extensions import db
 import json 
+from sqlalchemy import or_
 
 # Importar servicios
 from .pacientes_services import (
@@ -27,15 +28,31 @@ from .pacientes_services import (
 pacientes_bp = Blueprint('pacientes', __name__, url_prefix='/pacientes')
 
 
-@pacientes_bp.route('/')
+@pacientes_bp.route('/lista', methods=['GET'])
 @login_required
 def lista_pacientes():
-    """Lista paginada de pacientes"""
     page = request.args.get('page', 1, type=int)
-    search_term = request.args.get('buscar', '').strip()
-    pacientes = listar_pacientes_service(current_user, page, search_term)
-    return render_template('pacientes.html', pacientes=pacientes, buscar=search_term)
+    search_query = request.args.get('buscar', '').strip() # Obtener lo que escribes en el buscador
+    
+    # Consulta base
+    query = Paciente.query
 
+    # ▼▼▼ LÓGICA DE BÚSQUEDA (ESTO ES LO QUE PROBABLEMENTE FALTA) ▼▼▼
+    if search_query:
+        search_term = f"%{search_query}%"
+        query = query.filter(
+            or_(
+                Paciente.nombres.ilike(search_term),
+                Paciente.apellidos.ilike(search_term),
+                Paciente.documento.ilike(search_term)
+            )
+        )
+    # ▲▲▲ FIN LÓGICA DE BÚSQUEDA ▲▲▲
+
+    # Ordenar y paginar
+    pacientes = query.order_by(Paciente.id.desc()).paginate(page=page, per_page=6, error_out=False)
+
+    return render_template('pacientes.html', pacientes=pacientes, buscar=search_query)
 
 @pacientes_bp.route('/<int:id>', methods=['GET', 'POST'])
 @login_required
