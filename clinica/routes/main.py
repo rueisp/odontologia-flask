@@ -13,67 +13,45 @@ main_bp = Blueprint('main', __name__)
 @main_bp.route("/")
 @login_required
 def index():
-    # --- 1. CONFIGURACIÓN BÁSICA ---
+    # 1. Fecha
     local_timezone = pytz.timezone('America/Bogota')
     now_in_local_tz = datetime.now(local_timezone)
-    
     fecha_actual_formateada = now_in_local_tz.strftime('%A, %d de %B de %Y')
-    fecha_actual_corta = now_in_local_tz.strftime('%d %B')
-
-    # --- 2. DATOS DEL PANEL ---
+    
+    # 2. Datos del Panel (Contadores)
     try:
         panel_data = get_index_panel_data(now_in_local_tz.date(), now_in_local_tz.time())
     except Exception as e:
         current_app.logger.error(f"Error panel: {e}")
         panel_data = {}
 
-    # --- 3. LÓGICA DE FACTURAS (LIMPIA) ---
-    lista_facturas_simple = []
-    
+    # 3. Facturas Recientes (Sin desempaquetar nada raro, solo objetos)
+    facturas_recientes = []
     try:
         facturas_db = Factura.query.order_by(Factura.fecha_factura.desc()).limit(5).all()
-        
         for f in facturas_db:
-            try:
-                paciente = Paciente.query.get(f.paciente_id)
-                if paciente:
-                    p_nombre = getattr(paciente, 'nombres', getattr(paciente, 'nombre', ''))
-                    p_apellido = getattr(paciente, 'apellidos', getattr(paciente, 'apellido', ''))
-                    nombre_completo = f"{p_nombre} {p_apellido}".strip() or "Paciente Sin Nombre"
-                else:
-                    nombre_completo = "Paciente Eliminado"
-            except AttributeError:
-                nombre_completo = "Error de Datos"
+            paciente_nombre = "Desconocido"
+            if f.paciente:
+                paciente_nombre = f"{f.paciente.nombres} {f.paciente.apellidos}"
             
-            try:
-                num_citas = f.citas.count() 
-            except AttributeError:
-                num_citas = 0
-                
-            datos = {
+            facturas_recientes.append({
                 'id': f.id,
                 'paciente_id': f.paciente_id,
-                'nombre_paciente': nombre_completo,
+                'nombre_paciente': paciente_nombre,
                 'fecha_obj': f.fecha_factura,
-                'citas_count': num_citas,
+                'citas_count': f.citas.count(),
                 'total': f.valor_total
-            }
-            lista_facturas_simple.append(datos)
-            
+            })
     except Exception as e:
-        current_app.logger.error(f"Error al cargar facturas: {e}")
+        current_app.logger.error(f"Error facturas: {e}")
 
-    # --- (SECCIÓN ACTIVIDAD RECIENTE ELIMINADA) ---
-
+    # Retorno limpio
     return render_template(
         "index.html",
-        facturas_recientes=lista_facturas_simple,
-        # Ya no pasamos 'ultimas_acciones'
+        facturas_recientes=facturas_recientes,
         fecha_actual_formateada=fecha_actual_formateada,
-        fecha_actual_corta=fecha_actual_corta,
         **panel_data
     )
-
 @main_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:

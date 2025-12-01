@@ -1,134 +1,324 @@
 {% extends "base.html" %}
 
-{% block title %}Calendario de Citas{% endblock %}
+{% block title %}Calendario - Clínica{% endblock %}
 
 {% block head_extra %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/calendar.css') }}">
-    {# La importación de Lucide Icons CDN debería estar en base.html o en el block scripts. #}
+    <style>
+        /* --- ESTILOS TIPO IOS LIGHT --- */
+        
+        /* Contenedor principal limpio */
+        .ios-calendar-container {
+            background-color: #ffffff;
+            /* En móvil quitamos bordes y sombras para que parezca nativo */
+            border-radius: 0; 
+            box-shadow: none;
+        }
+        
+        /* En pantallas grandes mantenemos el estilo Glass */
+        @media (min-width: 768px) {
+            .ios-calendar-container {
+                border-radius: 2.5rem;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+                border: 1px solid rgba(0,0,0,0.05);
+                padding: 2rem;
+            }
+        }
+
+        /* Título del Mes Gigante */
+        .month-title {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #000;
+            letter-spacing: -0.02em;
+            line-height: 1;
+        }
+        .year-subtitle {
+            font-size: 1rem;
+            color: #6b7280; 
+            font-weight: 600;
+            margin-bottom: 0.2rem;
+        }
+
+        /* --- GRILLA LIMPIA --- */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            /* CERO espacio entre celdas */
+            width: 100%;
+        }
+
+        /* Cabecera de días (D L M...) */
+        .day-header {
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #9ca3af; /* Gris suave */
+            text-transform: uppercase;
+            padding-bottom: 1rem;
+            padding-top: 1rem;
+            border-bottom: 1px solid #f3f4f6; /* Línea separadora muy sutil */
+        }
+
+        /* Celda del día */
+        .day-cell {
+            height: 85px; /* Altura fija para uniformidad */
+            border-bottom: 1px solid #f3f4f6; /* Solo líneas horizontales muy sutiles */
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Todo centrado horizontalmente */
+            padding-top: 8px;
+        }
+        
+        /* Número del día */
+        .day-number {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #000;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            margin-bottom: 4px;
+            transition: all 0.2s;
+        }
+
+        /* Día Actual (Estilo iOS Rojo) */
+        .day-cell.today .day-number {
+            background-color: #000; /* Rojo iOS */
+            color: #fff;
+            font-weight: 700;
+        }
+
+        /* Eventos / Citas (Píldoras) */
+        .event-pill {
+            font-size: 0.65rem;
+            background-color: #ecfccb; /* Verde muy claro */
+            color: #365314; /* Verde oscuro texto */
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-bottom: 2px;
+            width: 90%; /* Que no toque los bordes */
+            text-align: left;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border-left: 2px solid #65a30d; /* Borde izquierdo de acento */
+            cursor: pointer;
+        }
+        
+        /* Si hay muchas citas, mostramos puntos */
+        .dots-container {
+            display: flex;
+            gap: 2px;
+            justify-content: center;
+        }
+        .dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background-color: #9ca3af;
+        }
+        .day-cell.today .dot { background-color: #ef4444; }
+
+        /* Botón + Invisible pero clicable */
+        .add-hitbox {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 1; /* Fondo */
+        }
+        
+        /* Selectores tipo iOS */
+        .ios-select {
+            border: none;
+            background: transparent;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #000;
+            padding-right: 1.5rem;
+            cursor: pointer;
+            appearance: none;
+        }
+        
+    </style>
 {% endblock %}
 
 {% block content %}
-<div class="calendar-container max-w-4xl mx-auto p-3 sm:p-4 md:p-6 bg-gray-50 rounded-lg shadow-lg my-4">
-    <div class="calendar-header flex flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
-        <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 whitespace-nowrap">
-            Calendario - {{ nombre_mes_display }} {{ anio }}
-        </h2>
 
-        <div class="controls-wrapper flex flex-col sm:flex-row sm:items-center flex-wrap gap-2">
-            <a href="{{ url_for('main.index') }}" class="bg-gray-900 hover:bg-gray-800 text-white text-xs sm:text-sm font-medium py-1.5 px-3 rounded shadow-sm transition duration-200 order-3 sm:order-1">
-                Volver
-            </a>
-            <form method="get" action="{{ url_for('calendario.mostrar_calendario') }}" class="flex items-center gap-1 sm:gap-2 order-1 sm:order-2 w-full sm:w-auto">
-                <select name="mes" class="form-select text-xs sm:text-sm border-gray-300 rounded-md shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 flex-grow sm:flex-grow-0">
-                    {% for m in range(1, 13) %}
-                        <option value="{{ m }}" {% if m == mes %}selected{% endif %}>{{ nombres_meses[m-1]|truncate(3, True, '') if nombres_meses else m }}</option>
-                    {% endfor %}
-                </select>
-                <select name="anio" class="form-select text-xs sm:text-sm border-gray-300 rounded-md shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                    {% for a in range(anio - 2, anio + 3) %}
-                        <option value="{{ a }}" {% if a == anio %}selected{% endif %}>{{ a }}</option>
-                    {% endfor %}
-                </select>
-                <button type="submit" class="btn bg-blue-500 hover:bg-blue-600 text-white text-xs sm:text-sm font-medium py-1.5 px-2 sm:px-3 rounded shadow-sm transition duration-200">Ir</button>
-            </form>
-             <a href="{{ url_for('calendario.registrar_cita') }}" class="bg-gray-500 hover:bg-gray-600 text-white text-xs sm:text-sm font-medium py-1.5 px-3 rounded shadow-sm transition duration-200 order-2 sm:order-3 whitespace-nowrap">
-                + Nueva Cita
-            </a>
-        </div>
-    </div>
+<!-- Contenedor Base -->
+<div class="relative min-h-screen bg-white md:bg-gray-100 overflow-x-hidden font-sans pb-24">
+    
+    <!-- Elementos Decorativos (Solo visibles en Desktop para no ensuciar móvil) -->
+    <div class="hidden md:block absolute top-0 left-0 w-96 h-96 bg-gray-300 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-blob"></div>
 
-    <div class="overflow-x-auto shadow-sm rounded">
-        <div class="grid grid-cols-7 text-center text-xs sm:text-sm font-semibold text-gray-600 bg-gray-100 py-2">
-            <div>Dom</div>
-            <div>Lun</div>
-            <div>Mar</div>
-            <div>Mié</div>
-            <div>Jue</div>
-            <div>Vie</div>
-            <div>Sáb</div>
-        </div>
-
-        <div class="calendar-grid grid grid-cols-7 gap-px bg-gray-300 border border-gray-300">
-            {% for dia in dias %}
-            <div class="day bg-white hover:bg-gray-50 border-gray-200 
-                 p-1 sm:p-2 flex flex-col relative transition-colors duration-150
-                 min-h-[70px] sm:min-h-[90px] md:min-h-[110px] {/* Altura responsiva */}
-                 {% if not dia.fecha %}empty-day !bg-gray-100 cursor-default{% endif %}"
-                 {% if dia.fecha %}
-                     title="{% if dia.citas %}{{ dia.citas|length }} cita{{ 's' if dia.citas|length != 1 else '' }}{% else %}Añadir cita para el {{ dia.fecha.day }}/{{ dia.fecha.month }}{% endif %}"
-                 {% endif %}>
-
-                {% if dia.fecha %}
-                    <div class="day-header flex justify-between items-center mb-0.5 sm:mb-1">
-                        <span class="day-number text-xs sm:text-sm font-medium 
-                                     {% if dia.hoy %}bg-blue-500 text-white rounded-full px-1.5 py-0.5 sm:px-2 sm:py-1{% else %}text-gray-700{% endif %}">
-                            {{ dia.fecha.day }}
-                        </span>
-                        <a href="{{ url_for('calendario.registrar_cita', fecha=dia.fecha.strftime('%Y-%m-%d'), next=request.full_path) }}" 
-                           class="add-appointment-btn text-green-500 hover:text-green-600 p-0.5 sm:p-1 rounded-full hover:bg-green-100"
-                           title="Añadir cita el {{ dia.fecha.strftime('%d/%m/%Y') }}">
-                            <i data-lucide="plus-circle" class="w-3 h-3 sm:w-4 sm:h-4"></i>
-                        </a>
-                    </div>
-
-                    <div class="appointments-content flex-grow flex flex-col justify-between text-center sm:text-left">
-                        {% if dia.citas %}
-                            <div class="appointment-indicator text-xxs sm:text-xs text-gray-600 mt-0.5 sm:mt-1">
-                                {{ dia.citas|length }} cita{{ 's' if dia.citas|length != 1 else '' }}
-                            </div>
-                            <button class="toggle-appointments-popup text-xxs sm:text-xs text-blue-600 hover:underline mt-1 sm:mt-auto" data-bs-toggle="modal" data-bs-target="#modalCitas" 
-                                data-fecha="{{ dia.fecha.strftime('%Y-%m-%d') }}"
-                                data-citas="{{ dia.citas|tojson|e }}"> {# `|e` escapa el JSON para atributos HTML #}
-                                Ver citas
-                            </button>
-                        {% else %}
-                            <div class="text-xxs sm:text-xs text-gray-400 italic flex-grow flex items-center justify-center">
-                                Sin citas
-                            </div>
-                        {% endif %}
-                    </div>
+    <div class="relative z-10 w-full max-w-5xl mx-auto md:p-6">
+        
+        <!-- Panel Principal -->
+        <div class="ios-calendar-container">
+            
+            <!-- Encabezado Estilo iOS -->
+            <div class="px-4 pt-4 pb-2 flex justify-between items-end mb-2">
+                <div>
+                    <!-- Año -->
+                    <div class="year-subtitle">{{ anio }}</div>
                     
-                {% else %}
-                    {# Celda vacía para días fuera del mes #}
-                {% endif %}
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-</div>
+                    <!-- Título Mes y Flechas -->
+                    <div class="flex items-center gap-1">
+                        <h1 class="month-title mr-2">{{ nombre_mes_display|capitalize }}</h1>
+                        
+                        <!-- Flecha ATRÁS (Nueva) -->
+                        <form method="GET" action="{{ url_for('calendario.mostrar_calendario') }}" class="flex">
+                            {% set prev_month = mes - 1 if mes > 1 else 12 %}
+                            {% set prev_year = anio if mes > 1 else anio - 1 %}
+                            <input type="hidden" name="mes" value="{{ prev_month }}">
+                            <input type="hidden" name="anio" value="{{ prev_year }}">
+                            <button type="submit" class="text-gray-400 hover:text-black transition p-1">
+                                <i data-lucide="chevron-left" class="w-8 h-8"></i>
+                            </button>
+                        </form>
 
-{# Modal para mostrar detalles de las citas de un día #}
-<div class="modal fade" id="modalCitas" tabindex="-1" aria-labelledby="modalCitasLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalCitasLabel">Citas del día</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div id="citas-lista-modal">
-                    {# Aquí se cargarán las citas con JavaScript #}
+                        <!-- Flecha ADELANTE -->
+                        <form method="GET" action="{{ url_for('calendario.mostrar_calendario') }}" class="flex">
+                            {% set next_month = mes + 1 if mes < 12 else 1 %}
+                            {% set next_year = anio if mes < 12 else anio + 1 %}
+                            <input type="hidden" name="mes" value="{{ next_month }}">
+                            <input type="hidden" name="anio" value="{{ next_year }}">
+                            <button type="submit" class="text-gray-400 hover:text-black transition p-1">
+                                <i data-lucide="chevron-right" class="w-8 h-8"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Botones de Acción -->
+                <div class="flex gap-3 mb-1">
+                    <a href="{{ url_for('main.index') }}" class="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200">
+                        <i data-lucide="home" class="w-5 h-5"></i>
+                    </a>
+                    <!-- Botón Más (+) ahora en NEGRO -->
+                    <a href="{{ url_for('calendario.registrar_cita') }}" class="p-2 rounded-full bg-black text-white shadow-md hover:bg-gray-800">
+                        <i data-lucide="plus" class="w-5 h-5"></i>
+                    </a>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+
+            <!-- Separador de Meses (Selectores ocultos/sutiles para cambiar rápido) -->
+            <form method="get" action="{{ url_for('calendario.mostrar_calendario') }}" class="px-4 mb-4 flex gap-4 text-sm text-gray-400">
+                <div class="flex items-center gap-2">
+                    <span>Ir a:</span>
+                    <select name="mes" class="bg-transparent border-b border-gray-200 focus:border-red-500 outline-none text-gray-800 font-medium" onchange="this.form.submit()">
+                        {% for m in range(1, 13) %}
+                            <option value="{{ m }}" {% if m == mes %}selected{% endif %}>{{ nombres_meses[m-1] }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="anio" class="bg-transparent border-b border-gray-200 focus:border-red-500 outline-none text-gray-800 font-medium" onchange="this.form.submit()">
+                        {% for a in range(anio - 2, anio + 3) %}
+                            <option value="{{ a }}" {% if a == anio %}selected{% endif %}>{{ a }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+
+            <!-- CABECERA DÍAS SEMANA (Minimalista) -->
+            <div class="calendar-grid sticky top-0 bg-white z-20">
+                <div class="day-header">D</div>
+                <div class="day-header">L</div>
+                <div class="day-header">M</div>
+                <div class="day-header">M</div>
+                <div class="day-header">J</div>
+                <div class="day-header">V</div>
+                <div class="day-header">S</div>
+            </div>
+
+            <!-- CUERPO DEL CALENDARIO -->
+            <div class="calendar-grid">
+                {% for dia in dias %}
+                    <!-- Celda -->
+                    <div class="day-cell {% if dia.hoy %}today{% endif %}">
+                        
+                        {% if dia.fecha %}
+                            <!-- Número (Centrado y redondo) -->
+                            <span class="day-number">{{ dia.fecha.day }}</span>
+
+                            <!-- Área Clicable para añadir cita (Ocupa el fondo) -->
+                            <a href="{{ url_for('calendario.registrar_cita', fecha=dia.fecha.strftime('%Y-%m-%d'), next=request.full_path) }}" 
+                               class="add-hitbox" title="Añadir Cita"></a>
+
+                            <!-- INDICADORES DE CITAS (Píldoras o Puntos) -->
+                            {% if dia.citas %}
+                                <div class="w-full px-1 flex flex-col gap-1 items-center z-20 pointer-events-none"> <!-- z-20 para estar sobre el hitbox -->
+                                    
+                                    <!-- Opción A: Si hay pocas citas (1 o 2), mostrar píldoras con nombre -->
+                                    {% if dia.citas|length <= 2 %}
+                                        {% for cita in dia.citas %}
+                                            <!-- Usamos un botón invisible sobre la píldora para abrir el modal -->
+                                            <div class="relative w-full">
+                                                <div class="event-pill">
+                                                    {{ cita.hora }} {{ cita.paciente_nombre_completo.split()[0] }}
+                                                </div>
+                                                <button class="absolute inset-0 w-full h-full cursor-pointer pointer-events-auto"
+                                                        data-bs-toggle="modal" data-bs-target="#modalCitas"
+                                                        data-fecha="{{ dia.fecha.strftime('%Y-%m-%d') }}"
+                                                        data-citas="{{ dia.citas|tojson|e }}">
+                                                </button>
+                                            </div>
+                                        {% endfor %}
+                                    
+                                    <!-- Opción B: Si hay muchas citas, mostrar puntos o contador -->
+                                    {% else %}
+                                        <div class="relative w-full">
+                                            <div class="event-pill bg-gray-100 text-gray-600 border-l-4 border-gray-400 text-center font-bold">
+                                                {{ dia.citas|length }} Citas
+                                            </div>
+                                            <button class="absolute inset-0 w-full h-full cursor-pointer pointer-events-auto"
+                                                    data-bs-toggle="modal" data-bs-target="#modalCitas"
+                                                    data-fecha="{{ dia.fecha.strftime('%Y-%m-%d') }}"
+                                                    data-citas="{{ dia.citas|tojson|e }}">
+                                            </button>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Citas (Estilo iOS Sheet) -->
+<div class="modal fade" id="modalCitas" tabindex="-1" aria-labelledby="modalCitasLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content rounded-[2rem] border-none shadow-2xl">
+            <div class="modal-header border-b-0 pb-0">
+                <h5 class="modal-title font-bold text-2xl text-gray-900" id="modalCitasLabel">Detalles</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-5">
+                <div id="citas-lista-modal" class="space-y-3">
+                    <!-- Aquí se inyectan las citas -->
+                </div>
+            </div>
+            <div class="modal-footer border-t-0 pt-0">
+                <button type="button" class="w-full bg-gray-100 text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
     </div>
 </div>
 
-{% endblock %} {# <-- ESTE CIERRA {% block content %} #}
+{% endblock %}
 
 {% block scripts %}
     <script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script> 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            lucide.createIcons(); // Inicializar Lucide Icons
+            lucide.createIcons();
 
-            // --- ¡MODIFICACIÓN CLAVE AQUÍ: Simplificar la obtención de fullPathFromJinja! ---
-            // Ya no necesitas construirla con Jinja, viene directamente de la variable del template
-            const fullPathFromJinja = "{{ current_full_path }}"; 
-            
             const modalCitas = document.getElementById('modalCitas');
             if (modalCitas) {
                 modalCitas.addEventListener('show.bs.modal', function (event) {
@@ -136,63 +326,49 @@
                     const fechaStr = button.getAttribute('data-fecha');
                     const citasJson = button.getAttribute('data-citas');
 
-                    console.log("DEBUG MODAL: Botón clickeado para fecha:", fechaStr);
-                    console.log("DEBUG MODAL: JSON de citas (raw):", citasJson);
-
                     let citas = [];
                     try {
                         citas = JSON.parse(citasJson); 
-                        console.log("DEBUG MODAL: Citas parseadas:", citas);
                     } catch (e) {
-                        console.error("ERROR MODAL: Fallo al parsear JSON de citas:", e, citasJson);
-                        const citasListaModal = modalCitas.querySelector('#citas-lista-modal');
-                        if (citasListaModal) citasListaModal.innerHTML = '<p class="text-danger">Error al cargar los detalles de la cita.</p>';
-                        return; // Salir si el JSON es inválido
+                        console.error("Error JSON:", e);
+                        return;
                     }
 
                     const modalTitle = modalCitas.querySelector('#modalCitasLabel');
-                    modalTitle.textContent = `Citas del día ${new Date(fechaStr).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+                    const fechaObj = new Date(fechaStr + 'T00:00:00');
+                    // Título estilo iOS: "Viernes, 28 de Noviembre"
+                    modalTitle.textContent = fechaObj.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+                    modalTitle.style.textTransform = 'capitalize';
 
                     const citasListaModal = modalCitas.querySelector('#citas-lista-modal');
-                    if (citasListaModal) citasListaModal.innerHTML = ''; 
-                    else { console.error("ERROR MODAL: No se encontró el elemento #citas-lista-modal"); return; }
-
+                    citasListaModal.innerHTML = ''; 
 
                     if (citas.length > 0) {
-                        citas.sort((a, b) => { 
-                            if (a.hora < b.hora) return -1;
-                            if (a.hora > b.hora) return 1;
-                            return 0;
-                        });                        
+                        citas.sort((a, b) => (a.hora < b.hora ? -1 : 1));                        
                         citas.forEach(cita => {
                             const citaDiv = document.createElement('div');
-                            citaDiv.className = 'cita-item-modal mb-2 p-2 border rounded';
+                            // Tarjeta de cita en Modal
+                            citaDiv.className = 'flex items-center gap-4 bg-white p-3 rounded-2xl border border-gray-100 shadow-sm';
                             
-                            const pacienteNombre = cita.paciente_nombre_completo || 'Paciente sin registrar';
-                            const pacienteTelefono = cita.paciente_telefono_str || 'No especificado'; 
-
-                            // --- ¡MODIFICACIÓN CLAVE AQUÍ: Usar las URLs directamente de cita! ---
-                            const editUrl = cita.edit_url; // ¡Ya viene lista de Python!
-                            const deleteUrl = cita.delete_url; // ¡Ya viene lista de Python!
-                            const nextUrlHidden = cita.next_url_encoded; // ¡Ya viene lista de Python!
-                            // --- FIN MODIFICACIÓN CLAVE ---
-
                             citaDiv.innerHTML = `
-                                <p class="mb-1"><strong>${cita.hora}</strong> - ${pacienteNombre}</p>
-                                <p class="mb-1">Teléfono: ${pacienteTelefono}</p>
-                                <p class="text-muted mb-1">Motivo: ${cita.motivo || 'No especificado'}</p>
-                                <p class="text-muted mb-0">Doctor: ${cita.doctor || 'N/A'}</p>
-                                <div class="mt-2 text-end">
-                                    <a href="${ editUrl }" class="btn btn-sm btn-outline-primary">Editar</a>
+                                <div class="flex-shrink-0 w-12 text-center">
+                                    <span class="block text-sm font-bold text-gray-900">${cita.hora}</span>
                                 </div>
+                                <div class="border-l-2 border-red-500 h-8 mx-2"></div>
+                                <div class="flex-grow">
+                                    <p class="font-bold text-gray-900 text-sm">${cita.paciente_nombre_completo}</p>
+                                    <p class="text-xs text-gray-500">${cita.motivo || 'Consulta General'}</p>
+                                </div>
+                                <a href="${cita.edit_url}" class="text-gray-400 hover:text-black">
+                                    <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                                </a>
                             `;
                             citasListaModal.appendChild(citaDiv);
                         });
-                    } else {
-                        citasListaModal.innerHTML = '<p class="text-muted">No hay citas para este día.</p>';
+                        lucide.createIcons();
                     }
                 });
             }
         });
     </script>
-{% endblock %} {# <-- ESTE CIERRA {% block scripts %} #}
+{% endblock %}

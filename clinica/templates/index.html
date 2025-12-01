@@ -4,9 +4,9 @@
 
 {% block head_extra %}
     <style>
-        /* --- ESTILOS DEL EFECTO VIDRIO --- */
+        /* --- ESTILOS DEL EFECTO VIDRIO (REFINADO) --- */
         
-        /* 1. Animación de Fondo (Suave) */
+        /* 1. Animación de Fondo */
         @keyframes blob {
             0% { transform: translate(0px, 0px) scale(1); }
             33% { transform: translate(20px, -30px) scale(1.05); }
@@ -16,40 +16,41 @@
         .animate-blob {
             animation: blob 25s infinite;
         }
-        .animation-delay-2000 { animation-delay: 5s; }
-        .animation-delay-4000 { animation-delay: 10s; }
 
-        /* 2. Clase Panel de Vidrio (FORZANDO BORDES REDONDOS) */
+        /* 2. Clase Panel de Vidrio (Sombra más sutil) */
         .glass-panel {
             background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.9);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
-            
-            /* FORZAR BORDES */
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05); /* Sombra más suave */
             border-radius: 2.5rem !important; 
             overflow: hidden !important;
         }
 
-        /* Ajuste específico para el Sidebar */
-        #main-sidebar {
-            border-radius: 2.5rem !important;
-        }
-
-        /* Ajuste para los paneles centrales y derechos */
-        .middle-panel, .right-panel {
-            border-radius: 3rem !important;
-        }
+        /* Ajustes específicos */
+        #main-sidebar { border-radius: 2.5rem !important; }
+        .middle-panel, .right-panel { border-radius: 3rem !important; }
         
-        /* Ajuste para las tarjetas internas (Negra y Blanca) */
+        /* Tarjetas Internas */
         .rounded-\[3rem\], .rounded-\[2\.5rem\] {
             border-radius: 3rem !important;
             overflow: hidden !important;
         }
         
-        /* Cabeceras Negras (Solo Facturas) */
-        .facturas-card-header { background-color: #000000; color: white; }
+        /* Encabezado Facturas */
+        .facturas-card-header { 
+            background-color: #000000; 
+            color: white; 
+            padding-top: 1.2rem; 
+            padding-bottom: 1.2rem;
+        }
+
+        /* Títulos */
+        h1.text-3xl {
+            font-weight: 800; /* Más grueso */
+            letter-spacing: -0.02em; /* Estilo moderno */
+        }
     </style>
 {% endblock %}
 

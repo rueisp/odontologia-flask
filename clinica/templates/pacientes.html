@@ -63,8 +63,9 @@
         /* ---- Tabla Minimalista Mejorada ---- */
         .table-responsive {
             border-radius: 1.5rem;
-            overflow: hidden; /* Para que los bordes redondos recorten la tabla */
+            overflow-x: auto;
             box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+            -webkit-overflow-scrolling: touch; /* Suaviza el deslizamiento en iPhone/iPad */
         }
 
         .table-pacientes-minimalista {

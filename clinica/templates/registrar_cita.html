@@ -2,345 +2,216 @@
 
 {% block title %}Registrar Cita{% endblock %}
 
-{% block head_extra %}
-    {# Estilos específicos para el log de actividad, puedes moverlos a tu CSS principal si prefieres #}
-    <style>
-        .action-type-badge {
-            font-size: 0.75em; /* 12px */
-            padding: 0.25em 0.6em; /* Ajusta el padding para que sea más rectangular */
-            border-radius: 0.375rem; /* rounded-md de Tailwind */
-            color: white;
-            margin-right: 0.5em;
-            line-height: 1; /* Asegura que el texto no haga el badge muy alto */
-            display: inline-block; /* Para que el margin-right funcione bien */
-        }
-        .badge-delete { background-color: #EF4444; } /* Tailwind red-500 */
-        .badge-edit { background-color: #F59E0B; color: #1F2937 !important; } /* Tailwind amber-500, texto oscuro */
-        .badge-create { background-color: #10B981; } /* Tailwind emerald-500 */
-        .badge-default { background-color: #6B7280; } /* Tailwind gray-500 */
-
-        /* Estilo para la cabecera de la tarjeta de actividad */
-        .activity-log-card-header {
-            background-color: #000000; /* Tailwind gray-800 o similar a tu bg-black */
-            color: white;
-        }
-
-        /* --- ESTILO CONTENEDOR PRINCIPAL --- */
-        .form-container {
-            background-color: #ffffff;
-            border-radius: 30px;
-            padding: 30px;
-            max-width: 600px;
-            margin: 0 auto 40px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            box-sizing: border-box;
-        }
-
-        /* --- ESTILO ENCABEZADO OSCURO (DENTRO) --- */
-        .page-header-dark {
-            background-color: #000;
-            color: #ffffff;
-            padding: 40px 30px;
-            border-radius: 30px;
-            margin: 0 0 20px 0;
-            box-sizing: border-box;
-            text-align: center;
-        }
-
-        .page-header-dark h2 {
-            margin: 0;
-            font-size: 22px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .page-header-dark h2 i[data-lucide] {
-            stroke-width: 2;
-        }
-        /* --- FIN ESTILO ENCABEZADO --- */
-
-        /* --- ESTILO GRUPOS DE INPUT --- */
-        .input-group-custom {
-            display: flex;
-            align-items: center;
-            background-color: #f1f3f5;
-            border-radius: 10px;
-            margin-bottom: 5px;
-            padding: 0;
-            border: 0px solid #f1f3f5;
-            transition: border-color 0.2s ease-in-out;
-            box-sizing: border-box;
-        }
-        .input-group-custom:focus-within {
-             border-color: #ced4da;
-             background-color: #e9ecef;
-        }
-
-        /* Etiqueta dentro del grupo */
-        .input-group-label {
-            flex-shrink: 0;
-            padding: 12px 15px;
-            font-size: 14px;
-            font-weight: 500;
-            color: #343a40;
-            white-space: nowrap;
-            min-width: 130px;
-            box-sizing: border-box;
-        }
-
-        /* Input/Textarea dentro del grupo */
-        .form-control-embedded {
-            flex-grow: 1;
-            border: none;
-            background-color: transparent;
-            padding: 12px 15px;
-            font-size: 16px;
-            color: #495057;
-            outline: none;
-            width: 100%;
-            box-sizing: border-box;
-            line-height: 1.5;
-        }
-
-        /* Textarea */
-        .input-group-custom textarea.form-control-embedded {
-            min-height: 80px;
-        }
-
-        /* Asterisco Requerido */
-        .input-group-label .required-asterisk {
-            color: #dc3545;
-            margin-left: 4px;
-            font-weight: bold;
-        }
-        /* --- FIN ESTILO INPUT --- */
-
-        /* Fieldset sin estilo visible */
-        fieldset { border: none; padding: 0; margin: 0 0 15px 0; }
-        fieldset legend { display: none; }
-
-        /* Texto de ayuda */
-        small {
-            font-size: 12px;
-            color: #6c757d;
-            display: block;
-            margin-top: -10px;
-            margin-bottom: 15px;
-            padding-left: 5px;
-        }
-        .d-block { display: block; }
-        .mb-3 { margin-bottom: 1rem; }
-     /* --- ESTILOS DE BOTONES (MODIFICADO) --- */
-
-        .button-row {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 25px;
-        }
-
-        .btn {
-            border-radius: 12px;
-            padding: 10px 20px;
-            font-size: 15px;
-            font-weight: 500;
-            transition: background-color 0.2s ease, box-shadow 0.2s ease;
-            width: auto; 
-            min-width: 266px; 
-            text-align: center;
-            border: none;
-            cursor: pointer;
-            box-sizing: border-box;
-            text-decoration: none; 
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-         .button-row .btn {
-            flex-grow: 1; 
-            margin: 0 px; 
-        }
-        .button-row .btn:first-child { margin-left: 0; }
-        .button-row .btn:last-child { margin-right: 0; } 
-
-
-        .btn-primary { background-color: #0d6efd; color: white; }
-        .btn-primary:hover { background-color: #0b5ed7; }
-        .btn-secondary { background-color: #6c757d; color: white; }
-        .btn-secondary:hover { background-color: #5a6268; }
-    </style>
-{% endblock %}
-
 {% block content %}
 
-<!-- Contenedor Principal Blanco -->
-<div class="form-container">
+<!-- Contenedor Compacto: py-6 en vez de py-10, p-6 en vez de p-8 -->
+<div class="relative w-full max-w-2xl mx-auto my-4 bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-2xl p-6 border border-white/50">
 
-    <!-- Encabezado Oscuro (Dentro del contenedor blanco) -->
-    <div class="page-header-dark">
-        <h2>
-            <i data-lucide="calendar-plus" class="w-5 h-5 inline-block mr-2"></i>
-            Registrar Nueva Cita
-        </h2>
+    <!-- Encabezado Compacto (Horizontal) -->
+    <div class="flex items-center justify-between mb-5 border-b border-gray-100 pb-3">
+        <div class="flex items-center gap-3">
+            <div class="flex items-center justify-center w-10 h-10 bg-gray-100 rounded-full">
+                <i data-lucide="calendar-plus" class="w-5 h-5 text-black"></i>
+            </div>
+            <div>
+                <h2 class="text-xl font-bold text-gray-900 leading-none">Nueva Cita</h2>
+                <p class="text-xs text-gray-400 mt-1">Ingresa los datos del paciente y la cita</p>
+            </div>
+        </div>
+        <!-- Botón cancelar discreto arriba a la derecha -->
+        {% set cancel_url = form_values.get('next_url') or request.args.get('next') %}
+        {% if not cancel_url %}
+            {% set cancel_url = url_for('calendario.mostrar_calendario') %}
+        {% endif %}
+        <a href="{{ cancel_url }}" class="p-2 text-gray-400 hover:text-black transition-colors rounded-full hover:bg-gray-50">
+            <i data-lucide="x" class="w-5 h-5"></i>
+        </a>
     </div>
 
-    <!-- Mensajes Flash -->
+    <!-- Mensajes Flash Compactos -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-        <div id="flash-message-container" class="mt-3">
+        <div id="flash-message-container" class="mb-4 space-y-1">
             {% for category, message in messages %}
-            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <div class="px-4 py-2 rounded-xl text-sm flex items-center shadow-sm
+                        {% if category == 'success' %} bg-green-50 text-green-800 border border-green-100
+                        {% elif category == 'error' %} bg-red-50 text-red-800 border border-red-100
+                        {% else %} bg-blue-50 text-blue-800 border border-blue-100 {% endif %}">
+                <span class="font-medium">{{ message }}</span>
+                <button type="button" class="ml-auto opacity-50 hover:opacity-100" data-bs-dismiss="alert"><i data-lucide="x" class="w-3 h-3"></i></button>
             </div>
             {% endfor %}
         </div>
         {% endif %}
     {% endwith %}
 
-    <!-- Formulario -->
-    <form method="POST"
+    <form method="POST" class="space-y-3" {# Espaciado vertical reducido #}
           action="{{ url_for('calendario.registrar_cita',
                              paciente_id_param=form_values.get('paciente_preseleccionado_id') if form_values else None,
                              next=form_values.get('next_url') if form_values else request.args.get('next')) }}">
 
-        {# Campo oculto 'next' #}
         <input type="hidden" name="next" value="{{ form_values.get('next_url', request.args.get('next', '')) }}">
+        <input type="hidden" id="paciente_id_seleccionado_hidden" name="paciente_id"
+               value="{{ form_values.get('paciente_preseleccionado_id', '') }}">
 
-
-<!-- Sección Datos del Paciente (con búsqueda de paciente integrada) -->
-        <fieldset>
-            {# Campo oculto para el ID del paciente seleccionado (este es el que se enviará al backend) #}
-            <input type="hidden" id="paciente_id_seleccionado_hidden" name="paciente_id"
-                   value="{{ form_values.get('paciente_preseleccionado_id', '') }}">
-
-            <div class="input-group-custom relative">
-                <span class="input-group-label">Paciente:<span class="required-asterisk">*</span></span>
-                <input type="text" class="form-control-embedded" id="paciente_busqueda_input"
-                       placeholder="Buscar paciente existente o escribir nuevo" autocomplete="off"
+        <!-- === PACIENTE === -->
+        <div class="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+            <!-- Buscador Compacto -->
+            <div class="relative group mb-3">
+                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <i data-lucide="search" class="w-4 h-4 text-gray-400"></i>
+                </div>
+                <input type="text" id="paciente_busqueda_input"
+                       class="w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:ring-1 focus:ring-black focus:border-black transition-all outline-none"
+                       placeholder="Buscar paciente..." autocomplete="off"
                        value="{{ form_values.get('paciente_preseleccionado_nombre', '') }}">
-                
-                {# Contenedor para las sugerencias de búsqueda #}
-                <div id="sugerencias_citas" class="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg mt-1 hidden" style="top: 100%; left: 0;"></div>
+                <div id="sugerencias_citas" class="absolute z-20 w-full mt-1 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden hidden"></div>
             </div>
-            <small class="d-block mb-3" id="small_crear_nuevo_paciente">O rellena los campos siguientes para crear un Nuevo Paciente:</small>
+            
+            <small class="block text-gray-400 text-[10px] mb-2" id="small_crear_nuevo_paciente">O llena los campos para crear uno nuevo:</small>
 
-            {# Campos para crear un nuevo paciente (inicialmente habilitados si no hay preseleccionado, o deshabilitados si lo hay) #}
-            <div class="input-group-custom">
-                <span class="input-group-label">Nombres:<span class="required-asterisk">*</span></span>
-                <input type="text" class="form-control-embedded" id="paciente_nombres" name="paciente_nombres_str" {# CAMBIADO NAME A _STR #}
+            <!-- FILA 1: Nombres (100% Ancho) -->
+            <div class="mb-3">
+                <input type="text" id="paciente_nombres" name="paciente_nombres_str" placeholder="Nombres *"
+                       class="w-full px-3 py-2 bg-white border border-transparent rounded-xl text-sm focus:ring-1 focus:ring-black focus:bg-white disabled:bg-gray-100 transition-all outline-none shadow-sm placeholder-gray-500 text-gray-900"
                        value="{{ form_values.get('paciente_nombres_val', '') }}"
-                       placeholder="Ej: Ana María" {% if form_values.get('paciente_preseleccionado_id') %}disabled{% else %}required{% endif %}>
+                       {% if form_values.get('paciente_preseleccionado_id') %}disabled{% else %}required{% endif %}>
             </div>
-            <div class="input-group-custom">
-                <span class="input-group-label">Apellidos:<span class="required-asterisk">*</span></span>
-                <input type="text" class="form-control-embedded" id="paciente_apellidos" name="paciente_apellidos_str" {# CAMBIADO NAME A _STR #}
+            
+            <!-- FILA 2: Apellidos (100% Ancho) -->
+            <div class="mb-3">
+                <input type="text" id="paciente_apellidos" name="paciente_apellidos_str" placeholder="Apellidos *"
+                       class="w-full px-3 py-2 bg-white border border-transparent rounded-xl text-sm focus:ring-1 focus:ring-black focus:bg-white disabled:bg-gray-100 transition-all outline-none shadow-sm placeholder-gray-500 text-gray-900"
                        value="{{ form_values.get('paciente_apellidos_val', '') }}"
-                       placeholder="Ej: Pérez Gómez" {% if form_values.get('paciente_preseleccionado_id') %}disabled{% else %}required{% endif %}>
+                       {% if form_values.get('paciente_preseleccionado_id') %}disabled{% else %}required{% endif %}>
             </div>
-            <div class="input-group-custom">
-                <span class="input-group-label">Edad:</span>
-                <input type="number" class="form-control-embedded" id="paciente_edad" name="paciente_edad_val" {# CAMBIADO NAME A _VAL #}
-                       value="{{ form_values.get('paciente_edad_val', '') }}"
-                       placeholder="Ej: 30" min="0" {% if form_values.get('paciente_preseleccionado_id') %}disabled{% endif %}>
-            </div>
-            <div class="input-group-custom">
-                <span class="input-group-label">Documento:</span>
-                <input type="text" class="form-control-embedded" id="paciente_documento" name="paciente_documento_val" {# CAMBIADO NAME A _VAL #}
-                       value="{{ form_values.get('paciente_documento_val', '') }}"
-                       placeholder="Ej: 12345678" {% if form_values.get('paciente_preseleccionado_id') %}disabled{% endif %}>
-            </div>
-            <div class="input-group-custom">
-                <span class="input-group-label">Teléfono:<span class="required-asterisk">*</span></span>
-                <input type="tel" class="form-control-embedded" id="paciente_telefono" name="paciente_telefono_str" {# CAMBIADO NAME A _STR #}
+            
+            <!-- FILA 3: Teléfono (100% Ancho) -->
+            <div class="mb-3">
+                <input type="tel" id="paciente_telefono" name="paciente_telefono_str" placeholder="Número de Teléfono *"
+                       class="w-full px-3 py-2 bg-white border border-transparent rounded-xl text-sm focus:ring-1 focus:ring-black disabled:bg-gray-100 transition-all outline-none shadow-sm placeholder-gray-500 text-gray-900"
                        value="{{ form_values.get('paciente_telefono_val', '') }}"
-                       placeholder="Ej: 3001234567" {% if form_values.get('paciente_preseleccionado_id') %}disabled{% else %}required{% endif %}>
+                       {% if form_values.get('paciente_preseleccionado_id') %}disabled{% else %}required{% endif %}>
             </div>
 
-            {# La sección de duplicados se mantiene pero su lógica ahora es manejada por el JS #}
-            {% if form_values.get('mostrar_seccion_duplicados') %}
-            <div class="alert alert-warning mt-4">
-                <p>Se encontraron múltiples pacientes con el mismo nombre. Por favor, seleccione el correcto o confirme la creación de uno nuevo.</p>
-                <div class="mb-3">
-                    <label for="paciente_id_seleccionado_duplicado" class="form-label">Seleccionar paciente existente:</label>
-                    <select class="form-select" id="paciente_id_seleccionado_duplicado" name="paciente_id_seleccionado_duplicado">
-                        {% for p in form_values.posibles_pacientes_encontrados %}
-                            <option value="{{ p.id }}">{{ p.nombres }} {{ p.apellidos }} ({{ p.documento or 'N/A' }})</option>
-                        {% endfor %}
-                    </select>
+            <!-- FILA 4: Documento (Ancho) y Edad (Pequeño) -->
+            <div class="grid grid-cols-3 gap-3">
+                <!-- Documento ocupa 2 columnas -->
+                <div class="col-span-2">
+                    <input type="text" id="paciente_documento" name="paciente_documento_val" placeholder="Documento / DNI (Op.)"
+                           class="w-full px-3 py-2 bg-white border border-transparent rounded-xl text-sm focus:ring-1 focus:ring-black disabled:bg-gray-100 transition-all outline-none shadow-sm placeholder-gray-500 text-gray-900"
+                           value="{{ form_values.get('paciente_documento_val', '') }}"
+                           {% if form_values.get('paciente_preseleccionado_id') %}disabled{% endif %}>
+                </div>
+
+                <!-- Edad ocupa 1 columna -->
+                <div class="col-span-1">
+                    <input type="number" id="paciente_edad" name="paciente_edad_val" placeholder="Edad" min="0"
+                           class="w-full px-3 py-2 bg-white border border-transparent rounded-xl text-sm focus:ring-1 focus:ring-black disabled:bg-gray-100 transition-all outline-none shadow-sm placeholder-gray-500 text-gray-900 text-center"
+                           value="{{ form_values.get('paciente_edad_val', '') }}"
+                           {% if form_values.get('paciente_preseleccionado_id') %}disabled{% endif %}>
                 </div>
             </div>
-            {% endif %}
-        </fieldset>
-
-        <!-- Sección Datos de la Cita -->
-        <fieldset>
-            <div class="input-group-custom">
-                <span class="input-group-label">Fecha:<span class="required-asterisk">*</span></span>
-                <input type="date" class="form-control-embedded" name="fecha" id="fecha"
+        </div>
+        <!-- === CITA === -->
+        <div class="grid grid-cols-2 gap-3">
+            <!-- Fecha y Hora -->
+            <div>
+                <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">Fecha</label>
+                <input type="date" name="fecha" id="fecha"
+                       class="w-full px-3 py-2 bg-gray-50 border-none rounded-xl text-sm text-gray-900 font-medium focus:ring-1 focus:ring-black transition-all outline-none"
                        value="{{ form_values.get('fecha_val', request.args.get('fecha', '')) }}" required>
             </div>
-            <div class="input-group-custom">
-                <span class="input-group-label">Hora:<span class="required-asterisk">*</span></span>
-                <input type="time" class="form-control-embedded" name="hora" id="hora"
+            <div>
+                <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">Hora</label>
+                <input type="time" name="hora" id="hora"
+                       class="w-full px-3 py-2 bg-gray-50 border-none rounded-xl text-sm text-gray-900 font-medium focus:ring-1 focus:ring-black transition-all outline-none"
                        value="{{ form_values.get('hora_val', '') }}" required>
             </div>
-            <div class="input-group-custom">
-                <span class="input-group-label">Doctor:<span class="required-asterisk">*</span></span>
-                <input type="text" class="form-control-embedded" name="doctor" id="doctor"
-                       value="{{ form_values.get('doctor_val', '') }}"
-                       placeholder="Nombre del Doctor/Especialista" required>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+            <!-- Doctor y Motivo en la misma línea -->
+            <div class="relative">
+                <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">Doctor</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none mt-6"> <!-- Icono ajustado -->
+                        <i data-lucide="stethoscope" class="w-3 h-3 text-gray-400"></i>
+                    </div>
+                    <input type="text" name="doctor" id="doctor"
+                           class="w-full pl-8 pr-3 py-2 bg-gray-50 border-none rounded-xl text-sm text-gray-900 focus:ring-1 focus:ring-black transition-all outline-none"
+                           value="{{ form_values.get('doctor_val', '') }}"
+                           placeholder="Dr. Nombre" required>
+                </div>
             </div>
-            <div class="input-group-custom">
-                <span class="input-group-label">Motivo:</span>
-                <input type="text" class="form-control-embedded" name="motivo" id="motivo"
+            <div>
+                <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">Motivo</label>
+                <input type="text" name="motivo" id="motivo"
+                       class="w-full px-3 py-2 bg-gray-50 border-none rounded-xl text-sm text-gray-900 focus:ring-1 focus:ring-black transition-all outline-none"
                        value="{{ form_values.get('motivo_val', '') }}"
-                       placeholder="Ej: Consulta general, Revisión, etc.">
+                       placeholder="Ej. Consulta">
             </div>
-            <div class="input-group-custom">
-                <span class="input-group-label">Observaciones:</span>
-                <textarea class="form-control-embedded" name="observaciones" id="observaciones" rows="3"
-                          placeholder="Notas adicionales sobre la cita">{{ form_values.get('observaciones_val', '') }}</textarea>
-            </div>
-        </fieldset>
-        <!-- Fin Sección Datos de la Cita -->
+        </div>
 
+        <!-- Observaciones -->
+        <div>
+            <textarea name="observaciones" id="observaciones" rows="2"
+                      class="w-full px-3 py-2 bg-gray-50 border-none rounded-xl text-sm text-gray-900 focus:ring-1 focus:ring-black transition-all outline-none resize-none placeholder-gray-400"
+                      placeholder="Notas adicionales...">{{ form_values.get('observaciones_val', '') }}</textarea>
+        </div>
 
-        <!-- Botones -->
-        <div class="button-row"> {# Cambiado a button-row para aplicar tus estilos flex #}
-            <button type="submit" class="btn btn-primary">Guardar Cita</button>
-            {# AHORA: Aseguramos una URL de retorno válida.
-               Si 'next_url' existe en form_values (POST) o en request.args (GET), la usamos.
-               De lo contrario, siempre redirigimos al calendario principal.
-               La función url_for debe ser llamada en el backend para generar la URL. #}
+        <!-- Botones de Acción: Grid de 2 columnas para ahorrar espacio -->
+        <div class="grid grid-cols-2 gap-3 mt-4">
+            
+            <!-- Lógica para URL de Cancelar -->
             {% set cancel_url = form_values.get('next_url') or request.args.get('next') %}
             {% if not cancel_url %}
                 {% set cancel_url = url_for('calendario.mostrar_calendario') %}
             {% endif %}
-            <a href="{{ cancel_url }}" class="btn btn-secondary">Cancelar</a>
+
+            <!-- Botón Cancelar (Gris Claro) -->
+            <a href="{{ cancel_url }}" 
+               class="flex items-center justify-center w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900 font-bold rounded-xl transition-all duration-200 text-sm">
+                Cancelar
+            </a>
+
+            <!-- Botón Guardar (Negro) -->
+            <button type="submit" class="flex items-center justify-center w-full py-3 bg-black hover:bg-gray-800 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 gap-2 text-sm">
+                <span>Agendar</span>
+                <i data-lucide="check" class="w-4 h-4"></i>
+            </button>
         </div>
+
+        {# Alerta de duplicados (oculta por defecto) #}
+        {% if form_values.get('mostrar_seccion_duplicados') %}
+        <div class="mt-2 p-3 bg-amber-50 rounded-xl border border-amber-100 text-xs">
+            <p class="text-amber-800 font-bold mb-1">⚠️ Duplicados</p>
+            <select class="w-full p-1 rounded border-amber-200 bg-white" id="paciente_id_seleccionado_duplicado" name="paciente_id_seleccionado_duplicado">
+                {% for p in form_values.posibles_pacientes_encontrados %}
+                    <option value="{{ p.id }}">{{ p.nombres }} {{ p.apellidos }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
     </form>
 </div>
 {% endblock %}
 
+
 {% block scripts %}
     {{ super() }}
-    <script type="module"> // <-- MUY IMPORTANTE: usa type="module" para imports/exports
-        // Importar las funciones de búsqueda y precarga desde el módulo de utilidades
+    <!-- Scripts se mantienen IDÉNTICOS, solo asegúrate de que search_utils.js esté cargando bien -->
+    <script type="module"> 
         import { initializePatientSearch, preloadPatient } from "{{ url_for('static', filename='js/search_utils.js') }}";
 
         document.addEventListener('DOMContentLoaded', function() {
-            lucide.createIcons(); // Inicializar Lucide Icons
+            lucide.createIcons();
 
-            // Elementos del nuevo sistema de búsqueda
             const pacienteBusquedaInput = document.getElementById('paciente_busqueda_input');
             const pacienteIdHiddenInput = document.getElementById('paciente_id_seleccionado_hidden');
             const sugerenciasCitasDiv = document.getElementById('sugerencias_citas');
             const smallCrearNuevoPaciente = document.getElementById('small_crear_nuevo_paciente');
 
-            // Referencias a los campos de creación/edición de paciente manual
             const inputNombres = document.getElementById('paciente_nombres');
             const inputApellidos = document.getElementById('paciente_apellidos');
             const inputTelefono = document.getElementById('paciente_telefono');
@@ -351,88 +222,77 @@
                 inputNombres, inputApellidos, inputTelefono, inputEdad, inputDocumento
             ];
 
-            // --- Funciones de Utilidad (dentro del scope de este archivo) ---
-
             function clearNewPatientFields() {
                 inputNombres.value = '';
                 inputApellidos.value = '';
                 inputTelefono.value = '';
                 inputEdad.value = '';
                 inputDocumento.value = '';
-                pacienteIdHiddenInput.value = ''; // Limpiar el ID oculto también
-                // NOTA: pacienteBusquedaInput.value no se limpia aquí si el usuario está buscando.
-                // Se limpia solo si el callback de initializePatientSearch lo hace o si se invoca clearNewPatientFields directamente.
+                pacienteIdHiddenInput.value = ''; 
             }
 
             async function populateNewPatientFields(patientData) {
-                if (!patientData) { // Si patientData es null, limpiar campos
+                if (!patientData) { 
                     clearNewPatientFields();
-                    toggleNewPatientFields(true); // Habilitar campos
+                    toggleNewPatientFields(true);
                     return;
                 }
-                
-                // Rellenar campos visibles
-                // Asumiendo que 'nombre' viene como "Nombres Apellidos" de obtener_paciente_ajax
                 const nombreCompletoArr = patientData.nombre.split(' ');
-                inputNombres.value = nombreCompletoArr.shift(); // Primer elemento como nombre
-                inputApellidos.value = nombreCompletoArr.join(' '); // El resto como apellido
+                inputNombres.value = nombreCompletoArr.shift(); 
+                inputApellidos.value = nombreCompletoArr.join(' ');
                 
                 inputTelefono.value = patientData.telefono !== 'No especificado' ? patientData.telefono : '';
                 inputEdad.value = patientData.edad !== 'No especificada' ? patientData.edad : '';
                 inputDocumento.value = patientData.documento !== 'No especificado' ? patientData.documento : '';
             }
 
-            // `true` para habilitar, `false` para deshabilitar
             function toggleNewPatientFields(enable) {
                 camposNuevoPaciente.forEach(campo => {
                     if (campo) {
                         campo.disabled = !enable;
                         if (enable) {
-                            // Solo añadir 'required' a los campos obligatorios si se está creando un nuevo paciente
                             if (campo.id === 'paciente_nombres' || campo.id === 'paciente_apellidos' || campo.id === 'paciente_telefono') {
                                 campo.setAttribute('required', 'required');
                             }
                         } else {
-                            campo.removeAttribute('required'); // Quitar 'required' si está deshabilitado
+                            campo.removeAttribute('required');
                         }
                     }
                 });
                 if (smallCrearNuevoPaciente) {
+                    // Mantenemos la lógica de visibilidad pero usando clases de Tailwind si quisieras, 
+                    // aunque el JS usa style.display, lo cual funciona perfecto.
                     smallCrearNuevoPaciente.style.display = enable ? 'block' : 'none';
                 }
             }
 
-
-            // --- Lógica de Inicialización de Búsqueda para este formulario ---
             if (pacienteBusquedaInput && sugerenciasCitasDiv && pacienteIdHiddenInput) {
                 initializePatientSearch(pacienteBusquedaInput, sugerenciasCitasDiv, pacienteIdHiddenInput, 
-                                        async (patientData) => { // onPatientSelectedCallback
+                                        async (patientData) => { 
                                             await populateNewPatientFields(patientData);
-                                            toggleNewPatientFields(false); // Deshabilitar campos de nuevo paciente
+                                            toggleNewPatientFields(false); 
                                         }, 
-                                        () => { // onSearchClearedCallback
+                                        () => { 
                                             clearNewPatientFields();
-                                            toggleNewPatientFields(true); // Habilitar campos de nuevo paciente
+                                            toggleNewPatientFields(true); 
                                         });
             } else {
-                console.error('ERROR: No se encontraron todos los elementos DOM para inicializar la búsqueda de pacientes en registrar_cita.html');
+                console.error('ERROR DOM: Faltan elementos ID');
             }
 
-            // --- Pre-carga inicial si hay un paciente_id en form_values (desde el backend) ---
-            const initialPatientId = pacienteIdHiddenInput.value; // Ya viene de Jinja si hay preseleccionado
+            const initialPatientId = pacienteIdHiddenInput.value;
             if (initialPatientId) {
                 preloadPatient(initialPatientId, pacienteBusquedaInput, pacienteIdHiddenInput, 
-                                async (patientData) => { // onPatientSelectedCallback
+                                async (patientData) => { 
                                     await populateNewPatientFields(patientData);
-                                    toggleNewPatientFields(false); // Deshabilitar campos de nuevo paciente
+                                    toggleNewPatientFields(false); 
                                 })
                 .catch(error => {
-                    console.error('Error al precargar paciente en registrar_cita:', error);
+                    console.error('Error precarga:', error);
                     clearNewPatientFields();
                     toggleNewPatientFields(true);
                 });
             } else {
-                // Si no hay un ID inicial, asegúrate de que los campos de creación de nuevo paciente estén habilitados
                 toggleNewPatientFields(true);
             }
         });
