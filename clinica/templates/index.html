@@ -17,13 +17,13 @@
             animation: blob 25s infinite;
         }
 
-        /* 2. Clase Panel de Vidrio (Sombra más sutil) */
+                /* 2. Clase Panel de Vidrio (Sin bordes forzado) */
         .glass-panel {
             background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.9);
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05); /* Sombra más suave */
+            border: 0px solid transparent !important; /* <--- ESTO ES LO IMPORTANTE */
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
             border-radius: 2.5rem !important; 
             overflow: hidden !important;
         }
@@ -77,7 +77,7 @@
         </header>
 
         <!-- DASHBOARD CONTAINER -->
-        <div class="dashboard flex flex-col lg:flex-row gap-4 p-4 lg:p-10 mx-auto w-full">
+        <div class="dashboard flex flex-col lg:flex-row gap-3 p-1 sm:p-4 lg:p-10 mx-auto w-full">
             
             <!-- =================================================================== -->
             <!-- ▼▼▼ 2. PANEL IZQUIERDO (SIDEBAR) ▼▼▼ -->
@@ -147,7 +147,7 @@
                         </div>
                         
                         <!-- Tarjeta Blanca (Próxima Cita) -->
-                        <div class="bg-white border border-gray-100 p-8 rounded-[3rem] flex justify-between items-center shadow-lg overflow-hidden">
+                        <div class="bg-white p-8 rounded-[3rem] flex justify-between items-center shadow-lg overflow-hidden">
                             <div>
                                 <div class="text-sm text-gray-400 mb-2 font-bold uppercase tracking-wider">Tu próxima cita</div>
                                 {% if proxima_cita %}
@@ -164,12 +164,12 @@
                     
                     <!-- Lista Citas de Hoy -->
                     {% if citas_del_dia is defined and citas_del_dia is not none %}
-                    <div class="today-appointments-section bg-white/60 backdrop-blur-sm border border-white/50 p-6 rounded-[2.5rem] shadow-sm mb-8">
+                    <div class="today-appointments-section bg-white/60 backdrop-blur-sm p-6 rounded-[2.5rem] shadow-sm mb-8">
                         <h3 class="text-lg font-bold text-gray-800 mb-5 flex items-center"><i data-lucide="list-checks" class="w-5 h-5 mr-2"></i>Citas para Hoy</h3>
                         <div id="lista-citas-hoy" class="space-y-3">
                             {% if citas_del_dia %}
                                 {% for cita_info in citas_del_dia %}
-                                <div class="bg-white border border-gray-100 rounded-2xl p-4 hover:shadow-md transition-all duration-200 appointment-card" data-cita-id="{{ cita_info.id }}" data-estado="{{ cita_info.estado | default('pendiente') }}">
+                                <div class="bg-white rounded-2xl p-4 hover:shadow-md transition-all duration-200 appointment-card" data-cita-id="{{ cita_info.id }}" data-estado="{{ cita_info.estado | default('pendiente') }}">
                                     <div class="flex justify-between items-start gap-3">
                                         <div class="flex-grow">
                                             <p class="font-bold text-gray-800 text-base">{{ cita_info.paciente_nombre_completo }}</p>
@@ -206,7 +206,7 @@
                 <!-- ▼▼▼ SECCIÓN: FACTURAS RECIENTES ▼▼▼ -->
                 <!-- =================================================================== -->
                 <div class="mt-8 mb-4">
-                    <div class="shadow-xl rounded-[2.5rem] overflow-hidden border border-white/50"> 
+                    <div class="shadow-xl rounded-[2.5rem] overflow-hidden"> 
                         <div class="facturas-card-header px-6 py-4 flex items-center bg-black text-white">
                             <i data-lucide="receipt-text" class="w-5 h-5 mr-3"></i>
                             <h3 class="text-lg font-bold mb-0">Facturas Recientes</h3>
@@ -282,7 +282,7 @@
 
                 <div id="seccion-datos" class="space-y-3 text-sm">
                     {% for label, id_val in [("Estado del paciente", "estadoPaciente"), ("Género • Edad", "generoEdad"),("Fecha de nacimiento", "fechaNacimiento"), ("Dirección", "direccionPaciente"),("Email", "emailPaciente"), ("Ocupación", "ocupacionPaciente"),("Aseguradora", "aseguradoraPaciente"), ("Alergias", "alergiasPaciente"),("Enfermedad Actual", "enfermedadPaciente")] %}
-                    <div class="bg-white/60 border border-white/60 rounded-2xl px-4 py-3 text-gray-600 flex justify-between items-center shadow-sm">
+                    <div class="bg-white/60 rounded-2xl px-4 py-3 text-gray-600 flex justify-between items-center shadow-sm">
                         <span class="font-bold text-gray-700 text-xs uppercase tracking-wide">{{ label }}</span>
                         <span id="{{ id_val }}" class="text-right font-medium text-gray-900">No especificado</span>
                     </div>
@@ -291,7 +291,7 @@
 
                 <div id="seccion-citas" class="hidden space-y-3 text-sm">
                     {% for label, id_val in [("Última cita", "ultimaCita"), ("Próxima cita", "proximaCitaPanelDerecho"),("Motivo frecuente", "motivoFrecuente")] %}
-                    <div class="bg-white/60 border border-white/60 rounded-2xl px-4 py-3 text-gray-600 flex justify-between items-center shadow-sm">
+                    <div class="bg-white/60 rounded-2xl px-4 py-3 text-gray-600 flex justify-between items-center shadow-sm">
                         <span class="font-bold text-gray-700 text-xs uppercase tracking-wide">{{ label }}</span>
                         <span id="{{ id_val }}" class="text-right font-medium text-gray-900">No especificado</span>
                     </div>
