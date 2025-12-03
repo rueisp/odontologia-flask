@@ -12,7 +12,7 @@ from clinica.models import Paciente, EPS, Municipio
 from ..extensions import db
 import json 
 from sqlalchemy import or_
-
+from clinica.decorators.limites import verificar_limite_pacientes
 # Importar servicios
 from .pacientes_services import (
     listar_pacientes_service,
@@ -79,6 +79,7 @@ def mostrar_paciente(id):
 
 @pacientes_bp.route('/crear', methods=['GET', 'POST'])
 @login_required
+@verificar_limite_pacientes  # ← NUEVO DECORADOR
 def crear_paciente():
     """Crea un nuevo paciente y maneja respuestas tanto AJAX como normales."""
 

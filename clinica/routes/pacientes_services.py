@@ -401,13 +401,40 @@ def crear_paciente_service(form_data, files, usuario):
         db.session.add(nuevo_paciente)
         db.session.commit()
 
+        # ===================================================================
+        # ▼▼▼ NUEVA SECCIÓN: INCREMENTAR CONTADOR DE PACIENTES HOY ▼▼▼
+        # ===================================================================
+        try:
+            from clinica.services.plan_service import PlanService
+            resultado_incremento = PlanService.incrementar_contador_paciente(usuario.id)
+            
+            if not resultado_incremento.get('exito'):
+                # Esto no debería pasar porque ya verificamos con el decorador,
+                # pero lo registramos por seguridad
+                current_app.logger.warning(
+                    f"Error al incrementar contador para usuario {usuario.id}: "
+                    f"{resultado_incremento.get('error', 'Error desconocido')}"
+                )
+            else:
+                current_app.logger.info(
+                    f"Contador incrementado para usuario {usuario.id}. "
+                    f"Pacientes hoy: {resultado_incremento.get('limite_diario').contador_pacientes}/"
+                    f"{resultado_incremento.get('limite_diario').limite_actual}"
+                )
+        except Exception as e:
+            # No fallamos la creación del paciente si hay error con el contador,
+            # solo lo registramos
+            current_app.logger.error(f"Error al incrementar contador de pacientes: {e}")
+        # ===================================================================
+        # ▲▲▲ FIN DE NUEVA SECCIÓN ▲▲▲
+        # ===================================================================
+
         return {'success': True, 'message': 'Paciente guardado con éxito', 'paciente_id': nuevo_paciente.id}
 
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f'Error FATAL al guardar paciente: {e}', exc_info=True)
         return {'success': False, 'message': 'Ocurrió un error inesperado al guardar el paciente.'}
-
 
 def editar_paciente_service(paciente_id, form_data, files, usuario):
     """Edita un paciente existente.

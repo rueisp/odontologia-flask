@@ -298,6 +298,39 @@
                     {% endfor %}
                 </div>
 
+                <!-- Contador de Límite Diario -->
+                {% if estadisticas_plan %}
+                <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-[3rem] flex justify-between items-center shadow-2xl mb-6">
+                    <div>
+                        <div class="text-blue-100 mb-1 font-medium">Límite diario de pacientes</div>
+                        <div class="text-4xl font-bold">
+                            {{ estadisticas_plan.pacientes_hoy }}/{{ estadisticas_plan.limite_hoy }}
+                            {% if estadisticas_plan.limite_alcanzado %}
+                            <span class="text-red-300 text-xl ml-2">¡Límite alcanzado!</span>
+                            {% endif %}
+                        </div>
+                        <div class="text-sm text-blue-200 mt-2">
+                            {% if estadisticas_plan.es_trial %}
+                                {% if estadisticas_plan.dia_trial_actual %}
+                                    Día {{ estadisticas_plan.dia_trial_actual }} de 30
+                                {% else %}
+                                    Día 1 de 30
+                                {% endif %}
+                                (Trial)
+                                {% if estadisticas_plan.dias_restantes_trial is not none %}
+                                    - {{ estadisticas_plan.dias_restantes_trial }} días restantes
+                                {% endif %}
+                            {% else %}
+                                Plan {{ estadisticas_plan.plan_actual|title }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="bg-white/20 p-4 rounded-full">
+                        <i data-lucide="users" class="w-8 h-8"></i>
+                    </div>
+                </div>
+                {% endif %}
+
                 <div id="seccion-imagenes" class="hidden space-y-4 p-4 bg-gray-50/50 rounded-2xl border border-dashed border-gray-300">
                     <h4 class="font-bold text-gray-800 mb-2">Imágenes del Paciente</h4>
                     <div id="dentigramaDisplayContainer" class="border p-2 rounded-xl bg-white shadow-sm hidden"><p class="text-xs text-gray-500 mb-1 font-bold">Dentigrama:</p><img id="dentigramaDisplay" class="max-w-full h-auto mx-auto rounded-lg" alt="Dentigrama del Paciente"><p id="noDentigrama" class="text-sm text-gray-500 text-center hidden">No hay dentigrama registrado.</p></div>

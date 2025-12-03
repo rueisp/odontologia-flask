@@ -258,6 +258,14 @@ class Usuario(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
     pacientes = db.relationship('Paciente', back_populates='odontologo', lazy='dynamic', cascade="all, delete-orphan")
     
+    # ↓↓↓ AQUÍ AGREGAR LAS NUEVAS RELACIONES ↓↓↓
+    # AGREGAR ESTAS 3 LÍNEAS:
+    planes = db.relationship('UsuarioPlan', back_populates='usuario', cascade='all, delete-orphan')
+    limites_diarios = db.relationship('LimiteDiario', back_populates='usuario', cascade='all, delete-orphan')
+    auditoria_accesos = db.relationship('AuditoriaAcceso', back_populates='usuario', cascade='all, delete-orphan')
+    # ↑↑↑ FIN DE LAS NUEVAS RELACIONES ↑↑↑
+    
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
@@ -344,3 +352,149 @@ class CUPSCode(db.Model):
 
     def __repr__(self):
         return f"<CUPSCode {self.code}: {self.description}>"
+    
+
+# ============================================================
+# NUEVAS TABLAS PARA SISTEMA DE PLANES Y SEGURIDAD
+# ============================================================
+
+class Plan(db.Model):
+    """Tabla de planes disponibles (trial, básico, profesional)"""
+    __tablename__ = 'planes'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(50), nullable=False, unique=True)  # trial, basico, profesional
+    descripcion = db.Column(db.String(200), nullable=True)
+    precio_mensual = db.Column(db.Float, nullable=False, default=0.0)  # 0 para trial
+    limite_pacientes_diario = db.Column(db.Integer, nullable=False, default=10)
+    limite_pacientes_diario_primeros_7_dias = db.Column(db.Integer, nullable=False, default=20)
+    duracion_trial_dias = db.Column(db.Integer, nullable=False, default=30)  # Solo para trial
+    caracteristicas = db.Column(db.JSON, nullable=True)  # Lista de características en JSON
+    activo = db.Column(db.Boolean, default=True, nullable=False)
+    orden = db.Column(db.Integer, default=0, nullable=False)  # Para ordenar en la UI
+    
+    # Relaciones
+    usuarios_planes = db.relationship('UsuarioPlan', back_populates='plan', cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<Plan {self.nombre}: ${self.precio_mensual}/mes>'
+
+class UsuarioPlan(db.Model):
+    """Relación entre usuario y plan (historial de suscripciones)"""
+    __tablename__ = 'usuarios_planes'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
+    plan_id = db.Column(db.Integer, db.ForeignKey('planes.id'), nullable=False)
+    
+    # Estado de la suscripción
+    estado = db.Column(db.String(20), nullable=False, default='activo')  # activo, cancelado, expirado, trial
+    fecha_inicio = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    fecha_fin = db.Column(db.DateTime, nullable=True)  # Null = renovación automática
+    fecha_cancelacion = db.Column(db.DateTime, nullable=True)
+    es_trial = db.Column(db.Boolean, default=False, nullable=False)
+    
+    # Límites especiales para trial
+    trial_dias_restantes = db.Column(db.Integer, nullable=True)
+    trial_pacientes_primeros_7_dias = db.Column(db.Boolean, default=False, nullable=False)
+    
+    # Relaciones
+    usuario = db.relationship('Usuario', back_populates='planes')
+    plan = db.relationship('Plan', back_populates='usuarios_planes')
+    pagos = db.relationship('Pago', back_populates='usuario_plan', cascade='all, delete-orphan')
+    
+    # Índices para búsquedas frecuentes
+    __table_args__ = (
+        db.Index('idx_usuario_plan_activo', 'usuario_id', 'estado'),
+        db.Index('idx_usuario_fecha_fin', 'usuario_id', 'fecha_fin'),
+    )
+    
+    def __repr__(self):
+        return f'<UsuarioPlan usuario:{self.usuario_id} plan:{self.plan_id} estado:{self.estado}>'
+
+
+class LimiteDiario(db.Model):
+    """Contador diario de pacientes por usuario"""
+    __tablename__ = 'limites_diarios'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
+    fecha = db.Column(db.Date, nullable=False, default=date.today)
+    contador_pacientes = db.Column(db.Integer, nullable=False, default=0)
+    limite_actual = db.Column(db.Integer, nullable=False, default=10)
+    
+    # Para tracking de trial
+    es_dia_trial = db.Column(db.Boolean, default=False, nullable=False)
+    dia_numero_trial = db.Column(db.Integer, nullable=True)
+    
+    # Relación
+    usuario = db.relationship('Usuario', back_populates='limites_diarios')
+    
+    # Índice único para evitar duplicados por usuario/fecha
+    __table_args__ = (
+        db.UniqueConstraint('usuario_id', 'fecha', name='uq_usuario_fecha'),
+    )
+    
+    def __repr__(self):
+        return f'<LimiteDiario usuario:{self.usuario_id} fecha:{self.fecha} {self.contador_pacientes}/{self.limite_actual}>'
+
+
+class Pago(db.Model):
+    """Historial de pagos de suscripciones"""
+    __tablename__ = 'pagos'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_plan_id = db.Column(db.Integer, db.ForeignKey('usuarios_planes.id'), nullable=False)
+    
+    # Información del pago
+    monto = db.Column(db.Float, nullable=False)
+    moneda = db.Column(db.String(3), nullable=False, default='USD')
+    metodo_pago = db.Column(db.String(50), nullable=True)  # stripe, paypal, etc.
+    id_transaccion = db.Column(db.String(100), nullable=True, unique=True)  # ID de la transacción externa
+    estado = db.Column(db.String(20), nullable=False, default='completado')  # completado, fallido, pendiente, reembolsado
+    
+    # Fechas
+    fecha_pago = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    fecha_vencimiento = db.Column(db.DateTime, nullable=True)
+    periodo_inicio = db.Column(db.DateTime, nullable=False)
+    periodo_fin = db.Column(db.DateTime, nullable=False)
+    
+    # Metadatos
+    metadatos = db.Column(db.JSON, nullable=True)  # Datos adicionales del pago
+    
+    # Relación
+    usuario_plan = db.relationship('UsuarioPlan', back_populates='pagos')
+    
+    def __repr__(self):
+        return f'<Pago ${self.monto} {self.moneda} - {self.estado}>'
+
+
+class AuditoriaAcceso(db.Model):
+    """Tracking de accesos y acciones importantes"""
+    __tablename__ = 'auditoria_accesos'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
+    usuario_email = db.Column(db.String(120), nullable=True)  # Backup por si se elimina usuario
+    
+    # Información de la acción
+    tipo_accion = db.Column(db.String(50), nullable=False)  # login, logout, crear_paciente, exceder_limite
+    descripcion = db.Column(db.Text, nullable=True)
+    ip_address = db.Column(db.String(45), nullable=True)
+    user_agent = db.Column(db.Text, nullable=True)
+    
+    # Recurso afectado
+    recurso_tipo = db.Column(db.String(50), nullable=True)  # paciente, cita, factura
+    recurso_id = db.Column(db.Integer, nullable=True)
+    
+    # Fecha
+    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+    
+    # Metadatos adicional
+    metadatos = db.Column(db.JSON, nullable=True)
+    
+    # Relación
+    usuario = db.relationship('Usuario', back_populates='auditoria_accesos')
+    
+    def __repr__(self):
+        return f'<AuditoriaAcceso {self.tipo_accion} - {self.usuario_email or "Sistema"}>'    

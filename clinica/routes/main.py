@@ -45,11 +45,16 @@ def index():
     except Exception as e:
         current_app.logger.error(f"Error facturas: {e}")
 
+    # 4. Estadísticas de plan y límites (NUEVO)
+    from clinica.services.plan_service import PlanService
+    estadisticas_plan = PlanService.obtener_estadisticas_usuario(current_user.id)    
+
     # Retorno limpio
     return render_template(
         "index.html",
         facturas_recientes=facturas_recientes,
         fecha_actual_formateada=fecha_actual_formateada,
+        estadisticas_plan=estadisticas_plan,  # ← NUEVO
         **panel_data
     )
 @main_bp.route('/login', methods=['GET', 'POST'])
