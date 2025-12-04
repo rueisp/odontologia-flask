@@ -33,7 +33,7 @@ class PlanService:
             {
                 'nombre': 'basico',
                 'descripcion': 'Plan básico para práctica pequeña',
-                'precio_mensual': 7.0,
+                'precio_mensual': 5.0,
                 'limite_pacientes_diario': 25,
                 'limite_pacientes_diario_primeros_7_dias': 25,
                 'duracion_trial_dias': 0,
@@ -52,7 +52,7 @@ class PlanService:
             {
                 'nombre': 'profesional',
                 'descripcion': 'Plan profesional para clínicas',
-                'precio_mensual': 15.0,
+                'precio_mensual': 7.0,
                 'limite_pacientes_diario': 50,
                 'limite_pacientes_diario_primeros_7_dias': 50,
                 'duracion_trial_dias': 0,

@@ -1,0 +1,232 @@
+<!-- templates/planes.html -->
+{% extends "base.html" %}
+
+{% block title %}Planes y Precios - Clínica{% endblock %}
+
+{% block head_extra %}
+<style>
+    .plan-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .plan-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    }
+    .plan-recommended {
+        border: 3px solid #3b82f6;
+        position: relative;
+    }
+    .plan-recommended::before {
+        content: 'RECOMENDADO';
+        position: absolute;
+        top: -12px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #3b82f6;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    .feature-list li {
+        position: relative;
+        padding-left: 28px;
+        margin-bottom: 12px;
+    }
+    .feature-list li::before {
+        content: '✓';
+        position: absolute;
+        left: 0;
+        color: #10b981;
+        font-weight: bold;
+        font-size: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Encabezado -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">Planes que se adaptan a tu clínica</h1>
+            <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                Desde práctica individual hasta clínicas con múltiples profesionales. 
+                Elige el plan perfecto para tu crecimiento.
+            </p>
+        </div>
+
+        <!-- Tarjeta de estado actual -->
+        {% if estadisticas %}
+        <div class="glass-panel rounded-3xl p-6 mb-8 shadow-lg">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">Tu Plan Actual</h3>
+                    <div class="flex items-center">
+                        <span class="text-2xl font-bold text-gray-900 mr-3">{{ estadisticas.plan_actual|title }}</span>
+                        {% if estadisticas.es_trial %}
+                        <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full">
+                            TRIAL
+                        </span>
+                        {% else %}
+                        <span class="bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full">
+                            ACTIVO
+                        </span>
+                        {% endif %}
+                    </div>
+                    <p class="text-gray-600 mt-2">
+                        {% if estadisticas.es_trial %}
+                            Día {{ estadisticas.dia_trial_actual or 1 }} de 30 
+                            {% if estadisticas.dias_restantes_trial is not none %}
+                                - {{ estadisticas.dias_restantes_trial }} días restantes
+                            {% endif %}
+                        {% elif estadisticas.fecha_fin_plan %}
+                            Renueva el {{ estadisticas.fecha_fin_plan.strftime('%d/%m/%Y') }}
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="mt-4 md:mt-0">
+                    <div class="bg-black text-white px-6 py-3 rounded-2xl text-center">
+                        <div class="text-sm text-gray-300">Pacientes hoy</div>
+                        <div class="text-2xl font-bold">{{ estadisticas.pacientes_hoy }}/{{ estadisticas.limite_hoy }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Grid de Planes -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+            {% for plan in planes %}
+            <div class="plan-card bg-white rounded-3xl shadow-xl p-8 {% if plan.nombre == 'basico' %}plan-recommended{% endif %}">
+                <!-- Encabezado del Plan -->
+                <div class="text-center mb-8">
+                    <h3 class="text-2xl font-bold text-gray-900 mb-2">{{ plan.nombre|title }}</h3>
+                    <div class="flex justify-center items-baseline mb-4">
+                        <span class="text-5xl font-bold text-gray-900">${{ "%.0f"|format(plan.precio_mensual) }}</span>
+                        <span class="text-gray-600 ml-2">/mes</span>
+                    </div>
+                    <p class="text-gray-600">{{ plan.descripcion }}</p>
+                </div>
+
+                <!-- Límites -->
+                <div class="mb-8 p-4 bg-gray-50 rounded-2xl">
+                    <div class="text-center mb-4">
+                        <div class="text-3xl font-bold text-gray-900">{{ plan.limite_pacientes_diario }}</div>
+                        <div class="text-gray-600">pacientes por día</div>
+                    </div>
+                    {% if plan.limite_pacientes_diario_primeros_7_dias > plan.limite_pacientes_diario %}
+                    <div class="text-center text-sm text-blue-600 font-medium">
+                        {{ plan.limite_pacientes_diario_primeros_7_dias }} pacientes/día primeros 7 días (solo trial)
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Características -->
+                <ul class="feature-list mb-8">
+                    {% if plan.caracteristicas and plan.caracteristicas.features %}
+                        {% for feature in plan.caracteristicas.features %}
+                        <li class="text-gray-700">{{ feature }}</li>
+                        {% endfor %}
+                    {% else %}
+                        <li class="text-gray-700">Historial completo de pacientes</li>
+                        <li class="text-gray-700">Gestión de citas y calendario</li>
+                        <li class="text-gray-700">Facturación electrónica</li>
+                        <li class="text-gray-700">Reportes básicos</li>
+                        {% if plan.nombre == 'basico' or plan.nombre == 'profesional' %}
+                        <li class="text-gray-700">Soporte prioritario</li>
+                        {% endif %}
+                        {% if plan.nombre == 'profesional' %}
+                        <li class="text-gray-700">Múltiples usuarios</li>
+                        <li class="text-gray-700">Reportes avanzados</li>
+                        <li class="text-gray-700">Integración RIPS completa</li>
+                        {% endif %}
+                    {% endif %}
+                </ul>
+
+                <!-- Botón de acción -->
+                <div class="text-center">
+                    {% if plan_actual and plan.id == plan_actual.id %}
+                    <button class="w-full bg-gray-300 text-gray-700 py-4 px-6 rounded-2xl font-bold text-lg cursor-not-allowed">
+                        Plan Actual
+                    </button>
+                    {% elif plan.nombre == 'trial' and estadisticas and estadisticas.es_trial %}
+                    <button class="w-full bg-gray-300 text-gray-700 py-4 px-6 rounded-2xl font-bold text-lg cursor-not-allowed">
+                        Trial Activo
+                    </button>
+                    {% else %}
+                    <a href="{{ url_for('planes.elegir_plan', plan_id=plan.id) }}" 
+                       class="block w-full bg-black text-white py-4 px-6 rounded-2xl font-bold text-lg hover:bg-gray-800 transition-colors duration-300 text-center">
+                        {% if plan.precio_mensual == 0 %}
+                            Comenzar Trial Gratis
+                        {% else %}
+                            Elegir Plan
+                        {% endif %}
+                    </a>
+                    {% endif %}
+                    
+                    {% if plan.precio_mensual == 0 %}
+                    <p class="text-sm text-gray-500 mt-3">Sin tarjeta de crédito requerida</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Preguntas Frecuentes -->
+        <div class="bg-white rounded-3xl shadow-lg p-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Preguntas Frecuentes</h2>
+            <div class="space-y-6 max-w-3xl mx-auto">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">¿Puedo cambiar de plan en cualquier momento?</h3>
+                    <p class="text-gray-600">Sí, puedes cambiar entre planes de pago en cualquier momento. El cambio se reflejará en tu próximo ciclo de facturación.</p>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">¿Qué pasa si excedo el límite diario de pacientes?</h3>
+                    <p class="text-gray-600">Podrás ver la información existente, pero no podrás crear nuevos pacientes hasta el siguiente día. Considera actualizar a un plan con mayor límite.</p>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">¿El trial incluye todas las funciones?</h3>
+                    <p class="text-gray-600">Sí, el trial de 30 días incluye acceso completo a todas las funciones del sistema sin restricciones.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enlace a gestión de suscripción -->
+        {% if estadisticas and not estadisticas.es_trial %}
+        <div class="text-center mt-8">
+            <a href="{{ url_for('planes.mi_suscripcion') }}" class="text-blue-600 hover:text-blue-800 font-medium">
+                Gestionar mi suscripción →
+            </a>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Animación suave para los planes
+        const planCards = document.querySelectorAll('.plan-card');
+        planCards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            
+            setTimeout(() => {
+                card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 100);
+        });
+        
+        // Inicializar iconos de Lucide
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    });
+</script>
+{% endblock %}

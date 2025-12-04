@@ -324,6 +324,15 @@
                                 Plan {{ estadisticas_plan.plan_actual|title }}
                             {% endif %}
                         </div>
+                        
+                        <!-- DENTRO del div azul, reemplaza la sección del botón: -->
+                        <div class="mt-4">
+                            <a href="/planes" class="inline-flex items-center gap-2 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-2 px-5 rounded-xl shadow-md hover:shadow-lg transition duration-200 border-2 border-yellow-300">
+                                <i data-lucide="zap" class="w-4 h-4"></i>
+                                Actualizar Plan
+                            </a>
+                            <p class="text-xs text-blue-200 mt-2">¿Necesitas más pacientes por día?</p>
+                        </div>
                     </div>
                     <div class="bg-white/20 p-4 rounded-full">
                         <i data-lucide="users" class="w-8 h-8"></i>

@@ -179,3 +179,25 @@ def perfil():
         return redirect(url_for('main.perfil'))
 
     return render_template('perfil.html', usuario=usuario_a_editar)
+
+# Agrega esto al final de tu main.py o en una ruta temporal:
+@main_bp.route('/debug-rutas')
+def debug_rutas():
+    from flask import current_app
+    rutas = []
+    for rule in current_app.url_map.iter_rules():
+        rutas.append({
+            'endpoint': rule.endpoint,
+            'methods': list(rule.methods),
+            'rule': rule.rule
+        })
+    
+    # Ordenar por ruta
+    rutas.sort(key=lambda x: x['rule'])
+    
+    html = "<h1>Rutas registradas en Flask</h1><ul>"
+    for ruta in rutas:
+        html += f"<li><strong>{ruta['rule']}</strong> → {ruta['endpoint']} ({', '.join(ruta['methods'])})</li>"
+    html += "</ul>"
+    
+    return html
