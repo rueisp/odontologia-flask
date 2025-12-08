@@ -219,10 +219,21 @@ def obtener_paciente_service(paciente_id, usuario):
         'imagen_2': paciente.imagen_2,
         'direccion': paciente.direccion or 'N/A',
         'barrio': paciente.barrio or 'N/A',
+        # Campos antiguos de ubicación (mantener por si acaso)
         'municipio': paciente.municipio or 'N/A',
         'departamento': paciente.departamento or 'N/A',
         'aseguradora': paciente.aseguradora or 'N/A',
         'tipo_vinculacion': paciente.tipo_vinculacion or 'N/A',
+        
+        # ▼▼▼ NUEVOS CAMPOS RIPS (AGREGADOS) ▼▼▼
+        'codigo_aseguradora': paciente.codigo_aseguradora,
+        'tipo_usuario_rips': paciente.tipo_usuario_rips,
+        'tipo_afiliado': paciente.tipo_afiliado,
+        'zona_residencia': paciente.zona_residencia,      # OJO: Nombre exacto del modelo
+        'codigo_departamento': paciente.codigo_departamento, # OJO: Nombre exacto del modelo
+        'codigo_municipio': paciente.codigo_municipio,       # OJO: Nombre exacto del modelo
+        # ▲▲▲ FIN NUEVOS CAMPOS ▲▲▲
+
         'referido_por': paciente.referido_por or 'N/A',
         'nombre_responsable': paciente.nombre_responsable or 'N/A',
         'telefono_responsable': paciente.telefono_responsable or 'N/A',
@@ -265,8 +276,6 @@ def obtener_paciente_service(paciente_id, usuario):
             full_public_id_trazos = None
 
     return paciente_data, evoluciones_procesadas, full_public_id_trazos
-
-
 def agregar_evolucion_service(paciente_id, descripcion, usuario):
     """Agrega una evolución a un paciente.
     
@@ -502,6 +511,12 @@ def editar_paciente_service(paciente_id, form_data, files, usuario):
         paciente.ultima_visita_odontologo = form_data.get('ultima_visita_odontologo')
         paciente.plan_tratamiento = form_data.get('plan_tratamiento')
         paciente.observaciones = form_data.get('observaciones')
+        paciente.codigo_aseguradora = form_data.get('codigo_aseguradora')
+        paciente.tipo_usuario_rips = form_data.get('tipo_usuario_rips')
+        paciente.tipo_afiliado = form_data.get('tipo_afiliado')
+        paciente.zona_residencia = form_data.get('zona_residencial')
+        paciente.codigo_departamento = form_data.get('codigo_dpto')
+        paciente.codigo_municipio = form_data.get('codigo_mpio')
 
         # Manejo de eliminación de imágenes
         if 'eliminar_imagen_perfil' in form_data and paciente.imagen_perfil_url:

@@ -105,7 +105,14 @@
                 <div class="text-center mb-8">
                     <h3 class="text-2xl font-bold text-gray-900 mb-2">{{ plan.nombre|title }}</h3>
                     <div class="flex justify-center items-baseline mb-4">
-                        <span class="text-5xl font-bold text-gray-900">${{ "%.0f"|format(plan.precio_mensual) }}</span>
+                        {% if plan.precio_cop > 0 %}
+                            <!-- Muestra el precio en COP y aplica formato de miles -->
+                            <span class="text-3xl font-bold text-gray-900">COP</span>
+                            <span class="text-5xl font-bold text-gray-900 ml-1">{{ "{:,.0f}".format(plan.precio_cop) }}</span>
+                        {% else %}
+                            <!-- Muestra $0 para el plan Trial -->
+                            <span class="text-5xl font-bold text-gray-900">$0</span>
+                        {% endif %}
                         <span class="text-gray-600 ml-2">/mes</span>
                     </div>
                     <p class="text-gray-600">{{ plan.descripcion }}</p>

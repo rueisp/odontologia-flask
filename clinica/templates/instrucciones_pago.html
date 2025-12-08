@@ -1,0 +1,33 @@
+<!-- templates/instrucciones_pago.html (Ejemplo de contenido) -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto p-8 bg-white shadow-xl rounded-3xl mt-12">
+    <h1 class="text-3xl font-bold text-gray-900 mb-6">Instrucciones de Pago</h1>
+    <p class="mb-4 text-gray-700">
+    Has elegido el plan 
+    <span class="font-bold">{{ solicitud.plan_nombre|title }}</span> 
+    por:
+    <span class="font-bold text-lg text-blue-600">
+        COP {{ "{:,.0f}".format(solicitud.monto_cop) }}
+    </span>
+</p>
+    <p class="mb-6 text-gray-700 font-semibold">Una vez realizado el pago, envía la confirmación de la transferencia al correo: **rueispitre@gmail.com** o al WhatsApp: **+57 3147953756**.</p>
+
+    <!-- Sección Bancolombia -->
+    <div class="border p-4 rounded-xl mb-4 bg-gray-50">
+        <h2 class="text-xl font-bold text-gray-900 mb-3">Opción 1: Transferencia Bancolombia</h2>
+        <p>Cuenta de Ahorros: 912-11360882</p>
+        <p>Titular: Rueis Pitre</p>
+    </div>
+
+    <!-- Sección Nequi/Daviplata -->
+    <div class="border p-4 rounded-xl mb-4 bg-gray-50">
+        <h2 class="text-xl font-bold text-gray-900 mb-3">Opción 2: Nequi / Daviplata</h2>
+        <p>Número de Celular: +57 3147953756</p>
+    </div>
+    
+    <p class="mt-6 text-sm text-gray-500">Activaremos tu plan en un máximo de 2 horas después de verificar tu pago.</p>
+
+</div>
+{% endblock %}

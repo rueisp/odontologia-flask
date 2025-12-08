@@ -367,11 +367,13 @@ class Plan(db.Model):
     descripcion = db.Column(db.String(200), nullable=True)
     precio_mensual = db.Column(db.Float, nullable=False, default=0.0)  # 0 para trial
     limite_pacientes_diario = db.Column(db.Integer, nullable=False, default=10)
+    precio_cop = db.Column(db.Integer, nullable=False, default=0) # <-- Precio fijo en Pesos Colombianos
     limite_pacientes_diario_primeros_7_dias = db.Column(db.Integer, nullable=False, default=20)
     duracion_trial_dias = db.Column(db.Integer, nullable=False, default=30)  # Solo para trial
     caracteristicas = db.Column(db.JSON, nullable=True)  # Lista de características en JSON
     activo = db.Column(db.Boolean, default=True, nullable=False)
     orden = db.Column(db.Integer, default=0, nullable=False)  # Para ordenar en la UI
+    
     
     # Relaciones
     usuarios_planes = db.relationship('UsuarioPlan', back_populates='plan', cascade='all, delete-orphan')
@@ -467,6 +469,38 @@ class Pago(db.Model):
     
     def __repr__(self):
         return f'<Pago ${self.monto} {self.moneda} - {self.estado}>'
+
+
+
+class SolicitudPago(db.Model):
+    """Registro de solicitudes de pago manual (para Bancolombia/Nequi)"""
+    __tablename__ = 'solicitudes_pago_manual' # Un nombre diferente para evitar confusión
+
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # Claves foráneas y datos del usuario
+    user_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
+    plan_id = db.Column(db.Integer, db.ForeignKey('planes.id'), nullable=False)
+    
+    # Información de la solicitud
+    plan_nombre = db.Column(db.String(80), nullable=False)
+    monto_cop = db.Column(db.Integer, nullable=False)
+    
+    # Estado del pago
+    estado = db.Column(db.String(20), default='PENDIENTE', nullable=False) # PENDIENTE, VERIFICADO, CANCELADO
+    
+    # Fechas
+    fecha_solicitud = db.Column(db.DateTime, default=db.func.now())
+    fecha_verificacion = db.Column(db.DateTime, nullable=True) # Cuando verificas la transferencia
+    
+    # Archivo o URL de comprobante (opcional)
+    comprobante_url = db.Column(db.String(255), nullable=True)
+
+    # Relación (opcional, para acceder al usuario)
+    usuario = db.relationship('Usuario', backref='solicitudes_pago')
+
+    def __repr__(self):
+        return f"<SolicitudPago {self.id} - {self.plan_nombre} - {self.estado}>"
 
 
 class AuditoriaAcceso(db.Model):

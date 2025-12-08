@@ -99,7 +99,7 @@
                 <div class="section-read-more-wrapper">
                     {# Si hay CUALQUIER texto en estos campos, muestra el botón #}
                     {% if paciente.motivo_consulta or paciente.enfermedad_actual %} 
-                        <button class="toggle-read-more-btn" data-target="motivo_consulta_section">Mostrar más</button>
+                        <button class="toggle-read-more-btn text-blue-600 font-bold hover:text-blue-800" data-target="motivo_consulta_section">Mostrar más</button>
                     {% endif %}
                 </div>
             </div>
@@ -140,7 +140,7 @@
                 </div>
                 <div class="section-read-more-wrapper">
                     {% if paciente.antecedentes_personales or paciente.antecedentes_familiares or paciente.antecedentes_quirurgicos or paciente.antecedentes_hemorragicos or paciente.farmacologicos or paciente.reaccion_medicamentos or paciente.alergias %}
-                        <button class="toggle-read-more-btn" data-target="antecedentes_alergias_section">Mostrar más</button>
+                        <button class="toggle-read-more-btn text-blue-600 font-bold hover:text-blue-800" data-target="antecedentes_alergias_section">Mostrar más</button>
                     {% endif %}
                 </div>
             </div>
@@ -169,8 +169,75 @@
                 </div>
                 <div class="section-read-more-wrapper">
                     {% if paciente.habitos or paciente.cepillado or paciente.examen_fisico or paciente.ultima_visita_odontologo %}
-                        <button class="toggle-read-more-btn" data-target="habitos_examen_section">Mostrar más</button>
+                        <button class="toggle-read-more-btn text-blue-600 font-bold hover:text-blue-800" data-target="habitos_examen_section">Mostrar más</button>
                     {% endif %}
+                </div>
+            </div>
+            <!-- TARJETA RIPS CORREGIDA -->
+            <div class="card-custom">
+                <h3><i data-lucide="file-json" class="card-icon"></i>Información RIPS</h3>
+                <div class="collapsible-section-content collapsed pb-4" id="rips_section">
+                    <div class="data-grid">
+                        
+                        {# 1. ASEGURADORA #}
+                        <div class="data-item">
+                            <span class="label">EPS / Aseguradora</span>
+                            <!-- En tu BD se llama: codigo_aseguradora -->
+                            <span class="value">{{ paciente.codigo_aseguradora or 'No especificado' }}</span>
+                        </div>
+
+                        {# 2. TIPO DE USUARIO #}
+                        <div class="data-item">
+                            <span class="label">Tipo de Usuario</span>
+                            <span class="value">
+                                <!-- En tu BD se llama: tipo_usuario_rips -->
+                                {% if paciente.tipo_usuario_rips == '1' %}Contributivo
+                                {% elif paciente.tipo_usuario_rips == '2' %}Subsidiado
+                                {% elif paciente.tipo_usuario_rips == '3' %}Vinculado
+                                {% else %}{{ paciente.tipo_usuario_rips or 'No especificado' }}{% endif %}
+                            </span>
+                        </div>
+
+                        {# 3. CONDICIÓN (AFILIADO) #}
+                        <div class="data-item">
+                            <span class="label">Condición</span>
+                            <span class="value">
+                                <!-- En tu BD se llama: tipo_afiliado -->
+                                {% if paciente.tipo_afiliado == 'C' %}Cotizante
+                                {% elif paciente.tipo_afiliado == 'B' %}Beneficiario
+                                {% else %}{{ paciente.tipo_afiliado or 'No especificado' }}{% endif %}
+                            </span>
+                        </div>
+
+                        {# 4. ZONA DE RESIDENCIA (¡IMPORTANTE! SIN LA 'L' AL FINAL) #}
+                        <div class="data-item">
+                            <span class="label">Zona de Residencia</span>
+                            <span class="value">
+                                <!-- En tu BD se llama: zona_residencia (NO zona_residencial) -->
+                                {% if paciente.zona_residencia == 'U' %}Urbano
+                                {% elif paciente.zona_residencia == 'R' %}Rural
+                                {% else %}{{ paciente.zona_residencia or 'No especificado' }}{% endif %}
+                            </span>
+                        </div>
+
+                        {# 5. DEPARTAMENTO (¡IMPORTANTE! NOMBRE LARGO) #}
+                        <div class="data-item">
+                            <span class="label">Departamento</span>
+                            <!-- En tu BD se llama: codigo_departamento (NO codigo_dpto) -->
+                            <span class="value">{{ paciente.codigo_departamento or 'No especificado' }}</span>
+                        </div>
+
+                        {# 6. MUNICIPIO (¡IMPORTANTE! NOMBRE LARGO) #}
+                        <div class="data-item">
+                            <span class="label">Municipio</span>
+                            <!-- En tu BD se llama: codigo_municipio (NO codigo_mpio) -->
+                            <span class="value">{{ paciente.codigo_municipio or 'No especificado' }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section-read-more-wrapper mt-2">
+                    <button class="toggle-read-more-btn text-blue-600 font-bold hover:text-blue-800" data-target="rips_section">Mostrar más</button>
                 </div>
             </div>
 
@@ -236,7 +303,7 @@
                 </div>
                 <div class="section-read-more-wrapper">
                     {% if paciente.observaciones %}
-                        <button class="toggle-read-more-btn" data-target="observaciones_section">Mostrar más</button>
+                        <button class="toggle-read-more-btn text-blue-600 font-bold hover:text-blue-800" data-target="observaciones_section">Mostrar más</button>
                     {% endif %}
                 </div>
             </div>
@@ -253,7 +320,7 @@
                 </div>
                 <div class="section-read-more-wrapper">
                     {% if paciente.plan_tratamiento %}
-                        <button class="toggle-read-more-btn" data-target="plan_tratamiento_section">Mostrar más</button>
+                        <button class="toggle-read-more-btn text-blue-600 font-bold hover:text-blue-800" data-target="plan_tratamiento_section">Mostrar más</button>
                     {% endif %}
                 </div>
             </div>
@@ -289,6 +356,15 @@
             <div class="card-custom">
                 <h3><i data-lucide="menu-square" class="card-icon"></i>Otras Acciones</h3>
                 <div class="d-grid gap-2">
+                     <!-- ▼▼▼ NUEVO BOTÓN: AGENDAR CITA ▼▼▼ -->
+                    <!-- Nota: Cambié 'None' por 'paciente.id' para pre-llenar los datos -->
+                    <a href="{{ url_for('calendario.registrar_cita', paciente_id_param=paciente.id) }}" 
+                       class="btn-custom" 
+                       style="background-color: #374151; color: white; border: none;"> 
+                       {# Usé el color gray-700 (#374151) que te gustaba #}
+                        <i data-lucide="calendar-plus" class="btn-icon"></i> Agendar Nueva Cita
+                    </a>
+                    <!-- ▲▲▲ FIN NUEVO BOTÓN ▲▲▲ -->
                     {# ESTE ES EL NUEVO BOTÓN QUE DEBES AGREGAR #}
                     <a href="{{ url_for('calendario.historial_citas_paciente', paciente_id=paciente.id) }}" class="btn-custom btn-primary-custom">
                         <i data-lucide="history" class="btn-icon"></i> Ver Historial de Citas para Facturar

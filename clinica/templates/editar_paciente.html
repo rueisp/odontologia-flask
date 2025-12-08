@@ -94,8 +94,8 @@
                 }
 
                 // --- LÓGICA DE MUNICIPIOS DINÁMICOS ---
-                const departamentoSelect = document.getElementById('codigo_departamento');
-                const municipioSelect = document.getElementById('codigo_municipio');
+                const departamentoSelect = document.getElementById('codigo_dpto');
+                const municipioSelect = document.getElementById('codigo_mpio');
                 if (departamentoSelect && municipioSelect) {
                     const todosLosMunicipios = JSON.parse('{{ municipios_json | safe }}');
                     const municipioInicial = "{{ paciente.codigo_mpio or '' }}";
