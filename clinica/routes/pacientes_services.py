@@ -1,9 +1,3 @@
-"""
-Servicios de lógica de negocio para el módulo de pacientes.
-
-Este módulo contiene toda la lógica de negocio relacionada con pacientes,
-separada de las rutas HTTP para mejor mantenibilidad y testabilidad.
-"""
 
 import os
 import uuid
@@ -14,7 +8,8 @@ import pytz
 from flask import request, jsonify, flash, current_app
 from sqlalchemy import or_
 from ..extensions import db
-from ..models import Paciente, Cita, Evolucion, AuditLog
+# IMPORTANTE: Asegúrate de importar EPS y Municipio aquí
+from ..models import Paciente, Cita, Evolucion, AuditLog, EPS, Municipio
 from ..utils import allowed_file, convertir_a_fecha, extract_public_id_from_url
 
 
@@ -23,122 +18,55 @@ from ..utils import allowed_file, convertir_a_fecha, extract_public_id_from_url
 # =========================================================================
 
 def upload_file_to_cloudinary(file, folder_name="general_uploads"):
-    """Sube un objeto FileStorage a Cloudinary y devuelve su URL segura.
-    
-    Args:
-        file: Objeto FileStorage de Flask
-        folder_name: Nombre de la carpeta en Cloudinary
-        
-    Returns:
-        str: URL segura del archivo subido, o None si falla
-    """
-    if not file:
-        current_app.logger.debug(f"CLOUDINARY_UPLOAD_DEBUG: No se proporcionó ningún objeto 'file' para subir a '{folder_name}'.")
-        return None
-    
-    if file.filename == '':
-        current_app.logger.debug(f"CLOUDINARY_UPLOAD_DEBUG: El nombre del archivo está vacío para subir a '{folder_name}'.")
-        return None
-    
-    if not allowed_file(file.filename):
-        current_app.logger.warning(f"CLOUDINARY_UPLOAD_WARNING: Tipo de archivo no permitido para '{file.filename}' en la carpeta '{folder_name}'.")
-        return None
+    """Sube un objeto FileStorage a Cloudinary y devuelve su URL segura."""
+    if not file or file.filename == '': return None
+    if not allowed_file(file.filename): return None
 
     try:
-        current_app.logger.info(f"CLOUDINARY_UPLOAD_INFO: Intentando subir '{file.filename}' a Cloudinary en la carpeta '{folder_name}'.")
+        file.seek(0)
         upload_result = cloudinary.uploader.upload(file, folder=folder_name)
-        secure_url = upload_result.get('secure_url')
-        if secure_url:
-            current_app.logger.info(f"CLOUDINARY_UPLOAD_SUCCESS: Archivo '{file.filename}' subido exitosamente a '{folder_name}'. URL: {secure_url}")
-        else:
-            current_app.logger.error(f"CLOUDINARY_UPLOAD_ERROR: Se subió el archivo '{file.filename}' pero no se obtuvo 'secure_url' en el resultado: {upload_result}", exc_info=True)
-        return secure_url
+        return upload_result.get('secure_url')
     except Exception as e:
-        current_app.logger.error(f"CLOUDINARY_UPLOAD_ERROR: Error al subir archivo '{file.filename}' a Cloudinary en '{folder_name}': {e}", exc_info=True)
+        current_app.logger.error(f"CLOUDINARY ERROR: {str(e)}", exc_info=True)
         return None
+
+
+def upload_base64_dentigrama(base64_string, patient_id):
+    """(NUEVO) Detecta y sube un string Base64 a Cloudinary si es necesario."""
+    if not base64_string: return None
+    if base64_string.startswith('http'): return base64_string
+    if base64_string.startswith('data:image'):
+        try:
+            public_id = f"dentigrama_patient_{patient_id}_{uuid.uuid4().hex}"
+            upload_result = cloudinary.uploader.upload(
+                base64_string, folder="dentigramas", public_id=public_id
+            )
+            return upload_result.get('secure_url')
+        except Exception as e:
+            current_app.logger.error(f"DENTIGRAMA ERROR: {e}")
+            return None
+    return base64_string
 
 
 def delete_from_cloudinary(url):
-    """Borra un recurso de Cloudinary dada su URL.
-    
-    Args:
-        url: URL del recurso en Cloudinary
-        
-    Returns:
-        bool: True si se eliminó exitosamente, False en caso contrario
-    """
-    if url:
+    """Borra un recurso de Cloudinary dada su URL."""
+    if url and 'cloudinary.com' in url:
         public_id = extract_public_id_from_url(url)
         if public_id:
             try:
                 cloudinary.uploader.destroy(public_id)
-                current_app.logger.debug(f"CLOUDINARY: Recurso {public_id} eliminado exitosamente.")
                 return True
             except Exception as e:
-                current_app.logger.error(f"Error al eliminar recurso {public_id} de Cloudinary: {e}", exc_info=True)
+                current_app.logger.error(f"Error al eliminar recurso Cloudinary: {e}")
                 return False
     return False
 
 
-def procesar_subida_imagen(file_key, folder_name, is_ajax=False):
-    """Procesa la subida de una imagen desde request.files.
-    
-    Args:
-        file_key: Clave en request.files
-        folder_name: Carpeta en Cloudinary
-        is_ajax: Si la petición es AJAX
-        
-    Returns:
-        tuple: (url, error_response)
-    """
-    if file_key not in request.files:
-        return None, None
-    
-    file = request.files[file_key]
-    if not file or file.filename == '':
-        return None, None
-    
-    if not allowed_file(file.filename):
-        error_msg = f'Tipo de archivo no permitido para {file_key}. Solo se permiten imágenes.'
-        current_app.logger.warning(f"SUBIDA_IMAGEN_ERROR: {error_msg}")
-        if is_ajax:
-            return None, jsonify({'success': False, 'error': error_msg})
-        flash(error_msg, 'warning')
-        return None, None
-    
-    url = upload_file_to_cloudinary(file, folder_name=folder_name)
-    if not url:
-        error_msg = f'Error al subir {file_key} a Cloudinary.'
-        current_app.logger.error(f"SUBIDA_IMAGEN_ERROR: {error_msg}")
-        if is_ajax:
-            return None, jsonify({'success': False, 'error': error_msg})
-        flash(error_msg, 'warning')
-        return None, None
-    
-    return url, None
-
-
 def eliminar_imagenes_paciente(paciente, log_prefix="PACIENTE"):
-    """Elimina todas las imágenes de un paciente de Cloudinary.
-    
-    Args:
-        paciente: Objeto Paciente
-        log_prefix: Prefijo para los logs
-    """
-    imagenes = {
-        'imagen_perfil_url': paciente.imagen_perfil_url,
-        'imagen_1': paciente.imagen_1,
-        'imagen_2': paciente.imagen_2,
-        'dentigrama_canvas': paciente.dentigrama_canvas
-    }
-    
-    for campo, url in imagenes.items():
-        if url:
-            if delete_from_cloudinary(url):
-                setattr(paciente, campo, None)
-                current_app.logger.debug(f"{log_prefix}: {campo} eliminada de Cloudinary")
-            else:
-                current_app.logger.warning(f"{log_prefix}: Falló eliminación de {campo}")
+    """Elimina todas las imágenes de un paciente de Cloudinary."""
+    imagenes = [paciente.imagen_perfil_url, paciente.imagen_1, paciente.imagen_2, paciente.dentigrama_canvas]
+    for url in imagenes:
+        delete_from_cloudinary(url)
 
 
 # =========================================================================
@@ -146,16 +74,6 @@ def eliminar_imagenes_paciente(paciente, log_prefix="PACIENTE"):
 # =========================================================================
 
 def listar_pacientes_service(usuario, page, search_term):
-    """Obtiene la lista paginada de pacientes para un usuario.
-    
-    Args:
-        usuario: Usuario actual
-        page: Número de página
-        search_term: Término de búsqueda
-        
-    Returns:
-        Pagination: Objeto de paginación con los pacientes
-    """
     query = Paciente.query.filter(Paciente.is_deleted == False)
 
     if not usuario.is_admin:
@@ -170,32 +88,58 @@ def listar_pacientes_service(usuario, page, search_term):
             )
         )
     
-    pacientes = query.order_by(Paciente.apellidos, Paciente.nombres).paginate(
-        page=page, per_page=7, error_out=False
-    )
-    
-    current_app.logger.debug(f"Usuario: {usuario.username}, es admin: {usuario.is_admin}")
-    current_app.logger.debug(f"Pacientes encontrados para este usuario: {pacientes.total}")
-
-    return pacientes
+    return query.order_by(Paciente.id.desc()).paginate(page=page, per_page=7, error_out=False)
 
 
 def obtener_paciente_service(paciente_id, usuario):
-    """Obtiene un paciente y prepara sus datos para mostrar.
-    
-    Args:
-        paciente_id: ID del paciente
-        usuario: Usuario actual
-        
-    Returns:
-        tuple: (paciente_data, evoluciones_procesadas, full_public_id_trazos)
-    """
+    # 1. Buscar Paciente
     query = Paciente.query.filter_by(id=paciente_id, is_deleted=False)
     if not usuario.is_admin:
         query = query.filter_by(odontologo_id=usuario.id)
     paciente = query.first_or_404()
 
-    # Preparar datos del paciente para la plantilla
+    # =======================================================
+    # ▼▼▼ LÓGICA DE ENRIQUECIMIENTO (BÚSQUEDA INTELIGENTE) ▼▼▼
+    # =======================================================
+    
+    # --- A. Búsqueda de Aseguradora (EPS) ---
+    nombre_eps_display = paciente.aseguradora or 'No especificado'
+    
+    if paciente.codigo_aseguradora:
+        # Limpiamos espacios y buscamos ignorando mayúsculas/minúsculas (ilike)
+        cod_eps = str(paciente.codigo_aseguradora).strip()
+        eps_obj = EPS.query.filter(EPS.codigo.ilike(cod_eps)).first()
+        
+        if eps_obj:
+            nombre_eps_display = eps_obj.nombre
+        else:
+            # Si no encuentra el nombre, mostramos el código para que sepas qué buscar
+            nombre_eps_display = f"{cod_eps} (Nombre no encontrado)"
+
+    # --- B. Búsqueda de Municipio y Departamento ---
+    nombre_municipio_display = paciente.municipio or 'No especificado'
+    nombre_departamento_display = paciente.departamento or 'No especificado'
+
+    if paciente.codigo_municipio and paciente.codigo_departamento:
+        cod_mpio = str(paciente.codigo_municipio).strip()
+        cod_dpto = str(paciente.codigo_departamento).strip()
+
+        # Intento 1: Búsqueda exacta (ej: busca '47189')
+        mpio_obj = Municipio.query.filter_by(codigo=cod_mpio).first()
+        
+        # Intento 2: Si falló, intentar con código corto (últimos 3 dígitos)
+        # Esto arregla el caso donde el paciente tiene '47189' pero la BD tiene '189'
+        if not mpio_obj and len(cod_mpio) > 2:
+            cod_corto = cod_mpio[-3:] 
+            mpio_obj = Municipio.query.filter_by(codigo=cod_corto, codigo_departamento=cod_dpto).first()
+
+        if mpio_obj:
+            nombre_municipio_display = mpio_obj.nombre
+            nombre_departamento_display = mpio_obj.nombre_departamento
+
+    # =======================================================
+    # ▼▼▼ DICCIONARIO FINAL ▼▼▼
+    # =======================================================
     paciente_data = {
         'id': paciente.id,
         'nombres': paciente.nombres or 'N/A',
@@ -213,27 +157,33 @@ def obtener_paciente_service(paciente_id, usuario):
         'genero': paciente.genero or 'N/A',
         'estado_civil': paciente.estado_civil or 'N/A',
         'ocupacion': paciente.ocupacion or 'N/A',
+        
+        # --- Imágenes ---
         'dentigrama_canvas': paciente.dentigrama_canvas,
         'imagen_perfil_url': paciente.imagen_perfil_url,
         'imagen_1': paciente.imagen_1,
         'imagen_2': paciente.imagen_2,
+        
+        # --- Ubicación ---
         'direccion': paciente.direccion or 'N/A',
         'barrio': paciente.barrio or 'N/A',
-        # Campos antiguos de ubicación (mantener por si acaso)
-        'municipio': paciente.municipio or 'N/A',
-        'departamento': paciente.departamento or 'N/A',
-        'aseguradora': paciente.aseguradora or 'N/A',
-        'tipo_vinculacion': paciente.tipo_vinculacion or 'N/A',
-        
-        # ▼▼▼ NUEVOS CAMPOS RIPS (AGREGADOS) ▼▼▼
-        'codigo_aseguradora': paciente.codigo_aseguradora,
-        'tipo_usuario_rips': paciente.tipo_usuario_rips,
-        'tipo_afiliado': paciente.tipo_afiliado,
-        'zona_residencia': paciente.zona_residencia,      # OJO: Nombre exacto del modelo
-        'codigo_departamento': paciente.codigo_departamento, # OJO: Nombre exacto del modelo
-        'codigo_municipio': paciente.codigo_municipio,       # OJO: Nombre exacto del modelo
-        # ▲▲▲ FIN NUEVOS CAMPOS ▲▲▲
 
+        # --- CAMPOS ENRIQUECIDOS (Aquí usamos las variables calculadas) ---
+        'municipio': nombre_municipio_display,       
+        'departamento': nombre_departamento_display, 
+        'aseguradora': nombre_eps_display,           
+        # -----------------------------------------------------------------
+
+        # --- CAMPOS TÉCNICOS RIPS (Códigos originales) ---
+        'tipo_vinculacion': paciente.tipo_vinculacion or 'N/A',
+        'codigo_aseguradora': paciente.codigo_aseguradora or 'No especificado',
+        'tipo_usuario_rips': paciente.tipo_usuario_rips or 'No especificado',
+        'tipo_afiliado': paciente.tipo_afiliado or 'No especificado',
+        'zona_residencia': paciente.zona_residencia or 'U', 
+        'codigo_departamento': paciente.codigo_departamento or 'No especificado',
+        'codigo_municipio': paciente.codigo_municipio or 'No especificado',
+        
+        # --- Resto de campos ---
         'referido_por': paciente.referido_por or 'N/A',
         'nombre_responsable': paciente.nombre_responsable or 'N/A',
         'telefono_responsable': paciente.telefono_responsable or 'N/A',
@@ -255,7 +205,6 @@ def obtener_paciente_service(paciente_id, usuario):
         'observaciones': paciente.observaciones or 'No especificado',
     }
 
-    # Preparar evoluciones
     evoluciones_procesadas = []
     if paciente.evoluciones:
         evoluciones_ordenadas = sorted(paciente.evoluciones, key=lambda evo: evo.fecha, reverse=True)
@@ -266,38 +215,27 @@ def obtener_paciente_service(paciente_id, usuario):
                 'fecha_formateada': evolucion_obj.fecha.strftime('%d de %B, %Y') if isinstance(evolucion_obj.fecha, (date, datetime)) else 'N/A'
             })
 
-    # Extraer Public ID del dentigrama
     full_public_id_trazos = None
     if paciente.dentigrama_canvas:
         try:
             full_public_id_trazos = extract_public_id_from_url(paciente.dentigrama_canvas)
         except Exception as e:
-            current_app.logger.error(f"DENTIGRAMA ERROR (Backend): Error al extraer public ID de dentigrama_canvas: {e}")
             full_public_id_trazos = None
 
     return paciente_data, evoluciones_procesadas, full_public_id_trazos
+
+
 def agregar_evolucion_service(paciente_id, descripcion, usuario):
-    """Agrega una evolución a un paciente.
-    
-    Args:
-        paciente_id: ID del paciente
-        descripcion: Descripción de la evolución
-        usuario: Usuario actual
-        
-    Returns:
-        dict: {'success': bool, 'message': str}
-    """
     query = Paciente.query.filter_by(id=paciente_id, is_deleted=False)
     if not usuario.is_admin:
         query = query.filter_by(odontologo_id=usuario.id)
     paciente = query.first_or_404()
 
     if not descripcion or not descripcion.strip():
-        return {'success': False, 'message': 'La descripción de la evolución no puede estar vacía.'}
+        return {'success': False, 'message': 'La descripción no puede estar vacía.'}
 
-    local_timezone = pytz.timezone('America/Bogota')
-    now_in_local_tz = datetime.now(local_timezone)
-    fecha_local = now_in_local_tz.date()
+    local_tz = pytz.timezone('America/Bogota')
+    fecha_local = datetime.now(local_tz).date()
 
     nueva_evolucion = Evolucion(
         descripcion=descripcion.strip(),
@@ -305,50 +243,40 @@ def agregar_evolucion_service(paciente_id, descripcion, usuario):
         fecha=fecha_local
     )
     db.session.add(nueva_evolucion)
-    
     try:
         db.session.commit()
         return {'success': True, 'message': 'Evolución añadida correctamente.'}
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Error al añadir evolución para paciente {paciente.id}: {e}", exc_info=True)
-        return {'success': False, 'message': 'Ocurrió un error al guardar la evolución.'}
-
+        return {'success': False, 'message': 'Error al guardar evolución.'}
 
 def crear_paciente_service(form_data, files, usuario):
-    """Crea un nuevo paciente con validación y manejo de imágenes.
-    
-    Args:
-        form_data: Datos del formulario
-        files: Archivos subidos
-        usuario: Usuario actual
-        
-    Returns:
-        dict: {'success': bool, 'message': str, 'paciente_id': int (opcional)}
-    """
-    # Validación de documento
+     # DEBUG: Ver todos los campos que llegan
+    print("=== TODOS LOS CAMPOS DEL FORMULARIO ===")
+    for key, value in form_data.items():
+        print(f"{key}: {value}")
+    print("======================================")
     documento = form_data.get('documento')
     if not documento:
-        return {'success': False, 'message': 'El número de documento es obligatorio.'}
+        return {'success': False, 'message': 'El documento es obligatorio.'}
 
-    paciente_existente = Paciente.query.filter_by(documento=documento, is_deleted=False).first()
-    if paciente_existente:
-        return {'success': False, 'message': f'Ya existe un paciente registrado con el documento {documento}.'}
+    if Paciente.query.filter_by(documento=documento, is_deleted=False).first():
+        return {'success': False, 'message': f'El paciente con documento {documento} ya existe.'}
     
     try:
-        # Preparar nombres y apellidos concatenados para compatibilidad
         primer_nombre = form_data.get('primer_nombre', '').strip()
         segundo_nombre = form_data.get('segundo_nombre', '').strip()
         primer_apellido = form_data.get('primer_apellido', '').strip()
         segundo_apellido = form_data.get('segundo_apellido', '').strip()
         
-        nombres_concatenados = f"{primer_nombre} {segundo_nombre}".strip()
-        apellidos_concatenados = f"{primer_apellido} {segundo_apellido}".strip()
+        # PROCESAMIENTO INICIAL DEL DENTIGRAMA (FIX: Usar helper)
+        dentigrama_url = None
+        if form_data.get('dentigrama_canvas'):
+             dentigrama_url = upload_base64_dentigrama(form_data.get('dentigrama_canvas'), "new_patient")
 
-        # Crear paciente con datos del formulario
         nuevo_paciente = Paciente(
-            nombres=nombres_concatenados,
-            apellidos=apellidos_concatenados,
+            nombres=f"{primer_nombre} {segundo_nombre}".strip(),
+            apellidos=f"{primer_apellido} {segundo_apellido}".strip(),
             primer_nombre=primer_nombre,
             segundo_nombre=segundo_nombre,
             primer_apellido=primer_apellido,
@@ -387,56 +315,40 @@ def crear_paciente_service(form_data, files, usuario):
             ultima_visita_odontologo=form_data.get('ultima_visita_odontologo', ''),
             plan_tratamiento=form_data.get('plan_tratamiento'),
             observaciones=form_data.get('observaciones', ''),
-            dentigrama_canvas=form_data.get('dentigrama_canvas') or None,
+            dentigrama_canvas=dentigrama_url,
             odontologo_id=usuario.id
         )
+            
+            # AGREGAR CAMPOS RIPS (¡ESTO FALTA!)
+        nuevo_paciente.codigo_aseguradora = form_data.get('codigo_aseguradora')
+        nuevo_paciente.tipo_usuario_rips = form_data.get('tipo_usuario_rips')
+        nuevo_paciente.tipo_afiliado = form_data.get('tipo_afiliado')
+        nuevo_paciente.zona_residencia = form_data.get('zona_residencia')
+        nuevo_paciente.codigo_departamento = form_data.get('codigo_dpto')
+        nuevo_paciente.codigo_municipio = form_data.get('codigo_mpio')
 
-        # Procesar imágenes (manteniendo lógica original por compatibilidad)
+        # Luego sigue tu código de imágenes...
+
+        # Imágenes (FIX: Usar logica segura)
         if 'imagen_perfil' in files:
-            file_perfil = files['imagen_perfil']
-            if file_perfil and file_perfil.filename != '' and allowed_file(file_perfil.filename):
-                nuevo_paciente.imagen_perfil_url = upload_file_to_cloudinary(file_perfil, folder_name="pacientes_perfil")
+            nuevo_paciente.imagen_perfil_url = upload_file_to_cloudinary(files['imagen_perfil'], "pacientes_perfil")
 
         if 'imagen_1' in files:
-            file_imagen_1 = files['imagen_1']
-            if file_imagen_1 and file_imagen_1.filename != '' and allowed_file(file_imagen_1.filename):
-                nuevo_paciente.imagen_1 = upload_file_to_cloudinary(file_imagen_1, folder_name="paciente_imagenes")
+            nuevo_paciente.imagen_1 = upload_file_to_cloudinary(files['imagen_1'], "paciente_imagenes")
 
         if 'imagen_2' in files:
-            file_imagen_2 = files['imagen_2']
-            if file_imagen_2 and file_imagen_2.filename != '' and allowed_file(file_imagen_2.filename):
-                nuevo_paciente.imagen_2 = upload_file_to_cloudinary(file_imagen_2, folder_name="paciente_imagenes")
+            nuevo_paciente.imagen_2 = upload_file_to_cloudinary(files['imagen_2'], "paciente_imagenes")
+
 
         db.session.add(nuevo_paciente)
         db.session.commit()
 
-        # ===================================================================
-        # ▼▼▼ NUEVA SECCIÓN: INCREMENTAR CONTADOR DE PACIENTES HOY ▼▼▼
-        # ===================================================================
+        # Incrementar contador
         try:
             from clinica.services.plan_service import PlanService
-            resultado_incremento = PlanService.incrementar_contador_paciente(usuario.id)
-            
-            if not resultado_incremento.get('exito'):
-                # Esto no debería pasar porque ya verificamos con el decorador,
-                # pero lo registramos por seguridad
-                current_app.logger.warning(
-                    f"Error al incrementar contador para usuario {usuario.id}: "
-                    f"{resultado_incremento.get('error', 'Error desconocido')}"
-                )
-            else:
-                current_app.logger.info(
-                    f"Contador incrementado para usuario {usuario.id}. "
-                    f"Pacientes hoy: {resultado_incremento.get('limite_diario').contador_pacientes}/"
-                    f"{resultado_incremento.get('limite_diario').limite_actual}"
-                )
-        except Exception as e:
-            # No fallamos la creación del paciente si hay error con el contador,
-            # solo lo registramos
-            current_app.logger.error(f"Error al incrementar contador de pacientes: {e}")
-        # ===================================================================
-        # ▲▲▲ FIN DE NUEVA SECCIÓN ▲▲▲
-        # ===================================================================
+            PlanService.incrementar_contador_paciente(usuario.id)
+        except Exception:
+            pass
 
         return {'success': True, 'message': 'Paciente guardado con éxito', 'paciente_id': nuevo_paciente.id}
 
@@ -445,38 +357,33 @@ def crear_paciente_service(form_data, files, usuario):
         current_app.logger.error(f'Error FATAL al guardar paciente: {e}', exc_info=True)
         return {'success': False, 'message': 'Ocurrió un error inesperado al guardar el paciente.'}
 
+
 def editar_paciente_service(paciente_id, form_data, files, usuario):
-    """Edita un paciente existente.
-    
-    Args:
-        paciente_id: ID del paciente
-        form_data: Datos del formulario
-        files: Archivos subidos
-        usuario: Usuario actual
-        
-    Returns:
-        dict: {'success': bool, 'message': str}
-    """
+    # Buscar paciente asegurando permisos
     query = Paciente.query.filter_by(id=paciente_id, is_deleted=False)
     if not usuario.is_admin:
         query = query.filter_by(odontologo_id=usuario.id)
     paciente = query.first_or_404()
     
     try:
-        # Actualizar campos de texto
+        # ==============================================================================
+        # 1. DATOS BÁSICOS (Con limpieza de espacios .strip())
+        # ==============================================================================
         primer_nombre = form_data.get('primer_nombre', '').strip()
         segundo_nombre = form_data.get('segundo_nombre', '').strip()
         primer_apellido = form_data.get('primer_apellido', '').strip()
         segundo_apellido = form_data.get('segundo_apellido', '').strip()
 
+        # Actualizamos partes individuales
         paciente.primer_nombre = primer_nombre
         paciente.segundo_nombre = segundo_nombre
         paciente.primer_apellido = primer_apellido
         paciente.segundo_apellido = segundo_apellido
         
-        # Actualizar campos concatenados para compatibilidad
+        # Actualizamos compuestos (evitando dobles espacios)
         paciente.nombres = f"{primer_nombre} {segundo_nombre}".strip()
         paciente.apellidos = f"{primer_apellido} {segundo_apellido}".strip()
+        
         paciente.tipo_documento = form_data.get('tipo_documento')
         paciente.documento = form_data.get('documento')
         paciente.email = form_data.get('email')
@@ -485,13 +392,70 @@ def editar_paciente_service(paciente_id, form_data, files, usuario):
         paciente.telefono = form_data.get('telefono')
         paciente.genero = form_data.get('genero')
         paciente.estado_civil = form_data.get('estado_civil')
+        paciente.ocupacion = form_data.get('ocupacion')
         paciente.direccion = form_data.get('direccion')
         paciente.barrio = form_data.get('barrio')
-        paciente.municipio = form_data.get('municipio')
-        paciente.departamento = form_data.get('departamento')
-        paciente.aseguradora = form_data.get('aseguradora')
+
+        # ==============================================================================
+        # 2. LÓGICA CRÍTICA DE RIPS Y UBICACIÓN (CORRECCIÓN DE OMISIONES)
+        # ==============================================================================
+        
+        # A. Capturamos los códigos del formulario
+        cod_eps = form_data.get('codigo_aseguradora', '').strip()
+        cod_dpto = form_data.get('codigo_dpto', '').strip()
+        cod_mpio = form_data.get('codigo_mpio', '').strip()
+
+        # B. Guardamos los códigos (Siempre necesarios para RIPS)
+        paciente.codigo_aseguradora = cod_eps
+        paciente.codigo_departamento = cod_dpto
+        paciente.codigo_municipio = cod_mpio
+        
+        # C. Guardamos los NOMBRES (Buscando en BD para evitar guardar códigos como texto)
+        
+        # --- Aseguradora ---
+        if cod_eps:
+            # Buscamos ignorando mayúsculas/minúsculas
+            eps_obj = EPS.query.filter(EPS.codigo.ilike(cod_eps)).first()
+            paciente.aseguradora = eps_obj.nombre if eps_obj else form_data.get('aseguradora')
+        else:
+            paciente.aseguradora = form_data.get('aseguradora')
+
+        # --- Municipio y Departamento ---
+        municipio_encontrado = False
+        if cod_mpio and cod_dpto:
+            # Intento 1: Búsqueda exacta (ej: '47189')
+            mpio_obj = Municipio.query.filter_by(codigo=cod_mpio).first()
+            
+            # Intento 2: Código corto si falla el largo (ej: '189' con dpto '47')
+            if not mpio_obj and len(cod_mpio) > 2:
+                cod_corto = cod_mpio[-3:]
+                mpio_obj = Municipio.query.filter_by(codigo=cod_corto, codigo_departamento=cod_dpto).first()
+            
+            if mpio_obj:
+                paciente.municipio = mpio_obj.nombre
+                paciente.departamento = mpio_obj.nombre_departamento
+                municipio_encontrado = True
+        
+        # Fallback: Si no se encontró por código, usamos el texto del input
+        # PERO validamos que no sea un número (para no guardar "47189" en el campo nombre)
+        if not municipio_encontrado:
+            raw_municipio = form_data.get('municipio')
+            raw_departamento = form_data.get('departamento')
+            
+            if raw_municipio and not raw_municipio.strip().isdigit():
+                paciente.municipio = raw_municipio
+            if raw_departamento and not raw_departamento.strip().isdigit():
+                paciente.departamento = raw_departamento
+
+        # D. Resto de campos RIPS
         paciente.tipo_vinculacion = form_data.get('tipo_vinculacion')
-        paciente.ocupacion = form_data.get('ocupacion')
+        paciente.tipo_usuario_rips = form_data.get('tipo_usuario_rips')
+        paciente.tipo_afiliado = form_data.get('tipo_afiliado')
+        paciente.zona_residencia = form_data.get('zona_residencia')
+        
+        # ==============================================================================
+        # 3. DATOS CLÍNICOS Y RESPONSABLE
+        # ==============================================================================
         paciente.referido_por = form_data.get('referido_por')
         paciente.nombre_responsable = form_data.get('nombre_responsable')
         paciente.telefono_responsable = form_data.get('telefono_responsable')
@@ -511,61 +475,55 @@ def editar_paciente_service(paciente_id, form_data, files, usuario):
         paciente.ultima_visita_odontologo = form_data.get('ultima_visita_odontologo')
         paciente.plan_tratamiento = form_data.get('plan_tratamiento')
         paciente.observaciones = form_data.get('observaciones')
-        paciente.codigo_aseguradora = form_data.get('codigo_aseguradora')
-        paciente.tipo_usuario_rips = form_data.get('tipo_usuario_rips')
-        paciente.tipo_afiliado = form_data.get('tipo_afiliado')
-        paciente.zona_residencia = form_data.get('zona_residencial')
-        paciente.codigo_departamento = form_data.get('codigo_dpto')
-        paciente.codigo_municipio = form_data.get('codigo_mpio')
 
-        # Manejo de eliminación de imágenes
-        if 'eliminar_imagen_perfil' in form_data and paciente.imagen_perfil_url:
+        # ==============================================================================
+        # 4. GESTIÓN DE IMÁGENES (Evitar duplicidad eliminando lo anterior si se pide)
+        # ==============================================================================
+        
+        # Eliminación Explícita
+        if form_data.get('eliminar_imagen_perfil') == 'true':
             delete_from_cloudinary(paciente.imagen_perfil_url)
             paciente.imagen_perfil_url = None
 
-        if 'eliminar_imagen_1' in form_data and paciente.imagen_1:
+        if form_data.get('eliminar_imagen_1') == 'true':
             delete_from_cloudinary(paciente.imagen_1)
             paciente.imagen_1 = None
         
-        if 'eliminar_imagen_2' in form_data and paciente.imagen_2:
+        if form_data.get('eliminar_imagen_2') == 'true':
             delete_from_cloudinary(paciente.imagen_2)
             paciente.imagen_2 = None
 
-        # Manejo de subida de nuevas imágenes
-        if 'imagen_perfil' in files:
-            file_perfil = files['imagen_perfil']
-            if file_perfil and file_perfil.filename != '':
-                if paciente.imagen_perfil_url:
-                    delete_from_cloudinary(paciente.imagen_perfil_url)
-                nueva_url = upload_file_to_cloudinary(file_perfil, folder_name="pacientes_perfil")
-                if nueva_url:
-                    paciente.imagen_perfil_url = nueva_url
+        # Subida de Nuevas Imágenes (Reemplaza la anterior)
+        if 'imagen_perfil' in files and files['imagen_perfil'].filename != '':
+             nueva_url = upload_file_to_cloudinary(files['imagen_perfil'], "pacientes_perfil")
+             if nueva_url:
+                 if paciente.imagen_perfil_url: delete_from_cloudinary(paciente.imagen_perfil_url)
+                 paciente.imagen_perfil_url = nueva_url
 
-        if 'imagen_1' in files:
-            imagen_1_file = files['imagen_1']
-            if imagen_1_file and imagen_1_file.filename != '':
-                if paciente.imagen_1:
-                    delete_from_cloudinary(paciente.imagen_1)
-                nueva_url = upload_file_to_cloudinary(imagen_1_file, folder_name="paciente_imagenes")
-                if nueva_url:
-                    paciente.imagen_1 = nueva_url
+        if 'imagen_1' in files and files['imagen_1'].filename != '':
+             nueva_url = upload_file_to_cloudinary(files['imagen_1'], "paciente_imagenes")
+             if nueva_url:
+                 if paciente.imagen_1: delete_from_cloudinary(paciente.imagen_1)
+                 paciente.imagen_1 = nueva_url
 
-        if 'imagen_2' in files:
-            imagen_2_file = files['imagen_2']
-            if imagen_2_file and imagen_2_file.filename != '':
-                if paciente.imagen_2:
-                    delete_from_cloudinary(paciente.imagen_2)
-                nueva_url = upload_file_to_cloudinary(imagen_2_file, folder_name="paciente_imagenes")
-                if nueva_url:
-                    paciente.imagen_2 = nueva_url
+        if 'imagen_2' in files and files['imagen_2'].filename != '':
+             nueva_url = upload_file_to_cloudinary(files['imagen_2'], "paciente_imagenes")
+             if nueva_url:
+                 if paciente.imagen_2: delete_from_cloudinary(paciente.imagen_2)
+                 paciente.imagen_2 = nueva_url
 
-        # Manejo del dentigrama
+        # Gestión del Dentigrama
         dentigrama_canvas_from_form = form_data.get('dentigrama_canvas')
         if dentigrama_canvas_from_form:
-            if paciente.dentigrama_canvas and paciente.dentigrama_canvas != dentigrama_canvas_from_form:
-                delete_from_cloudinary(paciente.dentigrama_canvas)
-            paciente.dentigrama_canvas = dentigrama_canvas_from_form
+            # Solo subir si cambió (verificación básica de string)
+            if paciente.dentigrama_canvas != dentigrama_canvas_from_form:
+                nueva_url = upload_base64_dentigrama(dentigrama_canvas_from_form, paciente.id)
+                if nueva_url:
+                    if paciente.dentigrama_canvas and paciente.dentigrama_canvas != nueva_url:
+                         delete_from_cloudinary(paciente.dentigrama_canvas)
+                    paciente.dentigrama_canvas = nueva_url
         elif not dentigrama_canvas_from_form and paciente.dentigrama_canvas:
+            # Si el formulario manda vacío pero había uno, se borra
             delete_from_cloudinary(paciente.dentigrama_canvas)
             paciente.dentigrama_canvas = None
 
@@ -576,18 +534,7 @@ def editar_paciente_service(paciente_id, form_data, files, usuario):
         db.session.rollback()
         current_app.logger.error(f'Error al editar paciente {paciente_id}: {e}', exc_info=True)
         return {'success': False, 'message': f'Error al actualizar el paciente: {str(e)}'}
-
-
 def borrar_paciente_service(paciente_id, usuario):
-    """Borra un paciente (soft delete) y sus imágenes.
-    
-    Args:
-        paciente_id: ID del paciente
-        usuario: Usuario actual
-        
-    Returns:
-        dict: {'success': bool, 'message': str}
-    """
     query = Paciente.query.filter_by(id=paciente_id)
     if not usuario.is_admin:
         query = query.filter_by(odontologo_id=usuario.id)
@@ -599,22 +546,17 @@ def borrar_paciente_service(paciente_id, usuario):
     paciente_nombre_completo = f"{paciente.nombres} {paciente.apellidos}"
     
     try:
-        # Eliminar imágenes de Cloudinary
         current_app.logger.info(f"PACIENTE_BORRADO: Iniciando eliminación de imágenes para paciente ID {paciente.id}")
         eliminar_imagenes_paciente(paciente, log_prefix="PACIENTE_BORRADO")
-        current_app.logger.info(f"PACIENTE_BORRADO: Finalizada eliminación de imágenes para paciente ID {paciente.id}")
-
-        # Soft delete del paciente
+        
         paciente.is_deleted = True
         paciente.deleted_at = datetime.utcnow()
 
-        # Soft delete en cascada para las citas
         citas_del_paciente = Cita.query.filter_by(paciente_id=paciente.id, is_deleted=False).all()
         for cita_item in citas_del_paciente:
             cita_item.is_deleted = True
             cita_item.deleted_at = datetime.utcnow()
 
-        # Crear log de auditoría
         log_descripcion = f"Paciente '{paciente_nombre_completo}' movido a la papelera."
         if citas_del_paciente:
             log_descripcion += f" También se movieron {len(citas_del_paciente)} cita(s) asociadas."
@@ -639,58 +581,26 @@ def borrar_paciente_service(paciente_id, usuario):
 
 
 def subir_dentigrama_service(image_data, patient_id):
-    """Sube un dentigrama a Cloudinary.
-    
-    Args:
-        image_data: Datos Base64 de la imagen
-        patient_id: ID del paciente (puede ser None para temporal)
-        
-    Returns:
-        dict: {'success': bool, 'url': str (opcional), 'message': str}
-    """
+    """Sube un dentigrama a Cloudinary (Usa Helper Seguro)."""
     if not image_data:
-        current_app.logger.error("UPLOAD_DENTIGRAMA_ERROR: No se proporcionaron datos de imagen.")
         return {'success': False, 'message': 'No se proporcionaron datos de imagen'}
 
     try:
-        patient = None
-        old_dentigrama_url = None
-
-        if patient_id:
-            patient = Paciente.query.get(patient_id)
-            if not patient:
-                current_app.logger.warning(f"UPLOAD_DENTIGRAMA_WARNING: Paciente con ID {patient_id} no encontrado.")
-            else:
-                old_dentigrama_url = patient.dentigrama_canvas
-
-        # Generar public_id único
-        base_public_id = f"dentigrama_patient_{patient_id}" if patient_id else "dentigrama_temp_session"
-        new_public_id = f"{base_public_id}_{uuid.uuid4().hex}"
-
-        current_app.logger.info(f"UPLOAD_DENTIGRAMA_INFO: Subiendo dentigrama para paciente {patient_id or 'temporal'}")
-
-        upload_result = cloudinary.uploader.upload(
-            image_data,
-            folder="dentigramas",
-            public_id=new_public_id
-        )
-        new_cloudinary_url = upload_result.get('secure_url')
-
-        if not new_cloudinary_url:
-            current_app.logger.error(f"UPLOAD_DENTIGRAMA_ERROR: Falló la subida a Cloudinary")
+        url = upload_base64_dentigrama(image_data, patient_id)
+        
+        if url:
+            # Actualizar BD inmediatamente si hay paciente
+            if patient_id:
+                patient = Paciente.query.get(patient_id)
+                if patient:
+                     if patient.dentigrama_canvas and patient.dentigrama_canvas != url:
+                        delete_from_cloudinary(patient.dentigrama_canvas)
+                     patient.dentigrama_canvas = url
+                     db.session.commit()
+            
+            return {'success': True, 'url': url, 'message': 'Dentigrama subido exitosamente'}
+        else:
             return {'success': False, 'message': 'Error al subir el dentigrama a Cloudinary.'}
 
-        # Actualizar BD si hay paciente
-        if patient:
-            if old_dentigrama_url:
-                delete_from_cloudinary(old_dentigrama_url)
-            patient.dentigrama_canvas = new_cloudinary_url
-            db.session.commit()
-            current_app.logger.info(f"UPLOAD_DENTIGRAMA_INFO: Dentigrama actualizado en BD para paciente {patient_id}")
-
-        return {'success': True, 'url': new_cloudinary_url, 'message': 'Dentigrama subido exitosamente'}
-
     except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"UPLOAD_DENTIGRAMA_FATAL_ERROR: {e}", exc_info=True)
         return {'success': False, 'message': 'Ocurrió un error inesperado al subir el dentigrama.'}

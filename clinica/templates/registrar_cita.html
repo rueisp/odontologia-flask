@@ -231,16 +231,27 @@
                 pacienteIdHiddenInput.value = ''; 
             }
 
+            // --- CÓDIGO NUEVO (Solución) ---
             async function populateNewPatientFields(patientData) {
                 if (!patientData) { 
                     clearNewPatientFields();
                     toggleNewPatientFields(true);
                     return;
                 }
-                const nombreCompletoArr = patientData.nombre.split(' ');
-                inputNombres.value = nombreCompletoArr.shift(); 
-                inputApellidos.value = nombreCompletoArr.join(' ');
-                
+
+                // 1. Priorizamos usar los campos separados si la base de datos los envía
+                if (patientData.nombres && patientData.apellidos) {
+                    inputNombres.value = patientData.nombres;     // Pone "Jhon Jose"
+                    inputApellidos.value = patientData.apellidos; // Pone "Snow Soto"
+                } 
+                // 2. Si por alguna razón solo llega el nombre completo (fallback), usamos la lógica vieja
+                else if (patientData.nombre) {
+                    const nombreCompletoArr = patientData.nombre.split(' ');
+                    inputNombres.value = nombreCompletoArr.shift(); 
+                    inputApellidos.value = nombreCompletoArr.join(' ');
+                }
+
+                // El resto de campos siguen igual...
                 inputTelefono.value = patientData.telefono !== 'No especificado' ? patientData.telefono : '';
                 inputEdad.value = patientData.edad !== 'No especificada' ? patientData.edad : '';
                 inputDocumento.value = patientData.documento !== 'No especificado' ? patientData.documento : '';

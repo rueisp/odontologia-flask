@@ -80,6 +80,8 @@ def obtener_paciente_ajax(id):
         paciente_data = {
             'id': paciente.id,
             'nombre': f"{paciente.nombres} {paciente.apellidos}",
+            'nombres': paciente.nombres,      # Enviamos "Jhon Jose" limpio
+            'apellidos': paciente.apellidos,  # Enviamos "Snow Soto" limpio
             'genero': paciente.genero or 'No especificado',
             'edad': paciente.edad if paciente.edad is not None else 'No especificada',
             'fecha_nacimiento': paciente.fecha_nacimiento.strftime('%d/%m/%Y') if paciente.fecha_nacimiento else 'No especificada',

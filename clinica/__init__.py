@@ -1,38 +1,25 @@
 # clinica/__init__.py
 
 import os
-from flask import Flask, request
+from flask import Flask
 from .extensions import db, migrate, login_manager 
 import cloudinary
 from dotenv import load_dotenv
 import logging
-import datetime
 from flask.json import dumps as json_dumps
 
-
-# --- IMPORTANTE: Cargar dotenv solo si estamos en un contexto local y .env existe ---
+# Cargar .env solo localmente
 if os.path.exists('.env'):
     load_dotenv()
 
-# ===========================================================================
-# MODIFICACIONES AÑADIDAS AQUÍ PARA LA FUNCIÓN GLOBAL JINJA (se mantiene)
-# ===========================================================================
-
+# Función global Jinja
 def get_attr_safe(obj, attr_name, default_value=None):
-    """
-    Función global Jinja personalizada para obtener de forma segura un atributo de un objeto.
-    """
     if obj is None:
         return default_value
     if isinstance(obj, dict):
         return obj.get(attr_name, default_value)
     else:
         return getattr(obj, attr_name, default_value)
-
-# ===========================================================================
-# FIN DE MODIFICACIONES
-# ===========================================================================
-
 
 def create_app():
     """Application Factory Function"""
@@ -46,24 +33,17 @@ def create_app():
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         SQLALCHEMY_POOL_RECYCLE=60,
         SQLALCHEMY_POOL_SIZE=5,
-        SQLALCHEMY_ENGINE_OPTIONS={
-            'pool_pre_ping': True
-        },
-        CLOUDINARY_CLOUD_NAME=os.environ.get('CLOUDINARY_CLOUD_NAME'),
-        CLOUDINARY_API_KEY=os.environ.get('CLOUDINARY_API_KEY'),
-        CLOUDINARY_API_SECRET=os.environ.get('CLOUDINARY_API_SECRET'),
-        CLOUDINARY_SECURE=True, 
+        SQLALCHEMY_ENGINE_OPTIONS={'pool_pre_ping': True},
         DEBUG=os.environ.get('FLASK_DEBUG') == '1' 
     )
 
     app.config['SESSION_COOKIE_SECURE'] = app.config['DEBUG'] == False 
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
+    # Logging setup
     if app.config['DEBUG']:
         app.config['SQLALCHEMY_ECHO'] = True
         logging.getLogger('sqlalchemy.pool').setLevel(logging.DEBUG)
-        logging.getLogger('sqlalchemy.dialects').setLevel(logging.DEBUG)
-        logging.getLogger('sqlalchemy.engine').setLevel(logging.DEBUG)
     else:
         app.config['SQLALCHEMY_ECHO'] = False
 
@@ -75,36 +55,49 @@ def create_app():
     else: 
         app.logger.setLevel(logging.DEBUG)
 
-    app.logger.info(f"Application initialized. DEBUG={app.debug}. Logging level set to {app.logger.level}.")
+    app.logger.info(f"App initialized. DEBUG={app.debug}.")
 
-    if app.config.get('CLOUDINARY_CLOUD_NAME') and \
-       app.config.get('CLOUDINARY_API_KEY') and \
-       app.config.get('CLOUDINARY_API_SECRET'):
+    # --- CORRECCIÓN CRÍTICA DE CLOUDINARY ---
+    # Intentamos obtener la variable global
+    cloudinary_url = os.environ.get('CLOUDINARY_URL')
+    
+    # 1. Intentar configurar con la URL completa (Prioridad Fly.io)
+    if cloudinary_url:
+        try:
+            # FORZAMOS la configuración pasando la URL explícitamente
+            cloudinary.config(cloudinary_url=cloudinary_url)
+            app.logger.info("Cloudinary: Configurado explícitamente usando CLOUDINARY_URL.")
+        except Exception as e:
+            app.logger.error(f"Cloudinary: Error al configurar con URL: {e}")
+
+    # 2. Si no hay URL, intentar con credenciales individuales (Legacy/Local)
+    elif (os.environ.get('CLOUDINARY_CLOUD_NAME') and 
+          os.environ.get('CLOUDINARY_API_KEY') and 
+          os.environ.get('CLOUDINARY_API_SECRET')):
+        
         cloudinary.config(
-            cloud_name=app.config.get('CLOUDINARY_CLOUD_NAME'),
-            api_key=app.config.get('CLOUDINARY_API_KEY'),
-            api_secret=app.config.get('CLOUDINARY_API_SECRET'),
-            secure=app.config.get('CLOUDINARY_SECURE', True) 
+            cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
+            api_key=os.environ.get('CLOUDINARY_API_KEY'),
+            api_secret=os.environ.get('CLOUDINARY_API_SECRET'),
+            secure=True
         )
-        app.logger.info("Cloudinary configured using environment variables.")
+        app.logger.info("Cloudinary: Configurado usando credenciales individuales.")
+    
     else:
-        app.logger.warning("CLOUDINARY: Credenciales no configuradas. Las funciones de Cloudinary pueden fallar.")
+        app.logger.warning("CLOUDINARY: ¡No se encontraron credenciales! La subida fallará.")
 
     @app.after_request
     def add_cors_headers(response):
         response.headers['Access-Control-Allow-Origin'] = '*'
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
         response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
-        
         if 'Cache-Control' not in response.headers:
              response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
              response.headers['Pragma'] = 'no-cache'
              response.headers['Expires'] = '0'
-
         return response
 
-
-    # --- 2. INICIALIZAR EXTENSIONES CON LA APP ---
+    # --- 2. INICIALIZAR EXTENSIONES ---
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
@@ -115,21 +108,14 @@ def create_app():
         return Usuario.query.get(int(user_id))
     
     login_manager.login_view = 'main.login'
-    login_manager.login_message = "Por favor, inicia sesión para acceder a esta página."
+    login_manager.login_message = "Por favor, inicia sesión."
     login_manager.login_message_category = "warning"
 
-
-    # --- REGISTRA LA FUNCIÓN GLOBAL JINJA AQUÍ ---
     app.jinja_env.globals['get_attr'] = get_attr_safe
-    app.logger.debug("Jinja global 'get_attr' registered.")
-    
-    # --- REGISTRAR EL FILTRO 'tojson' DE FORMA EXPLÍCITA ---
     app.jinja_env.add_extension('jinja2.ext.do')
     app.jinja_env.filters['tojson'] = json_dumps 
-    app.logger.debug("Jinja filter 'tojson' explicitly registered.")
 
-
-    # --- 3. REGISTRAR BLUEPRINTS (RUTAS) ---
+    # --- 3. REGISTRAR BLUEPRINTS ---
     with app.app_context(): 
         from .routes.main import main_bp
         from .routes.pacientes import pacientes_bp
@@ -158,15 +144,11 @@ def create_app():
         app.register_blueprint(procedimientos_bp)
         app.register_blueprint(api_bp)
         app.register_blueprint(planes_bp)
-        
 
-        # Ruta para mantener la app viva (ping)
         @app.route('/awake')
         def awake():
             return "Render App Awake", 200
         
-        
     return app
-
 
 app = create_app()

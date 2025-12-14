@@ -178,19 +178,17 @@
                 <h3><i data-lucide="file-json" class="card-icon"></i>Información RIPS</h3>
                 <div class="collapsible-section-content collapsed pb-4" id="rips_section">
                     <div class="data-grid">
-                        
+    
                         {# 1. ASEGURADORA #}
                         <div class="data-item">
                             <span class="label">EPS / Aseguradora</span>
-                            <!-- En tu BD se llama: codigo_aseguradora -->
-                            <span class="value">{{ paciente.codigo_aseguradora or 'No especificado' }}</span>
+                            <span class="value">{{ paciente.aseguradora }}</span>
                         </div>
 
-                        {# 2. TIPO DE USUARIO #}
+                        {# 2. TIPO DE USUARIO (Se queda igual, usa lógica if/else) #}
                         <div class="data-item">
                             <span class="label">Tipo de Usuario</span>
                             <span class="value">
-                                <!-- En tu BD se llama: tipo_usuario_rips -->
                                 {% if paciente.tipo_usuario_rips == '1' %}Contributivo
                                 {% elif paciente.tipo_usuario_rips == '2' %}Subsidiado
                                 {% elif paciente.tipo_usuario_rips == '3' %}Vinculado
@@ -198,41 +196,38 @@
                             </span>
                         </div>
 
-                        {# 3. CONDICIÓN (AFILIADO) #}
+                        {# 3. CONDICIÓN (Se queda igual) #}
                         <div class="data-item">
                             <span class="label">Condición</span>
                             <span class="value">
-                                <!-- En tu BD se llama: tipo_afiliado -->
                                 {% if paciente.tipo_afiliado == 'C' %}Cotizante
                                 {% elif paciente.tipo_afiliado == 'B' %}Beneficiario
                                 {% else %}{{ paciente.tipo_afiliado or 'No especificado' }}{% endif %}
                             </span>
                         </div>
 
-                        {# 4. ZONA DE RESIDENCIA (¡IMPORTANTE! SIN LA 'L' AL FINAL) #}
+                        {# 4. ZONA DE RESIDENCIA (Se queda igual) #}
                         <div class="data-item">
                             <span class="label">Zona de Residencia</span>
                             <span class="value">
-                                <!-- En tu BD se llama: zona_residencia (NO zona_residencial) -->
                                 {% if paciente.zona_residencia == 'U' %}Urbano
                                 {% elif paciente.zona_residencia == 'R' %}Rural
                                 {% else %}{{ paciente.zona_residencia or 'No especificado' }}{% endif %}
                             </span>
                         </div>
 
-                        {# 5. DEPARTAMENTO (¡IMPORTANTE! NOMBRE LARGO) #}
+                        {# 5. DEPARTAMENTO #}
                         <div class="data-item">
                             <span class="label">Departamento</span>
-                            <!-- En tu BD se llama: codigo_departamento (NO codigo_dpto) -->
-                            <span class="value">{{ paciente.codigo_departamento or 'No especificado' }}</span>
+                            <span class="value">{{ paciente.departamento }}</span>
                         </div>
 
-                        {# 6. MUNICIPIO (¡IMPORTANTE! NOMBRE LARGO) #}
+                        {# 6. MUNICIPIO #}
                         <div class="data-item">
                             <span class="label">Municipio</span>
-                            <!-- En tu BD se llama: codigo_municipio (NO codigo_mpio) -->
-                            <span class="value">{{ paciente.codigo_municipio or 'No especificado' }}</span>
+                            <span class="value">{{ paciente.municipio }}</span>
                         </div>
+
                     </div>
                 </div>
                 
