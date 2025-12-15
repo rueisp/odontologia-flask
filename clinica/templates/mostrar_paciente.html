@@ -54,28 +54,77 @@
                     <div class="data-item"><span class="label">Género</span><span class="value">{{ paciente.genero }}</span></div>
                     <div class="data-item"><span class="label">Estado Civil</span><span class="value">{{ paciente.estado_civil }}</span></div>
                     <div class="data-item"><span class="label">Ocupación</span><span class="value">{{ paciente.ocupacion }}</span></div>
-                </div>
-            </div>
-            <div class="card-custom">
-                <h3><i data-lucide="map-pin" class="card-icon"></i>Dirección y Aseguradora</h3>
-                <div class="data-grid">
+                    {# --- NUEVOS CAMPOS MOVIDOS AQUÍ --- #}
                     {{ render_campo('Dirección', 'direccion', paciente, editable=False) }}
                     {{ render_campo('Barrio', 'barrio', paciente, editable=False) }}
-                    {{ render_campo('Municipio', 'municipio', paciente, editable=False) }}
-                    {{ render_campo('Departamento', 'departamento', paciente, editable=False) }}
-                    {{ render_campo('Aseguradora', 'aseguradora', paciente, editable=False) }}
-                    {{ render_campo('Tipo de Vinculación', 'tipo_vinculacion', paciente, editable=False) }}
                 </div>
             </div>
+
+            <!-- TARJETA RIPS CORREGIDA -->
             <div class="card-custom">
-                <h3><i data-lucide="shield" class="card-icon"></i>Datos del Responsable</h3>
-                <div class="data-grid">
-                    {{ render_campo('Nombre del Responsable', 'nombre_responsable', paciente, editable=False) }}
-                    {{ render_campo('Teléfono del Responsable', 'telefono_responsable', paciente, editable=False) }}
-                    {{ render_campo('Parentesco', 'parentesco', paciente, editable=False) }}
-                    {{ render_campo('Referido por', 'referido_por', paciente, editable=False) }}
+                <h3><i data-lucide="file-json" class="card-icon"></i>Información RIPS</h3>
+                <div class="collapsible-section-content collapsed pb-4" id="rips_section">
+                    <div class="data-grid">
+    
+                        {# 1. ASEGURADORA #}
+                        <div class="data-item">
+                            <span class="label">EPS / Aseguradora</span>
+                            <span class="value">{{ paciente.aseguradora }}</span>
+                        </div>
+
+                        {# 2. TIPO DE USUARIO (Se queda igual, usa lógica if/else) #}
+                        <div class="data-item">
+                            <span class="label">Tipo de Usuario</span>
+                            <span class="value">
+                                {% if paciente.tipo_usuario_rips == '1' %}Contributivo
+                                {% elif paciente.tipo_usuario_rips == '2' %}Subsidiado
+                                {% elif paciente.tipo_usuario_rips == '3' %}Vinculado
+                                {% else %}{{ paciente.tipo_usuario_rips or 'No especificado' }}{% endif %}
+                            </span>
+                        </div>
+
+                        {# 3. CONDICIÓN (Se queda igual) #}
+                        <div class="data-item">
+                            <span class="label">Condición</span>
+                            <span class="value">
+                                {% if paciente.tipo_afiliado == 'C' %}Cotizante
+                                {% elif paciente.tipo_afiliado == 'B' %}Beneficiario
+                                {% else %}{{ paciente.tipo_afiliado or 'No especificado' }}{% endif %}
+                            </span>
+                        </div>
+
+                        {# 4. ZONA DE RESIDENCIA (Se queda igual) #}
+                        <div class="data-item">
+                            <span class="label">Zona de Residencia</span>
+                            <span class="value">
+                                {% if paciente.zona_residencia == 'U' %}Urbano
+                                {% elif paciente.zona_residencia == 'R' %}Rural
+                                {% else %}{{ paciente.zona_residencia or 'No especificado' }}{% endif %}
+                            </span>
+                        </div>
+
+                        {# 5. DEPARTAMENTO #}
+                        <div class="data-item">
+                            <span class="label">Departamento</span>
+                            <span class="value">{{ paciente.departamento }}</span>
+                        </div>
+
+                        {# 6. MUNICIPIO #}
+                        <div class="data-item">
+                            <span class="label">Municipio</span>
+                            <span class="value">{{ paciente.municipio }}</span>
+                        </div>
+
+                    </div>
+                </div>
+                
+                <div class="section-read-more-wrapper mt-2">
+                    <button class="toggle-read-more-btn text-blue-600 font-bold hover:text-blue-800" data-target="rips_section">Mostrar más</button>
                 </div>
             </div>
+
+            
+           
         </div>
 
 
@@ -173,69 +222,7 @@
                     {% endif %}
                 </div>
             </div>
-            <!-- TARJETA RIPS CORREGIDA -->
-            <div class="card-custom">
-                <h3><i data-lucide="file-json" class="card-icon"></i>Información RIPS</h3>
-                <div class="collapsible-section-content collapsed pb-4" id="rips_section">
-                    <div class="data-grid">
-    
-                        {# 1. ASEGURADORA #}
-                        <div class="data-item">
-                            <span class="label">EPS / Aseguradora</span>
-                            <span class="value">{{ paciente.aseguradora }}</span>
-                        </div>
-
-                        {# 2. TIPO DE USUARIO (Se queda igual, usa lógica if/else) #}
-                        <div class="data-item">
-                            <span class="label">Tipo de Usuario</span>
-                            <span class="value">
-                                {% if paciente.tipo_usuario_rips == '1' %}Contributivo
-                                {% elif paciente.tipo_usuario_rips == '2' %}Subsidiado
-                                {% elif paciente.tipo_usuario_rips == '3' %}Vinculado
-                                {% else %}{{ paciente.tipo_usuario_rips or 'No especificado' }}{% endif %}
-                            </span>
-                        </div>
-
-                        {# 3. CONDICIÓN (Se queda igual) #}
-                        <div class="data-item">
-                            <span class="label">Condición</span>
-                            <span class="value">
-                                {% if paciente.tipo_afiliado == 'C' %}Cotizante
-                                {% elif paciente.tipo_afiliado == 'B' %}Beneficiario
-                                {% else %}{{ paciente.tipo_afiliado or 'No especificado' }}{% endif %}
-                            </span>
-                        </div>
-
-                        {# 4. ZONA DE RESIDENCIA (Se queda igual) #}
-                        <div class="data-item">
-                            <span class="label">Zona de Residencia</span>
-                            <span class="value">
-                                {% if paciente.zona_residencia == 'U' %}Urbano
-                                {% elif paciente.zona_residencia == 'R' %}Rural
-                                {% else %}{{ paciente.zona_residencia or 'No especificado' }}{% endif %}
-                            </span>
-                        </div>
-
-                        {# 5. DEPARTAMENTO #}
-                        <div class="data-item">
-                            <span class="label">Departamento</span>
-                            <span class="value">{{ paciente.departamento }}</span>
-                        </div>
-
-                        {# 6. MUNICIPIO #}
-                        <div class="data-item">
-                            <span class="label">Municipio</span>
-                            <span class="value">{{ paciente.municipio }}</span>
-                        </div>
-
-                    </div>
-                </div>
-                
-                <div class="section-read-more-wrapper mt-2">
-                    <button class="toggle-read-more-btn text-blue-600 font-bold hover:text-blue-800" data-target="rips_section">Mostrar más</button>
-                </div>
-            </div>
-
+            
 
         </div>
 
@@ -317,6 +304,16 @@
                     {% if paciente.plan_tratamiento %}
                         <button class="toggle-read-more-btn text-blue-600 font-bold hover:text-blue-800" data-target="plan_tratamiento_section">Mostrar más</button>
                     {% endif %}
+                </div>
+            </div>
+
+            <div class="card-custom">
+                <h3><i data-lucide="shield" class="card-icon"></i>Datos del Responsable</h3>
+                <div class="data-grid">
+                    {{ render_campo('Nombre del Responsable', 'nombre_responsable', paciente, editable=False) }}
+                    {{ render_campo('Teléfono del Responsable', 'telefono_responsable', paciente, editable=False) }}
+                    {{ render_campo('Parentesco', 'parentesco', paciente, editable=False) }}
+                    {{ render_campo('Referido por', 'referido_por', paciente, editable=False) }}
                 </div>
             </div>
 
