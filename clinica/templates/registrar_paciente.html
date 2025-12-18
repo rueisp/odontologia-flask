@@ -3,8 +3,15 @@
 {% block title %}Registrar Paciente{% endblock %}
 
 {% block head_extra %}
-    {# Si tienes CSS específico para el dentigrama que no está en avatar_upload.css #}
-    {# <link rel="stylesheet" href="{{ url_for('static', filename='css/dentigrama_styles.css') }}"> #}
+    {# --- 1. ESTILOS PARA EL BUSCADOR INTELIGENTE (SELECT2) --- #}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+    <style>
+        /* Ajuste para que el buscador se parezca a tus otros inputs */
+        .select2-container--bootstrap-5 .select2-selection {
+            border-color: #dee2e6;
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
@@ -19,8 +26,7 @@
 
     <form action="{{ url_for('pacientes.crear_paciente') }}" method="post" enctype="multipart/form-data" id="patientMainForm">
         
-        {# Ahora _accordion_registro_paciente.html contendrá TODOS los items del acordeón,
-           incluyendo la sección de Datos Personales que antes estaba en un fieldset. #}
+        {# El acordeón contiene: Datos Personales, Ubicación/RIPS, Dentigrama, Imágenes, etc. #}
         {% include '_accordion_registro_paciente.html' with context %} 
         
         <div class="mt-5 mb-5 d-flex gap-3 justify-content-center">
@@ -30,8 +36,7 @@
     </form>
 </div>
 
-{# Modal para Ampliar Imagen de Perfil (si quieres que también funcione aquí) #}
-{# Asegúrate de que este modal esté presente si el script avatar_upload.js lo usa #}
+{# Modal para Ampliar Imagen de Perfil #}
 <div class="modal fade" id="avatarZoomModal" tabindex="-1" aria-labelledby="avatarZoomModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
@@ -50,138 +55,132 @@
 </div>
 {% endblock %}
 {% block scripts %}
-    <!-- ... tu script de flash messages ... -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     <script src="{{ url_for('static', filename='js/editor_dentigrama.js') }}"></script>
     <script src="{{ url_for('static', filename='js/avatar_upload.js') }}"></script> 
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log("MAIN PAGE SCRIPT: DOMContentLoaded fired from registrar_paciente.html."); 
+        $(document).ready(function() {
+            // --- A. INICIALIZAR SELECT2 (BUSCADORES) ---
+            $('#codigo_aseguradora').select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                placeholder: 'Escriba para buscar EPS...',
+                allowClear: true,
+                dropdownParent: $('#codigo_aseguradora').parent()
+            });
+
+            $('#codigo_dpto').select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                placeholder: 'Buscar departamento...'
+            });
+
+            // --- B. LÓGICA DE MUNICIPIOS (LO QUE FALTABA) ---
+            const departamentoSelect = document.getElementById('codigo_dpto');
+            const municipioSelect = document.getElementById('codigo_mpio');
             
-            // --- Lógica para el cálculo de la edad (se mantiene igual) ---
+            // Importante: Jinja renderiza esto como texto JSON válido
+            // Usamos 'default("[]")' para evitar errores si la variable llega vacía
+            const todosLosMunicipios = JSON.parse('{{ municipios_json | default("[]") | safe }}');
+
+            // Función para filtrar y llenar
+            function cargarMunicipios() {
+                const codigoDepto = departamentoSelect.value;
+                
+                // Limpiar opciones anteriores
+                municipioSelect.innerHTML = '<option value="">Seleccione un municipio</option>';
+                
+                if (!codigoDepto) {
+                    municipioSelect.disabled = true;
+                    return;
+                }
+
+                // Filtrar municipios que pertenezcan a ese departamento
+                const municipiosFiltrados = todosLosMunicipios.filter(m => m.codigo_departamento === codigoDepto);
+
+                if (municipiosFiltrados.length > 0) {
+                    municipioSelect.disabled = false;
+                    municipiosFiltrados.forEach(muni => {
+                        const option = document.createElement('option');
+                        option.value = muni.codigo;
+                        option.textContent = muni.nombre;
+                        municipioSelect.appendChild(option);
+                    });
+                } else {
+                    municipioSelect.disabled = true;
+                }
+            }
+
+            // Escuchar cambios. Como usamos Select2 (jQuery), usamos 'change' de jQuery para asegurar compatibilidad
+            $('#codigo_dpto').on('change', cargarMunicipios);
+        });
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- C. LÓGICA DE EDAD, GUARDADO Y DENTIGRAMA (Tu código original) ---
+            
+            // 1. Cálculo de Edad
             const fechaNacimientoInput = document.getElementById('fecha_nacimiento');
             const edadInput = document.getElementById('edad');
-
             if (fechaNacimientoInput && edadInput) { 
                 fechaNacimientoInput.addEventListener('change', function () {
                     const fechaNacimiento = new Date(this.value);
                     const hoy = new Date();
-
                     let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
                     const mes = hoy.getMonth() - fechaNacimiento.getMonth();
-
-                    if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNacimiento.getDate())) {
-                        edad--;
-                    }
+                    if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNacimiento.getDate())) { edad--; }
                     edadInput.value = edad;
-                    console.log("EDAD SCRIPT DEBUG: Edad calculada:", edad);
                 });
-                if (fechaNacimientoInput.value) {
-                     fechaNacimientoInput.dispatchEvent(new Event('change'));
-                }
-            } else {
-                console.warn("EDAD SCRIPT WARNING: No se encontraron los inputs de Fecha de Nacimiento o Edad. ID's esperados: 'fecha_nacimiento', 'edad'.");
             }
-            // --- FIN Lógica para el cálculo de la edad ---
 
-            // --- Lógica del formulario principal de paciente ---
+            // 2. Guardado del Formulario
             const mainForm = document.getElementById('patientMainForm');
             const mainSaveButton = document.getElementById('mainSaveButton'); 
             const dentigramaUrlInput = document.getElementById('dentigrama_url_input');
 
             if (mainForm && mainSaveButton) {
-                console.log("MAIN PAGE SCRIPT: patientMainForm and mainSaveButton found.");
-                
                 const mainSaveButtonHandler = async function(event) { 
                     event.preventDefault(); 
-                    console.log("MAIN PAGE SCRIPT: Save button CLICK event detected. Starting save process.");
-
                     mainSaveButton.disabled = true;
                     mainSaveButton.textContent = 'Guardando Paciente...';
                     
                     try {
                         let finalDentigramUrl = dentigramaUrlInput.value; 
-                        console.log("MAIN PAGE SCRIPT: Final Dentigram URL antes del envío del formulario:", finalDentigramUrl);
-
                         const formData = new FormData(mainForm); 
                         formData.set('dentigrama_canvas', finalDentigramUrl || ''); 
 
-                        console.log("MAIN PAGE SCRIPT: About to submit main form via fetch with dentigrama_canvas:", formData.get('dentigrama_canvas'));
-                        
                         const response = await fetch(mainForm.action, {
                             method: mainForm.method, 
                             body: formData,
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
                         });
 
-                        if (!response.ok) {
-                            const errorData = await response.json();
-                            throw new Error(`Error HTTP: ${response.status} - ${errorData.error || 'Error desconocido del servidor.'}`);
-                        }
-
                         const result = await response.json(); 
-                        console.log("MAIN PAGE SCRIPT: Server responded:", result);
-
                         if (result.success) {
-                            alert(result.message || "Paciente guardado exitosamente. Redirigiendo...");
+                            alert(result.message || "Paciente guardado exitosamente.");
                             window.location.href = result.redirect_url; 
                         } else {
-                            throw new Error(result.error || "Error desconocido al guardar el paciente.");
+                            throw new Error(result.error || "Error desconocido.");
                         }
-
                     } catch (error) {
-                        console.error("MAIN PAGE SCRIPT ERROR: Error al guardar el paciente:", error);
-                        alert("Hubo un error al guardar el paciente: " + error.message);
-                    } finally {
+                        alert("Hubo un error: " + error.message);
                         mainSaveButton.disabled = false;
                         mainSaveButton.textContent = 'Guardar';
                     }
                 }; 
-                
-                mainSaveButton.removeEventListener('click', mainSaveButtonHandler);
                 mainSaveButton.addEventListener('click', mainSaveButtonHandler);
-                console.log("MAIN PAGE SCRIPT: Listener para 'mainSaveButton' adjuntado/re-adjuntado.");
-
-            } else { 
-                console.error("MAIN PAGE SCRIPT ERROR: No se encontró el formulario principal con ID 'patientMainForm' o el botón 'mainSaveButton'.");
             }
-            // --- FIN Lógica del formulario principal de paciente ---
 
-            // --- Lógica para inicializar el dentigrama cuando su acordeón se abre (se mantiene igual) ---
-            const dentigramaCollapseElement = document.getElementById('collapseDentigrama');
-            if (dentigramaCollapseElement) {
-                dentigramaCollapseElement.addEventListener('shown.bs.collapse', function () {
-                    console.log("MAIN PAGE SCRIPT: Acordeón del dentigrama abierto. Reinicializando dentigrama...");
-                    if (typeof window.initializeDentigram === 'function') {
-                        window.initializeDentigram(); 
-                    } else {
-                        console.error("MAIN PAGE SCRIPT ERROR: window.initializeDentigram no está disponible globalmente.");
-                    }
+            // 3. Inicializar Dentigrama al abrir acordeón
+            const dentigramaCollapse = document.getElementById('collapseDentigrama');
+            if (dentigramaCollapse) {
+                dentigramaCollapse.addEventListener('shown.bs.collapse', function () {
+                    if (typeof window.initializeDentigram === 'function') window.initializeDentigram(); 
                 });
-            } else {
-                console.warn("MAIN PAGE SCRIPT WARNING: No se encontró el elemento del acordeón del dentigrama con ID 'collapseDentigrama'.");
-            }
-            // --- FIN Lógica de inicialización del dentigrama ---
-
-        });
-        document.addEventListener('DOMContentLoaded', function() {
-            try {
-                console.log("Iniciando script de municipios...");
-                const departamentoSelect = document.getElementById('codigo_dpto');
-                const municipioSelect = document.getElementById('codigo_mpio');
-                
-                if (!departamentoSelect || !municipioSelect) {
-                    console.error('ERROR: No se encontraron los selectores de departamento o municipio.');
-                    return;
-                }
-                
-            
-
-            } catch(e) {
-                console.error("ERROR FATAL en el script de carga de municipios:", e);
             }
         });
     </script>

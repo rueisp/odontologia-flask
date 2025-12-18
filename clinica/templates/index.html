@@ -136,38 +136,50 @@
                 <div class="space-y-8">
                     <div class="greeting-header"><h1 class="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">Hola, {% if current_user.nombre_completo and current_user.nombre_completo.strip() %}{{ current_user.nombre_completo }}{% else %}{{ current_user.username }}{% endif %}!</h1>{% if fecha_actual_formateada %}<p class="text-gray-500 mt-1 font-medium">Hoy es {{ fecha_actual_formateada }}</p>{% endif %}</div>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 mb-8">
-                        <!-- Tarjeta Negra (Citas Hoy) -->
-                        <!-- Tarjeta (Citas Hoy) - Estilo Gris Suave -->
-                        <div class="bg-gray-100 text-gray-900 p-8 rounded-[3rem] flex justify-between items-center shadow-2xl overflow-hidden">
-                            <div>
-                                <!-- Texto secundario oscurecido para contraste -->
-                                <div class="text-gray-600 mb-1 font-medium">Hoy tienes</div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-8">
+                        
+                        <div class="bg-gray-50 text-gray-900 p-8 rounded-[3rem] flex justify-between items-center shadow-xl overflow-hidden relative group hover:shadow-2xl transition-all duration-300">
+                            <div class="relative z-10">
+                                <div class="text-gray-600 mb-1 font-medium text-sm uppercase tracking-wide">Hoy tienes</div>
                                 <div class="text-4xl lg:text-5xl font-bold">
                                     {{ estadisticas.citas_hoy if estadisticas else '0' }} 
-                                    <span class="text-xl font-normal text-gray-600">citas</span>
+                                    <span class="text-xl font-normal text-gray-500">citas</span>
                                 </div>
                             </div>
-                            <!-- Icono invertido: fondo blanco, icono oscuro -->
-                            <div class="bg-white p-4 rounded-full shadow-sm">
+                            <div class="bg-white p-4 rounded-full shadow-sm relative z-10">
                                 <i data-lucide="calendar-check" class="w-8 h-8 text-gray-900"></i>
                             </div>
                         </div>
-                        
-                        <!-- Tarjeta Blanca (Próxima Cita) -->
-                        <div class="bg-white p-8 rounded-[3rem] flex justify-between items-center shadow-lg overflow-hidden">
+
+                        <div class="bg-gray-100 text-gray-900 p-8 rounded-[3rem] flex justify-between items-center shadow-xl overflow-hidden hover:shadow-2xl transition-all duration-300">
                             <div>
-                                <div class="text-sm text-gray-400 mb-2 font-bold uppercase tracking-wider">Tu próxima cita</div>
+                                <div class="text-xs text-gray-500 mb-2 font-bold uppercase tracking-wider">Tu próxima cita</div>
                                 {% if proxima_cita %}
-                                    <div class="text-xl font-bold text-gray-900">{{ proxima_cita.fecha_formateada }}</div>
-                                    <div class="text-md text-gray-600 mt-1">{{ proxima_cita.paciente_nombre }}</div>
+                                    <div class="text-xl font-bold text-gray-900 leading-tight">{{ proxima_cita.fecha_formateada }}</div>
+                                    <div class="text-md text-gray-600 mt-1 truncate max-w-[150px]">{{ proxima_cita.paciente_nombre }}</div>
                                 {% else %}
-                                    <div class="text-lg font-bold text-gray-700">No hay citas programadas</div>
-                                    <div class="text-sm text-gray-500 mt-1">Descansa un poco</div>
+                                    <div class="text-lg font-bold text-gray-700">Libre</div>
+                                    <div class="text-sm text-gray-500 mt-1">Sin agenda próxima</div>
                                 {% endif %}
                             </div>
-                            <div class="bg-gray-100 p-4 rounded-full"><i data-lucide="user-check" class="w-8 h-8 text-gray-600"></i></div>
+                            <div class="bg-white p-4 rounded-full shadow-sm border border-gray-100"><i data-lucide="user-check" class="w-8 h-8 text-gray-700"></i></div>
                         </div>
+
+                        <div class="bg-gray-200 text-gray-900 p-8 rounded-[3rem] flex justify-between items-center shadow-xl overflow-hidden relative group hover:shadow-2xl transition-all duration-300 md:col-span-2 lg:col-span-1">
+                            
+                            <div class="relative z-10">
+                                <div class="text-gray-700 mb-1 font-medium text-sm uppercase tracking-wide">Esta Semana</div>
+                                <div class="text-4xl lg:text-5xl font-bold">
+                                    {{ total_citas_semana if total_citas_semana is defined else '0' }}
+                                    <span class="text-xl font-normal text-gray-600">pacientes</span>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white p-4 rounded-full shadow-sm relative z-10">
+                                <i data-lucide="bar-chart-2" class="w-8 h-8 text-gray-900"></i>
+                            </div>
+                        </div>
+
                     </div>
                     
                     <!-- Lista Citas de Hoy -->

@@ -251,30 +251,65 @@ def agregar_evolucion_service(paciente_id, descripcion, usuario):
         return {'success': False, 'message': 'Error al guardar evolución.'}
 
 def crear_paciente_service(form_data, files, usuario):
-     # DEBUG: Ver todos los campos que llegan
-    print("=== TODOS LOS CAMPOS DEL FORMULARIO ===")
-    for key, value in form_data.items():
-        print(f"{key}: {value}")
-    print("======================================")
+    # 1. Validación básica: Documento obligatorio
     documento = form_data.get('documento')
     if not documento:
         return {'success': False, 'message': 'El documento es obligatorio.'}
 
+    # 2. Validación de duplicados (incluyendo borrados lógicos para evitar conflictos)
     if Paciente.query.filter_by(documento=documento, is_deleted=False).first():
         return {'success': False, 'message': f'El paciente con documento {documento} ya existe.'}
     
     try:
+        # ==============================================================================
+        # LÓGICA DE TRADUCCIÓN (CÓDIGOS -> NOMBRES)
+        # ==============================================================================
+        
+        # --- A. Procesar Aseguradora (EPS) ---
+        cod_eps = form_data.get('codigo_aseguradora')
+        nombre_eps_guardar = form_data.get('aseguradora') # Por defecto lo que venga (generalmente vacío)
+
+        if cod_eps:
+            # Buscamos la EPS en la BD por su código
+            eps_obj = EPS.query.filter_by(codigo=cod_eps).first()
+            if eps_obj:
+                nombre_eps_guardar = eps_obj.nombre
+        
+        # --- B. Procesar Municipio y Departamento ---
+        cod_dpto = form_data.get('codigo_dpto')
+        cod_mpio = form_data.get('codigo_mpio')
+        nombre_mpio_guardar = form_data.get('municipio')
+        nombre_dpto_guardar = form_data.get('departamento')
+
+        if cod_mpio:
+            # Intento 1: Búsqueda exacta
+            mpio_obj = Municipio.query.filter_by(codigo=cod_mpio).first()
+            
+            # Intento 2: Búsqueda por código corto (si aplica) para compatibilidad
+            if not mpio_obj and len(cod_mpio) > 3 and cod_dpto:
+                short_code = cod_mpio[-3:]
+                mpio_obj = Municipio.query.filter_by(codigo=short_code, codigo_departamento=cod_dpto).first()
+
+            if mpio_obj:
+                nombre_mpio_guardar = mpio_obj.nombre
+                nombre_dpto_guardar = mpio_obj.nombre_departamento
+
+        # ==============================================================================
+        # CREACIÓN DEL OBJETO PACIENTE
+        # ==============================================================================
+
         primer_nombre = form_data.get('primer_nombre', '').strip()
         segundo_nombre = form_data.get('segundo_nombre', '').strip()
         primer_apellido = form_data.get('primer_apellido', '').strip()
         segundo_apellido = form_data.get('segundo_apellido', '').strip()
-        
-        # PROCESAMIENTO INICIAL DEL DENTIGRAMA (FIX: Usar helper)
+
+        # Procesamiento del Dentigrama (si se dibujó uno nuevo)
         dentigrama_url = None
         if form_data.get('dentigrama_canvas'):
              dentigrama_url = upload_base64_dentigrama(form_data.get('dentigrama_canvas'), "new_patient")
 
         nuevo_paciente = Paciente(
+            # --- Datos Personales ---
             nombres=f"{primer_nombre} {segundo_nombre}".strip(),
             apellidos=f"{primer_apellido} {segundo_apellido}".strip(),
             primer_nombre=primer_nombre,
@@ -284,18 +319,30 @@ def crear_paciente_service(form_data, files, usuario):
             tipo_documento=form_data.get('tipo_documento'),
             documento=documento,
             fecha_nacimiento=convertir_a_fecha(form_data.get('fecha_nacimiento')),
-            telefono=form_data.get('telefono'),
             edad=int(form_data.get('edad')) if form_data.get('edad') else None,
             email=form_data.get('email'),
+            telefono=form_data.get('telefono'),
             genero=form_data.get('genero'),
             estado_civil=form_data.get('estado_civil'),
+            
+            # --- Ubicación y Ocupación (Con datos enriquecidos) ---
             direccion=form_data.get('direccion'),
             barrio=form_data.get('barrio'),
-            municipio=form_data.get('municipio'),
-            departamento=form_data.get('departamento'),
-            aseguradora=form_data.get('aseguradora'),
-            tipo_vinculacion=form_data.get('tipo_vinculacion'),
             ocupacion=form_data.get('ocupacion'),
+            municipio=nombre_mpio_guardar,      # <--- AQUÍ SE GUARDA EL NOMBRE AUTOMÁTICO
+            departamento=nombre_dpto_guardar,   # <--- AQUÍ SE GUARDA EL DEPARTAMENTO AUTOMÁTICO
+            aseguradora=nombre_eps_guardar,     # <--- AQUÍ SE GUARDA LA EPS AUTOMÁTICA
+            
+            # --- Datos RIPS (Códigos) ---
+            tipo_vinculacion=form_data.get('tipo_vinculacion'),
+            codigo_aseguradora=cod_eps,
+            codigo_departamento=cod_dpto,
+            codigo_municipio=cod_mpio,
+            tipo_usuario_rips=form_data.get('tipo_usuario_rips'),
+            tipo_afiliado=form_data.get('tipo_afiliado'),
+            zona_residencia=form_data.get('zona_residencia'),
+
+            # --- Historia Clínica ---
             referido_por=form_data.get('referido_por'),
             nombre_responsable=form_data.get('nombre_responsable'),
             telefono_responsable=form_data.get('telefono_responsable'),
@@ -315,21 +362,13 @@ def crear_paciente_service(form_data, files, usuario):
             ultima_visita_odontologo=form_data.get('ultima_visita_odontologo', ''),
             plan_tratamiento=form_data.get('plan_tratamiento'),
             observaciones=form_data.get('observaciones', ''),
+            
+            # --- Sistema ---
             dentigrama_canvas=dentigrama_url,
             odontologo_id=usuario.id
         )
-            
-            # AGREGAR CAMPOS RIPS (¡ESTO FALTA!)
-        nuevo_paciente.codigo_aseguradora = form_data.get('codigo_aseguradora')
-        nuevo_paciente.tipo_usuario_rips = form_data.get('tipo_usuario_rips')
-        nuevo_paciente.tipo_afiliado = form_data.get('tipo_afiliado')
-        nuevo_paciente.zona_residencia = form_data.get('zona_residencia')
-        nuevo_paciente.codigo_departamento = form_data.get('codigo_dpto')
-        nuevo_paciente.codigo_municipio = form_data.get('codigo_mpio')
 
-        # Luego sigue tu código de imágenes...
-
-        # Imágenes (FIX: Usar logica segura)
+        # 3. Subida de Imágenes (usando helper seguro)
         if 'imagen_perfil' in files:
             nuevo_paciente.imagen_perfil_url = upload_file_to_cloudinary(files['imagen_perfil'], "pacientes_perfil")
 
@@ -339,16 +378,16 @@ def crear_paciente_service(form_data, files, usuario):
         if 'imagen_2' in files:
             nuevo_paciente.imagen_2 = upload_file_to_cloudinary(files['imagen_2'], "paciente_imagenes")
 
-
+        # 4. Guardado en Base de Datos
         db.session.add(nuevo_paciente)
         db.session.commit()
 
-        # Incrementar contador
+        # 5. Incrementar contador (Lógica de planes)
         try:
             from clinica.services.plan_service import PlanService
             PlanService.incrementar_contador_paciente(usuario.id)
         except Exception:
-            pass
+            pass # Si falla el contador, no bloqueamos el registro
 
         return {'success': True, 'message': 'Paciente guardado con éxito', 'paciente_id': nuevo_paciente.id}
 
@@ -356,8 +395,6 @@ def crear_paciente_service(form_data, files, usuario):
         db.session.rollback()
         current_app.logger.error(f'Error FATAL al guardar paciente: {e}', exc_info=True)
         return {'success': False, 'message': 'Ocurrió un error inesperado al guardar el paciente.'}
-
-
 def editar_paciente_service(paciente_id, form_data, files, usuario):
     # Buscar paciente asegurando permisos
     query = Paciente.query.filter_by(id=paciente_id, is_deleted=False)

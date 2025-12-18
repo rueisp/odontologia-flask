@@ -1,10 +1,10 @@
 # ▼▼▼ IMPORTACIONES COMPLETAS ▼▼▼
 from flask import Blueprint, render_template, current_app, flash, request, redirect, url_for
 from flask_login import login_required, current_user, login_user, logout_user
-from datetime import datetime
+from datetime import datetime, timedelta, time  # <--- AGREGADO timedelta y time
 import pytz
 from clinica.utils import get_index_panel_data
-# Importamos los modelos (Ya no necesitamos AuditLog aquí)
+# Importamos los modelos
 from clinica.models import Cita, Paciente, Factura, Usuario
 from clinica import db
 
@@ -13,19 +13,19 @@ main_bp = Blueprint('main', __name__)
 @main_bp.route("/")
 @login_required
 def index():
-    # 1. Fecha
+    # 1. Fecha y Hora Local
     local_timezone = pytz.timezone('America/Bogota')
     now_in_local_tz = datetime.now(local_timezone)
     fecha_actual_formateada = now_in_local_tz.strftime('%A, %d de %B de %Y')
     
-    # 2. Datos del Panel (Contadores)
+    # 2. Datos del Panel (Contadores existentes)
     try:
         panel_data = get_index_panel_data(now_in_local_tz.date(), now_in_local_tz.time())
     except Exception as e:
         current_app.logger.error(f"Error panel: {e}")
         panel_data = {}
 
-    # 3. Facturas Recientes (Sin desempaquetar nada raro, solo objetos)
+    # 3. Facturas Recientes
     facturas_recientes = []
     try:
         facturas_db = Factura.query.order_by(Factura.fecha_factura.desc()).limit(5).all()
@@ -45,18 +45,53 @@ def index():
     except Exception as e:
         current_app.logger.error(f"Error facturas: {e}")
 
-    # 4. Estadísticas de plan y límites (NUEVO)
+    # 4. Estadísticas de plan y límites
     from clinica.services.plan_service import PlanService
     estadisticas_plan = PlanService.obtener_estadisticas_usuario(current_user.id)    
 
-    # Retorno limpio
+    # =======================================================
+    # 5. CONTADOR SEMANAL (NUEVO CÓDIGO)
+    # =======================================================
+    try:
+        # A. Calcular rango de la semana (Lunes a Domingo)
+        hoy_date = now_in_local_tz.date()
+        inicio_semana = hoy_date - timedelta(days=hoy_date.weekday()) # Lunes de esta semana
+        fin_semana = inicio_semana + timedelta(days=6) # Domingo de esta semana
+
+        # B. Convertir a datetime para cubrir todo el día (00:00 a 23:59)
+        fecha_inicio_dt = datetime.combine(inicio_semana, time.min)
+        fecha_fin_dt = datetime.combine(fin_semana, time.max)
+
+        # C. Construir consulta
+        query_semana = Cita.query.filter(
+            Cita.fecha >= fecha_inicio_dt,
+            Cita.fecha <= fecha_fin_dt, 
+            Cita.is_deleted == False
+        )
+
+        # D. Si no es admin, filtrar solo sus propias citas
+        if not current_user.is_admin:
+            query_semana = query_semana.filter(Cita.odontologo_id == current_user.id)
+
+        # E. Obtener el número
+        total_citas_semana = query_semana.count()
+    
+    except Exception as e:
+        current_app.logger.error(f"Error calculando citas semanales: {e}")
+        total_citas_semana = 0
+    # =======================================================
+
+
+    # Retorno limpio con la nueva variable
     return render_template(
         "index.html",
         facturas_recientes=facturas_recientes,
         fecha_actual_formateada=fecha_actual_formateada,
-        estadisticas_plan=estadisticas_plan,  # ← NUEVO
+        estadisticas_plan=estadisticas_plan,
+        total_citas_semana=total_citas_semana,  # <--- ¡AQUÍ ESTÁ LA MAGIA!
         **panel_data
     )
+
 @main_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -180,7 +215,7 @@ def perfil():
 
     return render_template('perfil.html', usuario=usuario_a_editar)
 
-# Agrega esto al final de tu main.py o en una ruta temporal:
+# Debug de rutas
 @main_bp.route('/debug-rutas')
 def debug_rutas():
     from flask import current_app
@@ -191,13 +226,9 @@ def debug_rutas():
             'methods': list(rule.methods),
             'rule': rule.rule
         })
-    
-    # Ordenar por ruta
     rutas.sort(key=lambda x: x['rule'])
-    
     html = "<h1>Rutas registradas en Flask</h1><ul>"
     for ruta in rutas:
         html += f"<li><strong>{ruta['rule']}</strong> → {ruta['endpoint']} ({', '.join(ruta['methods'])})</li>"
     html += "</ul>"
-    
     return html

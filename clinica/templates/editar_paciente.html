@@ -4,6 +4,17 @@
 
 {% block title %}Editar Paciente - {{ paciente.nombres }} {{ paciente.apellidos }}{% endblock %}
 
+{% block head_extra %}
+    {# --- 1. ESTILOS PARA EL BUSCADOR INTELIGENTE (SELECT2) --- #}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+    <style>
+        .select2-container--bootstrap-5 .select2-selection {
+            border-color: #dee2e6;
+        }
+    </style>
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
 
@@ -12,10 +23,11 @@
         <p>Paciente: <strong>{{ paciente.nombres }} {{ paciente.apellidos }}</strong> (ID: {{ paciente.id }})</p>
     </div>
 
-    {% include '_flash_messages.html' %} <!-- Incluimos los mensajes flash -->
+    {% include '_flash_messages.html' %}
 
     <form action="{{ url_for('pacientes.editar_paciente', id=paciente.id) }}" method="POST" enctype="multipart/form-data" id="patientEditForm">
         
+        {# Reutilizamos el mismo acordeón que en Registrar #}
         {% include '_accordion_registro_paciente.html' with context %}
         
         <div class="mt-5 mb-5 d-flex gap-3 justify-content-center">
@@ -30,15 +42,84 @@
 {% block scripts %}
     {{ super() }}
 
-    <!-- Carga de scripts externos -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
     <script src="{{ url_for('static', filename='js/editor_dentigrama.js') }}"></script> 
     <script src="{{ url_for('static', filename='js/avatar_upload.js') }}"></script> 
 
-    <!-- UN ÚNICO SCRIPT CON TODA LA LÓGICA PARA ESTA PÁGINA -->
+    <script>
+        $(document).ready(function() {
+            // --- A. INICIALIZAR SELECT2 ---
+            $('#codigo_aseguradora').select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                placeholder: 'Escriba para buscar EPS...',
+                allowClear: true,
+                dropdownParent: $('#codigo_aseguradora').parent()
+            });
+
+            $('#codigo_dpto').select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                placeholder: 'Buscar departamento...'
+            });
+
+            // --- B. LÓGICA DE MUNICIPIOS (CON PRE-SELECCIÓN) ---
+            const departamentoSelect = document.getElementById('codigo_dpto');
+            const municipioSelect = document.getElementById('codigo_mpio');
+            
+            // Datos pasados desde Flask
+            const todosLosMunicipios = JSON.parse('{{ municipios_json | default("[]") | safe }}');
+            const municipioGuardado = "{{ paciente.codigo_mpio or '' }}"; // El valor actual en BD
+
+            function cargarMunicipios() {
+                const codigoDepto = departamentoSelect.value;
+                municipioSelect.innerHTML = '<option value="">Seleccione un municipio</option>';
+
+                if (!codigoDepto) {
+                    municipioSelect.disabled = true;
+                    return;
+                }
+
+                const municipiosFiltrados = todosLosMunicipios.filter(m => m.codigo_departamento === codigoDepto);
+
+                if (municipiosFiltrados.length > 0) {
+                    municipioSelect.disabled = false;
+                    municipiosFiltrados.forEach(muni => {
+                        const option = document.createElement('option');
+                        option.value = muni.codigo;
+                        option.textContent = muni.nombre;
+                        
+                        // CLAVE: Si el código coincide con el guardado, lo seleccionamos
+                        if (muni.codigo === municipioGuardado) {
+                            option.selected = true;
+                        }
+                        
+                        municipioSelect.appendChild(option);
+                    });
+                } else {
+                    municipioSelect.disabled = true;
+                }
+            }
+
+            // Escuchar cambios
+            $('#codigo_dpto').on('change', function() {
+                // Al cambiar manualmente, recargamos (se perderá la selección guardada, lo cual es correcto)
+                cargarMunicipios();
+            });
+
+            // Ejecutar al cargar la página para mostrar el municipio actual
+            if (departamentoSelect.value) {
+                cargarMunicipios();
+            }
+        });
+    </script>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             try {
-                // --- Lógica de cálculo de edad ---
+                // --- C. CÁLCULO DE EDAD ---
                 const fechaNacimientoInput = document.getElementById('fecha_nacimiento');
                 const edadInput = document.getElementById('edad');
                 if (fechaNacimientoInput && edadInput) { 
@@ -52,10 +133,52 @@
                         edadInput.value = edad >= 0 ? edad : '';
                     };
                     fechaNacimientoInput.addEventListener('change', calcularEdad);
-                    calcularEdad(); // Calcula la edad al cargar la página
+                    // No llamamos a calcularEdad() aquí porque el valor ya viene renderizado del servidor,
+                    // pero si prefieres recalcularlo en JS, descomenta la siguiente línea:
+                    // calcularEdad(); 
                 }
 
-                // --- Lógica del dentigrama ---
+                // --- D. LÓGICA DE GUARDADO (AJAX) ---
+                const patientEditForm = document.getElementById('patientEditForm');
+                const editSaveButton = document.getElementById('editSaveButton'); 
+                
+                if (patientEditForm && editSaveButton) {
+                    editSaveButton.addEventListener('click', async (event) => { 
+                        event.preventDefault(); 
+                        
+                        editSaveButton.disabled = true;
+                        const originalText = editSaveButton.textContent;
+                        editSaveButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
+                        
+                        try {
+                            const formData = new FormData(patientEditForm);
+                            // IMPORTANTE: Manejo del dentigrama si existe el input oculto
+                            const dentigramaInput = document.getElementById('dentigrama_url_input');
+                            if(dentigramaInput) {
+                                formData.set('dentigrama_canvas', dentigramaInput.value || '');
+                            }
+
+                            const response = await fetch(patientEditForm.action, { 
+                                method: 'POST', 
+                                body: formData 
+                            });
+                            
+                            const result = await response.json();
+                            
+                            if (!response.ok) throw new Error(result.error || 'Error del servidor');
+                            
+                            alert(result.message || "Paciente actualizado correctamente.");
+                            if (result.redirect_url) window.location.href = result.redirect_url;
+                            
+                        } catch (error) {
+                            alert("Error al actualizar: " + error.message);
+                            editSaveButton.disabled = false;
+                            editSaveButton.innerHTML = originalText;
+                        }
+                    });
+                }
+
+                // --- E. DENTIGRAMA ---
                 const dentigramaCollapse = document.getElementById('collapseDentigrama');
                 if (dentigramaCollapse) {
                     dentigramaCollapse.addEventListener('shown.bs.collapse', () => {
@@ -63,67 +186,6 @@
                     });
                 }
                 
-                // --- Lógica de guardado del formulario principal ---
-                const patientEditForm = document.getElementById('patientEditForm');
-                const editSaveButton = document.getElementById('editSaveButton'); 
-                if (patientEditForm && editSaveButton) {
-                    editSaveButton.addEventListener('click', async (event) => { 
-                        event.preventDefault(); 
-                        editSaveButton.disabled = true;
-                        editSaveButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
-                        try {
-                            const formData = new FormData(patientEditForm);
-                            const response = await fetch(patientEditForm.action, { method: 'POST', body: formData });
-                            const result = await response.json();
-                            if (!response.ok) throw new Error(result.error || 'Error del servidor');
-                            alert(result.message || "Paciente actualizado.");
-                            if (result.redirect_url) window.location.href = result.redirect_url;
-                        } catch (error) {
-                            alert("Error al actualizar: " + error.message);
-                        } finally {
-                            editSaveButton.disabled = false;
-                            editSaveButton.innerHTML = 'Guardar Cambios';
-                        }
-                    });
-                }
-
-                // --- Lógica de modal de evolución ---
-                const editEvolutionModal = document.getElementById('editEvolutionModal');
-                if (editEvolutionModal) {
-                    editEvolutionModal.addEventListener('show.bs.modal', (event) => { /* Tu lógica de modal aquí */ });
-                }
-
-                // --- LÓGICA DE MUNICIPIOS DINÁMICOS ---
-                const departamentoSelect = document.getElementById('codigo_dpto');
-                const municipioSelect = document.getElementById('codigo_mpio');
-                if (departamentoSelect && municipioSelect) {
-                    const todosLosMunicipios = JSON.parse('{{ municipios_json | safe }}');
-                    const municipioInicial = "{{ paciente.codigo_mpio or '' }}";
-                    
-                    const cargarMunicipios = (codigoDepto) => {
-                        municipioSelect.innerHTML = '<option value="">Seleccione un municipio</option>';
-                        municipioSelect.disabled = true;
-                        if (!codigoDepto) return;
-                        
-                        const municipiosFiltrados = todosLosMunicipios.filter(m => m.codigo_departamento === codigoDepto);
-                        if (municipiosFiltrados.length > 0) {
-                            municipioSelect.disabled = false;
-                            municipiosFiltrados.forEach(muni => {
-                                const option = document.createElement('option');
-                                option.value = muni.codigo;
-                                option.textContent = muni.nombre;
-                                if (muni.codigo === municipioInicial) {
-                                    option.selected = true;
-                                }
-                                municipioSelect.appendChild(option);
-                            });
-                        }
-                    };
-                    departamentoSelect.addEventListener('change', () => cargarMunicipios(departamentoSelect.value));
-                    if (departamentoSelect.value) {
-                        cargarMunicipios(departamentoSelect.value);
-                    }
-                }
             } catch (e) {
                 console.error("Error en el script de editar_paciente.html:", e);
             }
