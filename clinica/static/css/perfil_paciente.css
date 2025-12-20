@@ -121,7 +121,7 @@ body {
     word-break: break-word; 
 }
 .data-item .value.text-area {
-    white-space: pre-wrap;
+    white-space: normal;
     font-size: 14px;
     line-height: 1.6;
     background-color: #f8f9fa;
@@ -269,17 +269,13 @@ body {
     pointer-events: none; 
 }
 
-/* --- ¡MODIFICACIÓN CLAVE AQUÍ! Controlar la visibilidad de los .value.text-area --- */
-/* Por defecto, los text-area son visibles. */
 .data-item .value.text-area {
-    /* Puedes darle un min-height para que siempre tenga un recuadro visible */
-    min-height: 40px; /* <--- AJUSTAR AQUÍ: Altura mínima para que se vea el recuadro del campo */
-    background-color: #f8f9fa; /* Fondo gris claro para el recuadro */
-    border-radius: 8px; /* Bordes redondeados */
-    padding: 12px; /* Padding interno */
-    display: block; /* Asegura que ocupa su propia línea */
-    /* Otros estilos... */
-    transition: all 0.3s ease-out; /* Para una transición suave */
+    min-height: auto !important; /* Se ajusta al contenido */
+    padding: 0 !important;       /* Sin aire extra */
+    background-color: transparent !important; /* Sin fondo gris */
+    border: none !important;
+    display: block;
+    line-height: 1.2;
 }
 
 /* Cuando la sección está colapsada, OCULTAMOS EL TEXTO, pero mantenemos el recuadro */
@@ -419,3 +415,159 @@ body {
     margin-right: 12px; 
     color: #4b5563; 
 }
+
+/* =======================================================
+   MODO ULTRA-COMPACTO CORREGIDO (ANTECEDENTES)
+   ======================================================= */
+
+/* 1. Eliminamos huecos entre las filas de antecedentes */
+#antecedentes_alergias_section .data-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0px !important; 
+}
+
+/* 2. Ajustamos la fila: poco aire arriba/abajo */
+#antecedentes_alergias_section .data-item {
+    margin-bottom: 0px !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+    border-bottom: 1px solid #f0f0f0; 
+}
+
+/* 3. TÍTULO: Sin margen abajo */
+#antecedentes_alergias_section .data-item .label {
+    margin-bottom: 0px !important; 
+    padding-bottom: 0px !important;
+    line-height: 1 !important; 
+}
+
+/* 4. VALOR (Texto "Asma"): Sin margen arriba y bloque forzado */
+#antecedentes_alergias_section .data-item .value.text-area {
+    margin-top: 0px !important; 
+    padding-top: 0px !important;
+    padding-bottom: 0px !important;
+    min-height: auto !important;
+    line-height: 1.2 !important; /* Interlineado normal para que se lea bien */
+    display: block !important;   /* Clave para que obedezca los márgenes */
+}
+/* =======================================================
+   MODO ULTRA-COMPACTO PARA "MOTIVO DE CONSULTA"
+   ======================================================= */
+
+/* 1. Cambiamos Grid a Flex vertical y eliminamos huecos */
+#motivo_consulta_section .data-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0px !important; /* CERO espacio entre los campos */
+}
+
+/* 2. Reducimos la altura de cada fila individual */
+#motivo_consulta_section .data-item {
+    margin-bottom: 0px !important;  /* Sin separación inferior */
+    padding-top: 4px !important;    /* Mínimo aire arriba */
+    padding-bottom: 4px !important; /* Mínimo aire abajo */
+    border-bottom: 1px solid #f0f0f0; /* Línea separadora muy sutil */
+}
+
+/* 3. Pegamos el TÍTULO (Label) al texto */
+#motivo_consulta_section .data-item .label {
+    margin-bottom: 0px !important;
+    padding-bottom: 0px !important;
+    line-height: 1 !important;
+}
+
+/* 4. Pegamos el TEXTO (Valor) al título y aseguramos que no sea alto */
+#motivo_consulta_section .data-item .value.text-area {
+    margin-top: 0px !important;
+    padding-top: 0px !important;
+    padding-bottom: 0px !important;
+    min-height: auto !important; /* Altura automática (clave) */
+    background-color: transparent !important; /* Sin fondo gris */
+    border: none !important;
+}
+
+/* =======================================================
+   MODO ULTRA-COMPACTO PARA "HÁBITOS Y EXAMEN FÍSICO"
+   ======================================================= */
+
+/* 1. Quitamos espacios del contenedor principal */
+#habitos_examen_section .data-grid,
+#habitos_examen_section > div { /* Por si no usas data-grid aquí */
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0px !important;
+}
+
+/* 2. Reducimos el espacio de cada fila */
+#habitos_examen_section .mb-3,      /* Bootstrap usa esto para separar */
+#habitos_examen_section .data-item,
+#habitos_examen_section .form-group {
+    margin-bottom: 0px !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+    border-bottom: 1px solid #f0f0f0; /* Línea separadora muy fina */
+}
+
+/* 3. Estilizamos el Título (Label) para que sea pequeño y gris */
+/* Corrección de fuente para Hábitos */
+#habitos_examen_section label,
+#habitos_examen_section .label {
+    margin-bottom: 0px !important;
+    font-size: 13px !important;
+    
+    /* CAMBIOS AQUÍ: */
+    font-weight: 500 !important; /* Bajamos de 700 (negrita) a 500 (medio) o usa 400 para normal */
+    font-family: 'Roboto', sans-serif !important; /* Aseguramos que sea la misma letra de la web */
+    color: #6c757d !important; /* Un gris suave, no negro */
+    
+    text-transform: none;
+    line-height: 1 !important;
+}
+
+/* 4. Transformamos los CAMPOS (Inputs) en texto plano */
+#habitos_examen_section textarea,
+#habitos_examen_section input,
+#habitos_examen_section .form-control {
+    min-height: auto !important;  /* CRÍTICO: Elimina la altura forzada */
+    height: auto !important;      /* Se ajusta al texto */
+    padding: 0 !important;        /* Quita el relleno interno */
+    margin: 0 !important;
+    background-color: transparent !important; /* Quita el fondo gris */
+    border: none !important;      /* Quita el borde del recuadro */
+    box-shadow: none !important;
+    resize: none;                 /* Quita la esquina para arrastrar */
+    color: #212529 !important;    /* Color de texto normal */
+    font-size: 14px !important;
+}
+
+/* =======================================================
+   ESTILO: BOTÓN "MOSTRAR MÁS" A LA DERECHA (SIN DEGRADADO)
+   ======================================================= */
+
+/* 1. ELIMINAR LA NIEBLA (El degradado blanco) */
+.collapsible-section-content.collapsed::after {
+    display: none !important; /* Desaparece el efecto de desvanecido */
+    background: none !important;
+}
+
+/* 2. MOVER EL BOTÓN A LA DERECHA */
+.section-read-more-wrapper {
+    text-align: right !important; /* Alineación a la derecha */
+    margin-top: -15px !important; /* Lo subimos un poco para que quede compacto */
+    padding-right: 5px; /* Un pequeño margen para que no toque el borde */
+    position: relative;
+    z-index: 20;
+    pointer-events: none; /* Truco: permite seleccionar el texto que está debajo (si hubiera hueco) */
+}
+
+/* 3. ESTILO DEL BOTÓN (Para que sea clicable) */
+.toggle-read-more-btn {
+    pointer-events: auto; /* Reactivamos el clic solo en el botón */
+    background-color: rgba(255, 255, 255, 0.9); /* Un fondo blanco semitransparente sutil detrás del texto */
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px !important; /* Un poco más pequeño y elegante */
+    text-decoration: none;
+}
+

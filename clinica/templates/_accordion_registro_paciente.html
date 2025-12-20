@@ -318,37 +318,54 @@ El 'data-bs-parent' en los botones debe apuntar al ID del primer item para mante
 
     <!-- =========== SECCIÓN 3: ANTECEDENTES PERSONALES =========== -->
     <div class="accordion-item card-custom mb-3">
-        <h2 class="accordion-header" id="headingAntecedentes">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                data-bs-target="#collapseAntecedentes" aria-expanded="false" aria-controls="collapseAntecedentes">
-                <i data-lucide="file-text" class="accordion-icon"></i>
-                <strong>Antecedentes Personales</strong>
-            </button>
-        </h2>
-        {# data-bs-parent apunta al ID del primer accordion-item. #}
-        <div id="collapseAntecedentes" class="accordion-collapse collapse" aria-labelledby="headingAntecedentes"
-            data-bs-parent="#accordionRegistroPaciente">
-            <div class="accordion-body">
-                <div class="row">
-                    {{ render_campo_textarea('Motivo de Consulta', 'motivo_consulta', paciente) }}
-                    {{ render_campo_textarea('Enfermedad Actual', 'enfermedad_actual', paciente) }}
-                    {{ render_campo_textarea('Antecedentes Personales', 'antecedentes_personales', paciente) }}
-                    {{ render_campo_textarea('Antecedentes Familiares', 'antecedentes_familiares', paciente) }}
-                    {{ render_campo_textarea('Antecedentes Quirúrgicos', 'antecedentes_quirurgicos', paciente) }}
-                    {{ render_campo_textarea('Antecedentes Hemorrágicos', 'antecedentes_hemorragicos', paciente) }}
-                    {{ render_campo_textarea('Farmacológicos', 'farmacologicos', paciente) }}
-                    {{ render_campo_textarea('Reacción a Medicamentos', 'reaccion_medicamentos', paciente) }}
-                    {{ render_campo_textarea('Alergias', 'alergias', paciente) }}
-                    {{ render_campo_textarea('Hábitos', 'habitos', paciente) }}
-                    {{ render_campo_textarea('Cepillado', 'cepillado', paciente) }}
-                    {{ render_campo_textarea('Examen Físico', 'examen_fisico', paciente) }}
-                    {{ render_campo_textarea('Última Visita al Odontólogo', 'ultima_visita_odontologo', paciente) }}
-                    {{ render_campo_textarea('Plan de Tratamiento', 'plan_tratamiento', paciente) }}
-                    {{ render_campo_textarea('Observaciones', 'observaciones', paciente) }}
-                </div>
+    <h2 class="accordion-header" id="headingAntecedentes">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+            data-bs-target="#collapseAntecedentes" aria-expanded="false" aria-controls="collapseAntecedentes">
+            <i data-lucide="file-text" class="accordion-icon"></i>
+            <strong>Antecedentes Personales</strong>
+        </button>
+    </h2>
+    <div id="collapseAntecedentes" class="accordion-collapse collapse" aria-labelledby="headingAntecedentes"
+        data-bs-parent="#accordionRegistroPaciente">
+        <div class="accordion-body">
+            
+            <div class="row mb-3">
+                {# FILA 1: Todo con render_campo (Input simple) #}
+                {{ render_campo('Motivo de Consulta', 'motivo_consulta', paciente) }}
+                {{ render_campo('Enfermedad Actual', 'enfermedad_actual', paciente) }}
+                {{ render_campo('Antecedentes Personales', 'antecedentes_personales', paciente) }}
+                {{ render_campo('Antecedentes Familiares', 'antecedentes_familiares', paciente) }}
             </div>
+            
+            <div class="row mb-3">
+                {# FILA 2 #}
+                {{ render_campo('Antecedentes Quirúrgicos', 'antecedentes_quirurgicos', paciente) }}
+                {{ render_campo('Antecedentes Hemorrágicos', 'antecedentes_hemorragicos', paciente) }}
+                {{ render_campo('Farmacológicos', 'farmacologicos', paciente) }}
+                {{ render_campo('Reacción a Medicamentos', 'reaccion_medicamentos', paciente) }}
+            </div>
+
+            <div class="row mb-3">
+                {# FILA 3 #}
+                {{ render_campo('Alergias', 'alergias', paciente) }}
+                {{ render_campo('Hábitos', 'habitos', paciente) }}
+                {{ render_campo('Cepillado', 'cepillado', paciente) }}
+                {{ render_campo('Examen Físico', 'examen_fisico', paciente) }}
+            </div>
+            
+            <div class="row mb-3">
+                {# FILA 4: Incluimos Observaciones aquí para que sea igual al resto #}
+                {{ render_campo('Última Visita Odontólogo', 'ultima_visita_odontologo', paciente) }}
+                {{ render_campo('Plan de Tratamiento', 'plan_tratamiento', paciente) }}
+                {{ render_campo('Observaciones', 'observaciones', paciente) }}
+                
+                {# Div vacío para completar la cuadrícula de 4 columnas estéticamente #}
+                <div class="col-md-3"></div>
+            </div>
+
         </div>
     </div>
+</div>
     <!-- =========== SECCIÓN 4: DENTIGRAMA =========== -->
     <div class="accordion-item card-custom mb-3" id="dentigramaAccordionItem"> {# <-- ¡NUEVO ID AQUÍ! #} <h2
             class="accordion-header" id="headingDentigrama">

@@ -67,21 +67,16 @@
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='white'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
 }
 
-/* --- ESTILOS PARA LOS TEXTAREA EN FORMULARIOS --- */
-
-/* 1. Definimos un tamaño inicial más pequeño */
+/* En formularios.css */
 .accordion-body textarea.form-control {
-    /* min-height: 80px; /* ELIMINA o COMENTA esta línea */
-    /* height: 80px;     /* ELIMINA o COMENTA esta línea */
-    
-    /* En su lugar, vamos a definir un min-height más adecuado
-       y permitir que el "rows" del HTML (ahora 1) controle la altura inicial. */
-    min-height: 2.5em; /* Una altura mínima más compacta, aprox. 1.5 líneas */
-                       /* Puedes probar con 2.2em o 2em si quieres que sea aún más compacto. */
-    height: auto;      /* Asegura que no tenga una altura fija y se ajuste al contenido/rows */
-    padding: 0.4rem 0.75rem; /* Ajusta el padding vertical para ser más compacto */
-    line-height: 1.4;        /* Ajusta la altura de línea */
-    resize: vertical; /* Mantener para que el usuario pueda redimensionar */
+    min-height: auto !important; /* <--- CAMBIO CLAVE: "auto" ajusta la altura al contenido real */
+    height: auto !important;
+    padding: 0 !important;       /* <--- CAMBIO CLAVE: Quita el relleno para que se vea fino */
+    margin: 0 !important;
+    line-height: 1.2;
+    background-color: transparent; /* Opcional: Si quieres quitar el gris también aquí */
+    border: none;                  /* Opcional: Si quieres quitar el borde */
+    resize: none;
 }
 
 /* 2. Opcional: un estilo más sutil para la barra de redimensionamiento */
@@ -107,4 +102,71 @@ fieldset.border legend {
     width: 100%;
     border-bottom: 1px solid #f0f0f0;
 }
+/* =======================================================
+   SALVAVIDAS DE EDICIÓN: RESTAURAR CAMPOS INPUT/TEXTAREA
+   ======================================================= */
+/* Esto asegura que, sin importar cuán compacta sea la vista de lectura,
+   cuando aparezca un campo para ESCRIBIR, tenga tamaño normal. */
 
+/* Regla maestra para todos los inputs y textareas dentro de las secciones */
+#motivo_consulta_section textarea,
+#motivo_consulta_section input:not([type="hidden"]),
+#antecedentes_alergias_section textarea,
+#antecedentes_alergias_section input:not([type="hidden"]),
+#habitos_examen_section textarea,
+#habitos_examen_section input:not([type="hidden"]),
+.form-control { /* Clase de Bootstrap para inputs */
+    
+    /* Restauramos la altura y visibilidad */
+    min-height: 38px !important;  /* Altura mínima estándar para escribir */
+    height: auto !important;
+    padding: 8px 12px !important; /* Relleno interno necesario para ver el cursor */
+    
+    /* Restauramos la apariencia de campo editable */
+    background-color: #ffffff !important; /* Fondo blanco */
+    border: 1px solid #ced4da !important; /* Borde gris clásico */
+    border-radius: 6px !important;
+    
+    /* Restauramos márgenes para que no se peguen al editar */
+    margin-top: 5px !important;
+    margin-bottom: 10px !important;
+    
+    /* Aseguramos que el texto sea visible */
+    color: #212529 !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* =======================================================
+   ESCUDO DE PROTECCIÓN PARA EL MODO EDICIÓN
+   ======================================================= */
+/* Usamos el ID específico del formulario de edición (#patientEditForm) 
+   para ganar prioridad sobre cualquier estilo genérico de "lectura". */
+
+#patientEditForm textarea,
+#patientEditForm input.form-control,
+#patientEditForm select.form-select {
+    /* 1. Restaurar visibilidad y tamaño */
+    min-height: 38px !important;    /* Altura estándar de Bootstrap */
+    height: auto !important;
+    opacity: 1 !important;          /* Asegurar que sea visible */
+    visibility: visible !important;
+    display: block !important;      /* Asegurar que ocupe espacio */
+
+    /* 2. Restaurar apariencia de campo editable */
+    padding: 10px 15px !important;  /* Relleno cómodo para escribir */
+    background-color: #ffffff !important;
+    border: 1px solid #ced4da !important;
+    color: #212529 !important;      /* Texto negro */
+    
+    /* 3. Restaurar márgenes */
+    margin-bottom: 15px !important;
+}
+
+/* Caso especial para textareas grandes (como Evolución o Motivo) */
+#patientEditForm textarea {
+    min-height: 80px !important; /* Un poco más alto para párrafos */
+}

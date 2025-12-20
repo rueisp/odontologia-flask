@@ -1,8 +1,7 @@
-{# clinica/templates/_componentes_paciente.html (FINAL, SIN LÓGICA DE FECHA EN JINJA) #}
+{# clinica/templates/_componentes_paciente.html (CORREGIDO) #}
 
 {% macro render_campo(label, field_name, paciente=None, editable=True, type='text', readonly=false, required=false, pattern=None, title=None) %}
     {% if editable %}
-        <!-- MODO EDICIÓN (para registrar_paciente.html y editar_paciente.html) -->
         <div class="col-md-3">
             <label for="{{ field_name }}" class="form-label">
                 {{ label }}
@@ -13,12 +12,13 @@
                 class="form-control"
                 id="{{ field_name }}"
                 name="{{ field_name }}"
-                value="{% if request.form[field_name] is not none and request.form[field_name] != '' %}
-                           {{ request.form[field_name] }}
-                       {% elif paciente %}
-                           {# Usamos get_attr. El valor de fecha YA DEBE VENIR FORMATEADO COMO CADENA desde Python. #}
-                           {{ get_attr(paciente, field_name, '') }} 
-                       {% endif %}"
+                {# LÓGICA DE VALOR CORREGIDA #}
+                value="{%- if request.form.get(field_name) -%}
+                           {{ request.form.get(field_name) }}
+                       {%- elif paciente -%}
+                           {# Intenta obtener atributo de objeto o clave de diccionario #}
+                           {{ (paciente[field_name] if paciente is mapping else paciente|attr(field_name)) | default('', true) }}
+                       {%- endif -%}"
                 {% if readonly %}readonly{% endif %}
                 {% if required %}required{% endif %}
                 {% if pattern %}pattern="{{ pattern }}"{% endif %}
@@ -26,14 +26,12 @@
             >
         </div>
     {% else %}
-        <!-- MODO SOLO LECTURA (para mostrar_paciente.html) -->
         <div class="data-item">
             <span class="label">{{ label }}</span>
             <span class="value">
                 {% if paciente %}
-                    {# Aquí paciente es un diccionario y el valor ya está formateado desde Python #}
-                    {# NO SE HACE NINGUNA COMPROBACIÓN DE FECHA NI STRFTIME EN JINJA #}
-                    {{ paciente.get(field_name, 'N/A') }} 
+                    {# Intenta obtener como diccionario o atributo #}
+                    {{ (paciente.get(field_name) if paciente is mapping else paciente|attr(field_name)) | default('N/A', true) }}
                 {% else %}
                     N/A
                 {% endif %}
@@ -43,36 +41,40 @@
 {% endmacro %}
 
 
-{% macro render_campo_textarea(label, field_name, paciente=None, editable=True, rows=1, readonly=false, required=false) %}
+{# templates/_componentes_paciente.html #}
+
+{% macro render_campo(label, field_name, paciente=None, editable=True, type='text', readonly=false, required=false, pattern=None, title=None) %}
     {% if editable %}
-        <!-- MODO EDICIÓN -->
-        <div class="col-md-6 mb-3">
+        <div class="col-md-3">
             <label for="{{ field_name }}" class="form-label">
                 {{ label }}
                 {% if required %}<span class="text-danger">*</span>{% endif %}
             </label>
-            <textarea
+            <input
+                type="{{ type }}"
                 class="form-control"
                 id="{{ field_name }}"
                 name="{{ field_name }}"
-                rows="{{ rows }}"
+                {# AGREGADO: | trim para eliminar espacios vacíos al inicio y final #}
+                value="{%- if request.form.get(field_name) -%}
+                           {{ request.form.get(field_name) | trim }}
+                       {%- elif paciente -%}
+                           {{ (paciente[field_name] if paciente is mapping else paciente|attr(field_name)) | default('', true) | trim }}
+                       {%- endif -%}"
                 {% if readonly %}readonly{% endif %}
                 {% if required %}required{% endif %}
-            >{% if request.form[field_name] is not none and request.form[field_name] != '' %}
-                {{ request.form[field_name] }}
-             {% elif paciente %}
-                {{ get_attr(paciente, field_name, '') }}
-             {% endif %}</textarea>
+                {% if pattern %}pattern="{{ pattern }}"{% endif %}
+                {% if title %}title="{{ title }}"{% endif %}
+            >
         </div>
     {% else %}
-        <!-- MODO SOLO LECTURA -->
         <div class="data-item">
             <span class="label">{{ label }}</span>
-            <span class="value text-area">
+            <span class="value">
                 {% if paciente %}
-                    {{ paciente.get(field_name, 'No especificado') }}
+                    {{ (paciente.get(field_name) if paciente is mapping else paciente|attr(field_name)) | default('N/A', true) }}
                 {% else %}
-                    No especificado
+                    N/A
                 {% endif %}
             </span>
         </div>
