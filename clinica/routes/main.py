@@ -7,6 +7,7 @@ from clinica.utils import get_index_panel_data
 # Importamos los modelos
 from clinica.models import Cita, Paciente, Factura, Usuario
 from clinica import db
+from sqlalchemy import func, extract
 
 main_bp = Blueprint('main', __name__)
 
@@ -25,10 +26,19 @@ def index():
         current_app.logger.error(f"Error panel: {e}")
         panel_data = {}
 
-    # 3. Facturas Recientes
+    # 3. Facturas Recientes (CORREGIDO CON FILTRO DE USUARIO)
     facturas_recientes = []
     try:
-        facturas_db = Factura.query.order_by(Factura.fecha_factura.desc()).limit(5).all()
+        # Iniciamos la consulta base
+        query_facturas = Factura.query.join(Paciente)
+
+        # Si NO es admin, filtramos para ver solo las facturas de SUS pacientes
+        if not current_user.is_admin:
+            query_facturas = query_facturas.filter(Paciente.odontologo_id == current_user.id)
+        
+        # Ordenamos por fecha descendente y tomamos las 5 últimas
+        facturas_db = query_facturas.order_by(Factura.fecha_factura.desc()).limit(5).all()
+
         for f in facturas_db:
             paciente_nombre = "Desconocido"
             if f.paciente:
@@ -39,11 +49,13 @@ def index():
                 'paciente_id': f.paciente_id,
                 'nombre_paciente': paciente_nombre,
                 'fecha_obj': f.fecha_factura,
-                'citas_count': f.citas.count(),
+                # Usamos f.citas.count() con paréntesis porque es una relación dinámica
+                'citas_count': f.citas.count(), 
                 'total': f.valor_total
             })
     except Exception as e:
         current_app.logger.error(f"Error facturas: {e}")
+
 
     # 4. Estadísticas de plan y límites
     from clinica.services.plan_service import PlanService
@@ -210,6 +222,48 @@ def perfil():
         return redirect(url_for('main.perfil'))
 
     return render_template('perfil.html', usuario=usuario_a_editar)
+
+@main_bp.route('/ingresos')
+@login_required
+def ver_ingresos():
+    # 1. Definir fechas actuales
+    local_timezone = pytz.timezone('America/Bogota')
+    ahora = datetime.now(local_timezone)
+    mes_actual = ahora.month
+    anio_actual = ahora.year
+    nombre_mes = ahora.strftime('%B') # Nombre del mes (ej: December)
+
+    # 2. Calcular el TOTAL ganado este mes (Suma de Facturas)
+    # Hacemos JOIN con Paciente para asegurar que sean facturas de TUS pacientes
+    total_mes_consulta = db.session.query(func.sum(Factura.valor_total))\
+        .join(Paciente)\
+        .filter(
+            Paciente.odontologo_id == current_user.id,
+            extract('month', Factura.fecha_factura) == mes_actual,
+            extract('year', Factura.fecha_factura) == anio_actual
+        )
+    
+    # Si devuelve None (no hay facturas), lo convertimos a 0
+    total_ingresos_mes = total_mes_consulta.scalar() or 0.0
+
+    # 3. Obtener el detalle de las facturas de este mes para mostrarlas en lista
+    facturas_mes = Factura.query.join(Paciente)\
+        .filter(
+            Paciente.odontologo_id == current_user.id,
+            extract('month', Factura.fecha_factura) == mes_actual,
+            extract('year', Factura.fecha_factura) == anio_actual
+        )\
+        .order_by(Factura.fecha_factura.desc())\
+        .all()
+
+    return render_template(
+        'ingresos.html', 
+        total_ingresos_mes=total_ingresos_mes,
+        facturas_mes=facturas_mes,
+        nombre_mes=nombre_mes,
+        anio_actual=anio_actual
+    )
+
 
 # Debug de rutas
 @main_bp.route('/debug-rutas')

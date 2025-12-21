@@ -20,3 +20,13 @@ primary_region = 'gru'
   memory = '1gb'
   cpu_kind = 'shared'
   cpus = 1
+
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+
+# ▼▼▼ AGREGA ESTO AL FINAL ▼▼▼
+[deploy]
+  release_command = "flask db upgrade"

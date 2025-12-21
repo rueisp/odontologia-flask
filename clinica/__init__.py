@@ -130,6 +130,10 @@ def create_app():
         from .routes.procedimientos import procedimientos_bp
         from .routes.api import api_bp
         from .routes.planes import planes_bp
+        from clinica.routes.procedimientos_ajax import procedimientos_ajax_bp
+
+
+
 
         app.register_blueprint(main_bp)
         app.register_blueprint(pacientes_bp)
@@ -144,6 +148,7 @@ def create_app():
         app.register_blueprint(procedimientos_bp)
         app.register_blueprint(api_bp)
         app.register_blueprint(planes_bp)
+        app.register_blueprint(procedimientos_ajax_bp)
 
         @app.route('/awake')
         def awake():

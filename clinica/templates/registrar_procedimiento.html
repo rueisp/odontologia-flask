@@ -4,22 +4,22 @@
 
 {% block content %}
 <div class="container mx-auto p-6">
-    <div class="bg-white p-8 rounded-xl shadow-lg max-w-2xl mx-auto">
+    <div class="bg-white p-8 rounded-xl shadow-lg max-w-2xl mx-auto relative">
 
         <h1 class="text-3xl font-bold text-gray-800 mb-2">Registrar Procedimiento</h1>
         <p class="text-gray-600 mb-6">
             Para la cita del <span class="font-semibold">{{ cita.fecha.strftime('%d/%m/%Y') }}</span>
-            para el paciente <span class="font-semibold">{{ cita.paciente.nombre_completo if cita.paciente else
-                cita.paciente_nombres_str }}</span>.
+            del paciente <span class="font-semibold">{{ cita.paciente.nombre_completo if cita.paciente else cita.paciente_nombres_str }}</span>.
         </p>
 
         <form method="POST" action="{{ url_for('procedimientos.registrar_procedimiento', cita_id=cita.id) }}"
-            class="space-y-6">
+            class="space-y-6" autocomplete="off">
 
             <div>
                 <label for="codigo_cups" class="block text-sm font-medium text-gray-700">Código CUPS (*)</label>
                 <input type="text" id="codigo_cups" name="codigo_cups" required
-                    value="{{ form_data.get('codigo_cups', '') }}" placeholder="Ej: 237101 (Detartraje Supragingival)"
+                    value="{{ form_data.get('codigo_cups', '') }}" 
+                    placeholder="Escribe código o nombre (ej: Detartraje)"
                     class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
             </div>
 
@@ -28,7 +28,7 @@
                     CIE-10 (*)</label>
                 <input type="text" id="diagnostico_cie10" name="diagnostico_cie10" required
                     value="{{ form_data.get('diagnostico_cie10', '') }}"
-                    placeholder="Ej: K036 (Depósitos en los dientes)"
+                    placeholder="Escribe código o nombre (ej: Caries)"
                     class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
             </div>
 
@@ -46,7 +46,7 @@
                         <span class="text-gray-500 sm:text-sm">$</span>
                     </div>
                     <input type="number" id="valor" name="valor" step="0.01" required
-                        value="{{ form_data.get('valor', '') }}" placeholder="50000"
+                        value="{{ form_data.get('valor', '') }}" placeholder="0"
                         class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 pl-7 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                 </div>
             </div>
@@ -67,13 +67,17 @@
 </div>
 
 <script src="{{ url_for('static', filename='js/autocomplete.js') }}"></script>
+
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        
         // Autocomplete para CUPS
         const cupsInput = document.getElementById('codigo_cups');
         new Autocomplete(cupsInput, {
-            apiUrl: '/api/cups/search',
-            valueField: 'code',
+            // Esta ruta debe coincidir con procedimientos_ajax.py
+            apiUrl: '/api/procedimientos/buscar_cups', 
+            // 'val' es lo que devuelve mi Python en el diccionario json
+            valueField: 'val',  
             labelField: 'label',
             onSelect: function (item) {
                 console.log('CUPS seleccionado:', item);
@@ -83,8 +87,9 @@
         // Autocomplete para CIE-10
         const cie10Input = document.getElementById('diagnostico_cie10');
         new Autocomplete(cie10Input, {
-            apiUrl: '/api/cie10/search',
-            valueField: 'codigo',
+             // Esta ruta debe coincidir con procedimientos_ajax.py
+            apiUrl: '/api/procedimientos/buscar_cie10',
+            valueField: 'val',
             labelField: 'label',
             onSelect: function (item) {
                 console.log('CIE-10 seleccionado:', item);

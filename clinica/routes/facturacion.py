@@ -1,7 +1,7 @@
 # clinica/routes/facturacion.py
 
 from flask import Blueprint, request, redirect, url_for, flash
-from flask_login import login_required
+from flask_login import login_required, current_user
 from datetime import datetime
 import pytz
 # Importamos las herramientas y modelos necesarios
@@ -21,6 +21,11 @@ def crear_factura_para_paciente(paciente_id):
     """
     # 1. Buscamos al paciente para asegurarnos de que existe
     paciente = Paciente.query.get_or_404(paciente_id)
+
+    # SEGURIDAD: Verificar que el paciente pertenezca al odontólogo actual
+    if not current_user.is_admin and paciente.odontologo_id != current_user.id:
+        flash('No tienes permiso para facturar a este paciente.', 'danger')
+        return redirect(url_for('main.index'))
     
     # 2. Buscamos todas las citas de este paciente que NO tienen una factura asignada
     # Buscamos todas las citas de este paciente que NO tienen una factura asignada
@@ -33,21 +38,29 @@ def crear_factura_para_paciente(paciente_id):
         return redirect(url_for('calendario.historial_citas_paciente', paciente_id=paciente_id))
     # ▲▲▲ ¡FIN DEL BLOQUE IMPORTANTE! ▲▲▲
     try:
-        # 4. Si hay citas, creamos la nueva factura
+        # 4. CALCULAR EL VALOR TOTAL (NUEVO)
+        # ------------------------------------------------------------------
+        # Recorremos las citas que vamos a facturar y sumamos sus procedimientos
+        total_factura = 0.0
         
-        # Generamos un número de factura único. Para RIPS, esto es solo un identificador.
-        # Una forma simple es usar el ID del paciente y la fecha/hora actual.
+        for cita in citas_a_facturar:
+            # 'procedimientos' es la relación que definimos en models.py
+            for proc in cita.procedimientos:
+                # Sumamos el valor (usamos (proc.valor or 0) por seguridad si alguno está vacío)
+                total_factura += (proc.valor or 0.0)
+        # ------------------------------------------------------------------
+
+        # Generamos un número de factura único.
         numero_factura_generado = f"FACT-{paciente.id}-{int(datetime.now().timestamp())}"
 
         nueva_factura = Factura(
             numero_factura=numero_factura_generado,
             fecha_factura=datetime.now(pytz.utc),
             paciente_id=paciente.id,
-            valor_total=0.0  # TODO: Más adelante, aquí podrías sumar los costos de cada cita/procedimiento
+            valor_total=total_factura  # <--- ¡AQUÍ ASIGNAMOS LA SUMA REAL!
         )
 
         # 5. Guardamos la nueva factura en la base de datos PRIMERO
-        #    Hacemos esto para que la base de datos le asigne un 'id'.
         db.session.add(nueva_factura)
         db.session.commit()
 
@@ -58,7 +71,8 @@ def crear_factura_para_paciente(paciente_id):
         # 7. Guardamos los cambios en las citas
         db.session.commit()
 
-        flash(f'Factura {nueva_factura.numero_factura} creada exitosamente, agrupando {len(citas_a_facturar)} citas.', 'success')
+        # Mensaje de éxito mostrando el valor formateado (ej: $50,000)
+        flash(f'Factura {nueva_factura.numero_factura} creada por valor de ${total_factura:,.0f}', 'success')
 
     except Exception as e:
         db.session.rollback() # Si algo falla, deshacemos los cambios

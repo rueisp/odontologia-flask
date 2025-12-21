@@ -100,6 +100,7 @@
                     <a href="{{ url_for('calendario.mostrar_calendario') }}" class="block p-3 rounded-2xl text-gray-600 hover:bg-black hover:text-white transition-all duration-200 flex items-center hover:shadow-md"><i data-lucide="calendar-days" class="w-5 h-5 inline-block mr-3"></i> Calendario</a>
                     <a href="{{ url_for('reportes.vista_reportes') }}" class="block p-3 rounded-2xl text-gray-600 hover:bg-black hover:text-white transition-all duration-200 flex items-center hover:shadow-md"><i data-lucide="file-text" class="w-5 h-5 mr-3"></i> Reportes</a>
                     <a href="{{ url_for('papelera.ver_papelera') }}" class="block p-3 rounded-2xl text-gray-600 hover:bg-black hover:text-white transition-all duration-200 flex items-center hover:shadow-md"><i data-lucide="trash-2" class="w-5 h-5 inline-block mr-3"></i> Papelera</a>
+                    <a href="{{ url_for('main.ver_ingresos') }}" class="block p-3 rounded-2xl text-gray-600 hover:bg-black hover:text-white transition-all duration-200 flex items-center hover:shadow-md"><i data-lucide="wallet" class="w-5 h-5 inline-block mr-3"></i> Ingresos</a>
                 </div>
                 <hr class="my-6 border-gray-300">
                 <div class="space-y-2">
@@ -263,17 +264,15 @@
                                         <p class="text-xs text-gray-500">
                                             <span class="font-bold text-gray-800">{{ factura.citas_count }}</span> cita(s)
                                         </p>
-                                        {% if factura.total %}
-                                        <span class="text-xs font-bold text-green-700 bg-green-100/80 px-3 py-1 rounded-full">
-                                            ${{ "{:,.0f}".format(factura.total) }}
+                                        
+                                        <span class="text-xs font-bold text-green-700 bg-green-100/80 px-3 py-1 rounded-full border border-green-200">
+                                            ${{ "{:,.0f}".format(factura.total or 0) }}
                                         </span>
-                                        {% endif %}
-                                    </div>
+                                        </div>
                                 </li>
                                 {% endfor %}
                             </ul>
                             {% else %}
-                            <!-- Estado vacío -->
                             <div class="px-6 py-10 text-center text-gray-500">
                                 <i data-lucide="info" class="w-10 h-10 text-gray-400 mx-auto mb-3 opacity-60"></i>
                                 <p class="text-base font-medium">No hay facturas recientes.</p>
