@@ -200,7 +200,7 @@ def registrar_cita():
             form_values.update({
                 'paciente_preseleccionado_id': paciente_id_seleccionado,
                 'paciente_preseleccionado_nombre': request.form.get('paciente_busqueda_input', ''),
-                'paciente_nombres_val': nombres_pac_form,
+                'paciente_nonueva_cita = Citambres_val': nombres_pac_form,
                 'paciente_apellidos_val': apellidos_pac_form,
                 'paciente_telefono_val': telefono_pac_form,
                 'fecha_val': fecha_str, 'hora_val': hora_str, 'doctor_val': doctor_form,
@@ -224,6 +224,7 @@ def registrar_cita():
                 doctor=doctor_form,
                 motivo=motivo_form or None,
                 observaciones=observaciones_form or None,
+                odontologo_id=current_user.id,  # <--- ¡ESTO ES LO QUE FALTABA!
                 paciente_id=None,
                 paciente_nombres_str=None,
                 paciente_apellidos_str=None,

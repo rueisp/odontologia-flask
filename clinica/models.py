@@ -171,6 +171,8 @@ class Cita(db.Model):
     hora = db.Column(db.Time, nullable=False)
     motivo = db.Column(db.String(255), nullable=True)
     doctor = db.Column(db.String(100), nullable=False)
+    odontologo_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
+    odontologo = db.relationship('Usuario', backref='citas')
     observaciones = db.Column(db.Text, nullable=True)
     estado = db.Column(db.String(20), default='pendiente', nullable=False)
     factura_id = db.Column(db.Integer, db.ForeignKey('facturas.id'), nullable=True)

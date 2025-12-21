@@ -49,38 +49,34 @@ def index():
     from clinica.services.plan_service import PlanService
     estadisticas_plan = PlanService.obtener_estadisticas_usuario(current_user.id)    
 
-    # =======================================================
-    # 5. CONTADOR SEMANAL (NUEVO CÓDIGO)
+# =======================================================
+    # 5. CONTADOR SEMANAL (CORREGIDO)
     # =======================================================
     try:
         # A. Calcular rango de la semana (Lunes a Domingo)
         hoy_date = now_in_local_tz.date()
-        inicio_semana = hoy_date - timedelta(days=hoy_date.weekday()) # Lunes de esta semana
-        fin_semana = inicio_semana + timedelta(days=6) # Domingo de esta semana
+        inicio_semana = hoy_date - timedelta(days=hoy_date.weekday()) # Lunes
+        fin_semana = inicio_semana + timedelta(days=6) # Domingo
 
-        # B. Convertir a datetime para cubrir todo el día (00:00 a 23:59)
-        fecha_inicio_dt = datetime.combine(inicio_semana, time.min)
-        fecha_fin_dt = datetime.combine(fin_semana, time.max)
-
-        # C. Construir consulta
+        # B. Construir consulta (COMPARANDO FECHA vs FECHA)
         query_semana = Cita.query.filter(
-            Cita.fecha >= fecha_inicio_dt,
-            Cita.fecha <= fecha_fin_dt, 
+            Cita.fecha >= inicio_semana, 
+            Cita.fecha <= fin_semana, 
             Cita.is_deleted == False
         )
 
-        # D. Si no es admin, filtrar solo sus propias citas
+        # C. Si no es admin, filtrar solo sus propias citas
+        # El usuario "admin_test" verá sus citas si tiene is_admin=False
         if not current_user.is_admin:
             query_semana = query_semana.filter(Cita.odontologo_id == current_user.id)
 
-        # E. Obtener el número
+        # D. Obtener el número
         total_citas_semana = query_semana.count()
     
     except Exception as e:
         current_app.logger.error(f"Error calculando citas semanales: {e}")
         total_citas_semana = 0
     # =======================================================
-
 
     # Retorno limpio con la nueva variable
     return render_template(
