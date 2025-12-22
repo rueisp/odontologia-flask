@@ -227,4 +227,34 @@ def delete_from_cloudinary(url):
     current_app.logger.debug("CLOUDINARY_DELETE_DEBUG: URL de imagen vacía o None, no hay nada que borrar.") # <-- NUEVO LOG
     return False # La URL estaba vacía
 
-# ... (resto de tu utils.py) ...
+
+# =========================================================================
+# === FUNCIONES DE LIMPIEZA PARA RIPS Y REPORTES ===
+# =========================================================================
+
+def limpiar_texto_rips(texto, longitud_max=None):
+    """
+    Sanitiza un texto para ser usado en archivos planos (CSV/TXT).
+    1. Elimina comas (reemplaza por espacios).
+    2. Elimina saltos de línea.
+    3. Elimina espacios dobles.
+    4. Trunca a longitud máxima si se especifica.
+    """
+    if not texto:
+        return ""
+    
+    # Asegurar que es string
+    texto_limpio = str(texto)
+    
+    # Reemplazar caracteres peligrosos para CSV
+    texto_limpio = texto_limpio.replace(',', ' ').replace(';', ' ')
+    texto_limpio = texto_limpio.replace('\r\n', ' ').replace('\n', ' ')
+    
+    # Eliminar espacios dobles y espacios al inicio/final
+    texto_limpio = " ".join(texto_limpio.split())
+    
+    # Truncar si es necesario
+    if longitud_max and len(texto_limpio) > longitud_max:
+        texto_limpio = texto_limpio[:longitud_max]
+        
+    return texto_limpio
