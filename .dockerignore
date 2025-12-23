@@ -1,72 +1,35 @@
-# flyctl launch added from .gitignore
-# # Entornos Virtuales
-# Ignora la carpeta del entorno virtual, sea cual sea su nombre.
-**\env
-**\venv
-**\.venv
-**\*\env
-**\*\venv
-**\*\.venv
+# --- Control de Versiones y Git ---
+.git
+.gitignore
+.github
 
-# # Archivos de Caché y Binarios de Python
-# Las carpetas __pycache__ se generan automáticamente.
-**\__pycache__
-**\*.pyc
-**\*.pyo
-**\*.pyd
+# --- Python y Entornos Virtuales ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+venv/
+.venv/
 
-# # Archivos de Configuración Sensibles
-# ¡¡MUY IMPORTANTE!! Nunca subir archivos con secretos.
-**\.env
-**\*.env
-**\.env.*
+# --- Variables de Entorno y Secretos (SEGURIDAD) ---
+.env
+.env.*
+.flaskenv
 
-# La carpeta 'instance' de Flask a menudo contiene configuraciones de producción.
-instance
+# --- Base de Datos e Instancia ---
+instance/
+*.sqlite3
+*.db
 
-# # Archivos de Dependencias y Construcción
-# Generados por pip y setuptools.
-**\*.egg-info
-**\dist
-**\build
-**\*.egg
+# --- Archivos de Sistema y Editor ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
 
-# # Archivos de Bases de Datos Locales
-# Si alguna vez usas SQLite para pruebas rápidas.
-**\*.db
-**\*.sqlite3
-
-# # Archivos de Registro (Logs)
-# Los archivos de log no deben estar en el repositorio.
-**\*.log
-**\logs
-
-# # Archivos del Sistema Operativo
-# Ignorar archivos específicos de macOS, Windows y Linux.
-**\.DS_Store
-**\Thumbs.db
-**\desktop.ini
-
-# # Archivos de Editores y IDEs
-# Configuraciones personales de Visual Studio Code.
-**\.vscode
-# .idea/ (para PyCharm)
-
-# # Archivos de Pruebas
-# Informes de cobertura de pruebas.
-**\.coverage
-**\htmlcov
-**\.pytest_cache
-
-# flyctl launch added from .pytest_cache\.gitignore
-# Created by pytest automatically.
-.pytest_cache\**\*
-
-# flyctl launch added from env\.gitignore
-# Created by venv; see https://docs.python.org/3/library/venv.html
-env\**\*
-
-# flyctl launch added from venv\.gitignore
-# Created by venv; see https://docs.python.org/3/library/venv.html
-venv\**\*
+# --- Otros ---
+Dockerfile
+.dockerignore
 fly.toml
+tests/
