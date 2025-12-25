@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dentigrama Profesional V6 (Final)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
+        
+        .dentigrama-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            max-width: 1200px;
+            margin: 20px auto;
+            text-align: center;
+        }
+
+        h2 { color: #333; font-weight: 700; }
+
+        /* --- SVG --- */
+        svg {
+            background-color: #fff; max-width: 100%; height: auto; user-select: none; overflow: visible; 
+        }
+
+        .diente-group { cursor: pointer; }
+        .diente-numero { font-size: 10px; font-weight: 800; fill: #6c757d; text-anchor: middle; }
+
+        /* Zonas */
+        .zona { fill: white; stroke: #333; stroke-width: 1; transition: fill 0.1s; }
+        .zona:hover { fill: #f0f0f0; }
+
+        /* Colores Zonas */
+        .pintado-caries { fill: #dc3545 !important; }   
+        .pintado-amalgama { fill: #0d6efd !important; } 
+        .pintado-resina { fill: #198754 !important; }   
+
+        /* Capas invisibles al clic (crucial para que el clic pase al grupo) */
+        .layer-structure { pointer-events: none; } 
+
+        /* --- TOOLBAR --- */
+        .toolbar-wrapper { position: sticky; top: 10px; z-index: 999; display: flex; justify-content: center; }
+        .toolbar {
+            background: rgba(255, 255, 255, 0.95); padding: 10px 20px; border-radius: 50px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1); display: flex; gap: 12px; align-items: center;
+            border: 1px solid rgba(0,0,0,0.05); backdrop-filter: blur(10px);
+        }
+
+        .btn-tool {
+            width: 45px; height: 45px; border-radius: 50%; border: 2px solid transparent;
+            display: flex; align-items: center; justify-content: center; font-size: 20px;
+            transition: all 0.2s; background-color: #f8f9fa; color: #555; cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: relative;
+        }
+        .btn-tool:hover { transform: scale(1.1); }
+        .btn-tool.active { transform: scale(1.15); box-shadow: 0 0 0 3px rgba(0,0,0,0.1); border-color: #fff; }
+
+        /* Estilos Específicos Botones */
+        .btn-caries { background-color: #dc3545; color: white; }
+        .btn-amalgama { background-color: #0d6efd; color: white; }
+        .btn-resina { background-color: #198754; color: white; }
+        .btn-protesis { background-color: #e7f1ff; color: #0d6efd; }
+        .btn-endo { background-color: #fff3cd; color: #ffc107; }
+        
+        /* Icono custom para Prótesis */
+        .icon-protesis-custom { display: flex; flex-direction: column; gap: 3px; }
+        .icon-protesis-custom span { display: block; width: 22px; height: 3px; background-color: #0d6efd; border-radius: 2px; }
+
+        .btn-extraccion { background-color: #f8d7da; color: #dc3545; } 
+        .btn-ausente { background-color: #cff4fc; color: #0dcaf0; } 
+
+        .divider { width: 1px; height: 30px; background: #dee2e6; }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <div class="toolbar-wrapper">
+        <div class="toolbar">
+            <button class="btn-tool btn-caries active" onclick="setHerramienta('caries', this)" title="Caries"></button>
+            <button class="btn-tool btn-amalgama" onclick="setHerramienta('amalgama', this)" title="Amalgama"></button>
+            <button class="btn-tool btn-resina" onclick="setHerramienta('resina', this)" title="Resina"></button>
+            <div class="divider"></div>
+            <button class="btn-tool btn-protesis" onclick="setHerramienta('protesis', this)" title="Prótesis"><div class="icon-protesis-custom"><span></span><span></span></div></button>
+            <button class="btn-tool btn-endo" onclick="setHerramienta('endodoncia', this)" title="Endodoncia"><i class="fas fa-tooth"></i></button>
+            <button class="btn-tool btn-extraccion" onclick="setHerramienta('extraccion', this)" title="Extracción Indicada"><i class="fas fa-times"></i></button>
+            <button class="btn-tool btn-ausente" onclick="setHerramienta('ausente', this)" title="Diente Ausente"><i class="fas fa-times text-primary"></i></button>
+            <div class="divider"></div>
+            <button class="btn-tool bg-white border" onclick="setHerramienta('borrador', this)" title="Borrar Todo"><i class="fas fa-eraser text-secondary"></i></button>
+        </div>
+    </div>
+
+    <div class="dentigrama-container">
+        <h2>Odontodiagrama Interactivo</h2>
+        <svg id="svgDentigrama" viewBox="0 0 860 480"></svg>
+        <div class="mt-4 border-top pt-3">
+            <button class="btn btn-dark px-4" onclick="simularGuardado()"><i class="fas fa-save me-2"></i> Guardar Historia</button>
+            <div id="debug-log" class="mt-2 text-muted small font-monospace">Esperando acciones...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // === CONFIGURACIÓN ===
+    const SVG_NS = "http://www.w3.org/2000/svg";
+    const svg = document.getElementById('svgDentigrama');
+    let herramientaActual = 'caries'; 
+
+    const dientesAdultosSup = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28];
+    const dientesNinosSup   = [55, 54, 53, 52, 51, 61, 62, 63, 64, 65];
+    const dientesNinosInf   = [85, 84, 83, 82, 81, 71, 72, 73, 74, 75];
+    const dientesAdultosInf = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38];
+
+    function crearDienteSVG(numero, x, y) {
+        const grupo = document.createElementNS(SVG_NS, "g");
+        grupo.setAttribute("class", "diente-group");
+        grupo.setAttribute("transform", `translate(${x}, ${y})`);
+        grupo.setAttribute("data-diente", numero);
+        
+        // **IMPORTANTE**: 'capture: true' intercepta el clic antes que las zonas
+        grupo.addEventListener('click', (e) => handleClickGlobal(e, grupo), true);
+
+        // 1. Número y Zonas Base
+        const texto = document.createElementNS(SVG_NS, "text");
+        texto.setAttribute("x", 25); texto.setAttribute("y", -8); texto.setAttribute("class", "diente-numero"); texto.textContent = numero; grupo.appendChild(texto);
+        
+        const zonasGroup = document.createElementNS(SVG_NS, "g");
+        zonasGroup.setAttribute("class", "diente-zonas");
+        const pathArriba = "M10.8,10.8 L19.3,19.3 A8,8 0 0,1 30.7,19.3 L39.2,10.8 A20,20 0 0,0 10.8,10.8 Z";
+        const pathDerecha = "M39.2,10.8 L30.7,19.3 A8,8 0 0,1 30.7,30.7 L39.2,39.2 A20,20 0 0,0 39.2,10.8 Z";
+        const pathAbajo = "M39.2,39.2 L30.7,30.7 A8,8 0 0,1 19.3,30.7 L10.8,39.2 A20,20 0 0,0 39.2,39.2 Z";
+        const pathIzquierda = "M10.8,39.2 L19.3,30.7 A8,8 0 0,1 19.3,19.3 L10.8,10.8 A20,20 0 0,0 10.8,39.2 Z";
+        crearZona(zonasGroup, pathArriba, "vestibular"); crearZona(zonasGroup, pathDerecha, "derecha"); crearZona(zonasGroup, pathAbajo, "lingual"); crearZona(zonasGroup, pathIzquierda, "izquierda");
+        const cCentro = document.createElementNS(SVG_NS, "circle"); cCentro.setAttribute("cx", 25); cCentro.setAttribute("cy", 25); cCentro.setAttribute("r", 8); cCentro.setAttribute("class", "zona"); cCentro.setAttribute("data-cara", "oclusal"); zonasGroup.appendChild(cCentro);
+        grupo.appendChild(zonasGroup);
+
+        // 2. Capas Estructurales (Ocultas)
+        crearCapaX(grupo, "layer-extraccion", "#dc3545"); // X Roja
+        crearCapaX(grupo, "layer-ausente", "#0d6efd");    // X Azul
+
+        const endoGroup = document.createElementNS(SVG_NS, "text");
+        endoGroup.setAttribute("class", "layer-structure layer-endo");
+        endoGroup.setAttribute("x", 25); endoGroup.setAttribute("y", -20); endoGroup.setAttribute("text-anchor", "middle"); endoGroup.setAttribute("fill", "#d63384"); endoGroup.setAttribute("font-size", "10"); endoGroup.setAttribute("font-weight", "bold"); endoGroup.textContent = "ENDO"; endoGroup.setAttribute("display", "none");
+        grupo.appendChild(endoGroup);
+
+        const protesisGroup = document.createElementNS(SVG_NS, "g");
+        protesisGroup.setAttribute("class", "layer-structure layer-protesis");
+        protesisGroup.setAttribute("display", "none");
+        const pLine1 = document.createElementNS(SVG_NS, "line"); pLine1.setAttribute("x1", 0); pLine1.setAttribute("y1", 15); pLine1.setAttribute("x2", 50); pLine1.setAttribute("y2", 15); pLine1.setAttribute("stroke", "#0d6efd"); pLine1.setAttribute("stroke-width", "3");
+        const pLine2 = document.createElementNS(SVG_NS, "line"); pLine2.setAttribute("x1", 0); pLine2.setAttribute("y1", 35); pLine2.setAttribute("x2", 50); pLine2.setAttribute("y2", 35); pLine2.setAttribute("stroke", "#0d6efd"); pLine2.setAttribute("stroke-width", "3");
+        protesisGroup.appendChild(pLine1); protesisGroup.appendChild(pLine2);
+        grupo.appendChild(protesisGroup);
+
+        return grupo;
+    }
+
+    function crearCapaX(grupo, clase, color) {
+        const xGroup = document.createElementNS(SVG_NS, "g");
+        xGroup.setAttribute("class", `layer-structure ${clase}`);
+        xGroup.setAttribute("display", "none"); 
+        const line1 = document.createElementNS(SVG_NS, "line"); line1.setAttribute("x1", 5); line1.setAttribute("y1", 5); line1.setAttribute("x2", 45); line1.setAttribute("y2", 45); line1.setAttribute("stroke", color); line1.setAttribute("stroke-width", "4");
+        const line2 = document.createElementNS(SVG_NS, "line"); line2.setAttribute("x1", 45); line2.setAttribute("y1", 5); line2.setAttribute("x2", 5); line2.setAttribute("y2", 45); line2.setAttribute("stroke", color); line2.setAttribute("stroke-width", "4");
+        xGroup.appendChild(line1); xGroup.appendChild(line2); grupo.appendChild(xGroup);
+    }
+
+    function crearZona(padre, d, cara) {
+        const path = document.createElementNS(SVG_NS, "path");
+        path.setAttribute("d", d); path.setAttribute("class", "zona"); path.setAttribute("data-cara", cara); padre.appendChild(path);
+    }
+
+    // === LÓGICA CENTRAL DE CLICS (CORREGIDA) ===
+    function handleClickGlobal(e, grupo) {
+        // A. HERRAMIENTAS GLOBALES (Estructurales + BORRADOR)
+        // Si la herramienta actual afecta a todo el diente, la procesamos aquí y detenemos el evento.
+        const herramientasGlobales = ['extraccion', 'ausente', 'endodoncia', 'protesis', 'borrador'];
+        
+        if (herramientasGlobales.includes(herramientaActual)) {
+            e.stopPropagation(); // Evita que el clic baje a las zonas individuales
+            e.preventDefault();
+
+            if (herramientaActual === 'borrador') {
+                // Si es borrador, limpiamos TODO el diente sin preguntar
+                limpiarDienteCompleto(grupo);
+            } else {
+                // Si es estructural (X, Endo, Protesis), aplicamos el estado
+                aplicarEstadoDiente(grupo);
+            }
+            return; // Salimos, no se procesan zonas
+        }
+
+        // B. HERRAMIENTAS DE PINTURA DE ZONAS (Caries, Resina, Amalgama)
+        // Solo funcionan si el target real del clic fue una zona.
+        const targetEsZona = e.target.classList.contains('zona');
+        if (targetEsZona) {
+             pintarZona(e.target);
+        }
+    }
+
+    function aplicarEstadoDiente(grupo) {
+        const dienteID = grupo.getAttribute('data-diente');
+        if (herramientaActual === 'extraccion') {
+            toggleLayer(grupo, '.layer-extraccion'); grupo.querySelector('.layer-ausente').setAttribute('display', 'none');
+        } else if (herramientaActual === 'ausente') {
+            toggleLayer(grupo, '.layer-ausente'); grupo.querySelector('.layer-extraccion').setAttribute('display', 'none');
+            const isVisible = grupo.querySelector('.layer-ausente').getAttribute('display') !== 'none';
+            grupo.querySelector('.diente-zonas').setAttribute('opacity', isVisible ? '0.2' : '1');
+        } else if (herramientaActual === 'endodoncia') {
+            toggleLayer(grupo, '.layer-endo');
+        } else if (herramientaActual === 'protesis') {
+            toggleLayer(grupo, '.layer-protesis');
+        }
+        logAction(`Diente ${dienteID}: Estado ${herramientaActual} cambiado.`);
+    }
+
+    function toggleLayer(grupo, selector) {
+        const layer = grupo.querySelector(selector);
+        layer.setAttribute('display', layer.getAttribute('display') === 'none' ? 'block' : 'none');
+    }
+
+    function pintarZona(zona) {
+        zona.classList.remove('pintado-caries', 'pintado-amalgama', 'pintado-resina');
+        zona.classList.add(`pintado-${herramientaActual}`);
+        logAction(`Zona pintada: ${herramientaActual}`);
+    }
+
+    function limpiarDienteCompleto(grupo) {
+        // Borra TODAS las capas estructurales
+        grupo.querySelector('.layer-extraccion').setAttribute('display', 'none');
+        grupo.querySelector('.layer-ausente').setAttribute('display', 'none');
+        grupo.querySelector('.layer-endo').setAttribute('display', 'none');
+        grupo.querySelector('.layer-protesis').setAttribute('display', 'none');
+        // Restaura opacidad y limpia zonas
+        grupo.querySelector('.diente-zonas').setAttribute('opacity', '1');
+        grupo.querySelectorAll('.zona').forEach(z => { z.classList.remove('pintado-caries', 'pintado-amalgama', 'pintado-resina'); });
+        logAction(`Diente ${grupo.getAttribute('data-diente')} limpiado totalmente.`);
+    }
+
+    // === UI & RENDER ===
+    function setHerramienta(h, btn) { herramientaActual = h; document.querySelectorAll('.btn-tool').forEach(b => b.classList.remove('active')); btn.classList.add('active'); logAction(`Herramienta: ${h.toUpperCase()}`); }
+    function logAction(msg) { document.getElementById('debug-log').textContent = msg; }
+    
+    function renderizar() {
+        const startX = 30; const gap = 48;
+        dientesAdultosSup.forEach((num, i) => { let x = startX + (i*gap); if(i>=8) x+=20; svg.appendChild(crearDienteSVG(num, x, 50)); });
+        const offsetNinos = (gap*3)+20; 
+        dientesNinosSup.forEach((num, i) => { let x = startX + offsetNinos + (i*gap); if(i>=5) x+=20; svg.appendChild(crearDienteSVG(num, x, 140)); });
+        dientesNinosInf.forEach((num, i) => { let x = startX + offsetNinos + (i*gap); if(i>=5) x+=20; svg.appendChild(crearDienteSVG(num, x, 220)); });
+        dientesAdultosInf.forEach((num, i) => { let x = startX + (i*gap); if(i>=8) x+=20; svg.appendChild(crearDienteSVG(num, x, 310)); });
+        const t = document.createElementNS(SVG_NS, "text"); t.setAttribute("x",40); t.setAttribute("y",400); t.textContent="DERECHA"; t.setAttribute("fill","#aaa"); svg.appendChild(t);
+        const t2 = document.createElementNS(SVG_NS, "text"); t2.setAttribute("x",820); t2.setAttribute("y",400); t2.textContent="IZQUIERDA"; t2.setAttribute("fill","#aaa"); t2.setAttribute("text-anchor","end"); svg.appendChild(t2);
+    }
+
+    renderizar();
+</script>
+
+</body>
+</html>

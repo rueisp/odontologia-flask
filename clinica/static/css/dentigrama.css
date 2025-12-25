@@ -1,0 +1,191 @@
+/* clinica/static/css/dentigrama.css */
+/* VERSIÓN CORREGIDA PARA V13 */
+
+/* --- CONTENEDOR PRINCIPAL BLINDADO --- */
+.dentigrama-svg-container {
+    background-color: #ffffff;
+    padding: 0; /* Quitamos padding interno para evitar desajustes */
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    text-align: center;
+    overflow: hidden;
+    position: relative;
+    
+    /* FUERZA LA ALINEACIÓN EXACTA */
+    width: 100%;
+    max-width: 860px; /* Ancho máximo igual al del diseño SVG */
+    aspect-ratio: 860 / 480; /* Mantiene la proporción perfecta siempre */
+    margin: 0 auto; /* Centrado en la pantalla */
+}
+
+/* --- EL LIENZO SVG --- */
+#svgDentigrama {
+    display: block;
+    width: 100%;
+    height: 100%;
+    /* La imagen de fondo debe cubrir exactamente el mismo espacio que el SVG */
+    background-size: contain; 
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* --- ELEMENTOS INTERACTIVOS --- */
+.diente-group { 
+    cursor: pointer; 
+    transition: opacity 0.2s ease;
+}
+.diente-group:hover {
+    opacity: 0.9;
+}
+
+.diente-numero { 
+    font-size: 10px; 
+    font-weight: 800; 
+    fill: #6c757d; 
+    text-anchor: middle; 
+}
+
+/* --- ZONAS INTERACTIVAS (Lógica Fantasma) --- */
+.zona { 
+    /* Relleno casi invisible para ver el fondo, pero capturar clics */
+    fill: rgba(255, 255, 255, 0.01); 
+    stroke: #333; 
+    stroke-width: 1; 
+    transition: fill 0.1s; 
+}
+.zona:hover { 
+    fill: rgba(255, 255, 255, 0.5); /* Se ilumina al pasar el mouse */
+}
+
+/* --- COLORES VIVOS (CORREGIDO) --- */
+/* Opacity 1 !important asegura que no se vean opacos/lavados */
+.pintado-caries { 
+    fill: #dc3545 !important; 
+    opacity: 1 !important; 
+    fill-opacity: 1 !important; 
+}   
+.pintado-amalgama { 
+    fill: #0d6efd !important; 
+    opacity: 1 !important; 
+    fill-opacity: 1 !important; 
+} 
+.pintado-resina { 
+    fill: #198754 !important; 
+    opacity: 1 !important; 
+    fill-opacity: 1 !important; 
+}   
+.pintado-blanco { 
+    fill: #ffffff !important; 
+    opacity: 1 !important; 
+    fill-opacity: 1 !important; 
+}
+
+/* --- CAPAS ESTRUCTURALES --- */
+.layer-structure { 
+    pointer-events: none; /* Permite hacer clic a través de ellas */
+} 
+
+/* Estilo para el Check (NUEVO) */
+.layer-check {
+    pointer-events: none;
+    /* Sombra blanca para resaltar sobre colores oscuros */
+    filter: drop-shadow(0px 0px 1px rgba(255,255,255,0.9)); 
+}
+
+/* --- BARRA DE HERRAMIENTAS --- */
+.dentigrama-toolbar {
+    background: #f8f9fa;
+    padding: 10px 20px;
+    border-radius: 50px;
+    display: inline-flex;
+    gap: 12px;
+    align-items: center;
+    border: 1px solid #dee2e6;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.btn-tool {
+    width: 45px; 
+    height: 45px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    font-size: 18px;
+    background-color: #fff;
+    color: #555;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+}
+
+.btn-tool:hover { 
+    transform: scale(1.1); 
+    z-index: 2;
+}
+
+/* Estado Activo */
+.btn-tool.active { 
+    transform: scale(1.15); 
+    box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.15); 
+    border-color: #fff; 
+    z-index: 2;
+}
+
+/* --- COLORES DE BOTONES --- */
+.btn-caries { background-color: #dc3545; color: white; }
+.btn-amalgama { background-color: #0d6efd; color: white; }
+.btn-resina { background-color: #198754; color: white; }
+
+.btn-protesis { background-color: #e7f1ff; color: #0d6efd; }
+.btn-endo { background-color: #fff3cd; color: #ffc107; }
+.btn-extraccion { background-color: #f8d7da; color: #dc3545; }
+.btn-ausente { background-color: #cff4fc; color: #0dcaf0; }
+.btn-corona { background-color: #e7f1ff; color: #0d6efd; }
+.btn-check { background-color: #d1e7dd; color: #198754; }
+
+/* Icono Custom Prótesis */
+.icon-protesis-custom { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 3px; 
+}
+.icon-protesis-custom span { 
+    display: block; 
+    width: 20px; 
+    height: 3px; 
+    background-color: currentColor; 
+    border-radius: 2px; 
+}
+
+.toolbar-divider { 
+    width: 1px; 
+    height: 30px; 
+    background: #dee2e6; 
+    margin: 0 5px; 
+}
+
+/* =======================================================
+   CORRECCIÓN FINAL: FORZAR INTERACTIVIDAD DEL BOTÓN CHECK
+   ======================================================= */
+
+/* Corrección: Botón Check en MORADO */
+.btn-check {
+    cursor: pointer !important;
+    pointer-events: auto !important;
+    background-color: #e0cffc !important; /* Morado claro de fondo */
+    color: #6f42c1 !important;            /* Morado fuerte de icono */
+}
+
+/* Aseguramos que la animación de "agrandar" (hover) 
+   siempre quede por encima de otros elementos */
+.btn-tool:hover {
+    z-index: 100 !important; 
+    transform: scale(1.15);
+}

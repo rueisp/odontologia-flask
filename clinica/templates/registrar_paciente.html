@@ -6,6 +6,9 @@
     {# --- 1. ESTILOS PARA EL BUSCADOR INTELIGENTE (SELECT2) --- #}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dentigrama.css') }}">
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         /* Ajuste para que el buscador se parezca a tus otros inputs */
         .select2-container--bootstrap-5 .select2-selection {
@@ -63,67 +66,39 @@
 
     <script>
         $(document).ready(function() {
-            // --- A. INICIALIZAR SELECT2 (BUSCADORES) ---
+            // --- A. INICIALIZAR SELECT2 ---
             $('#codigo_aseguradora').select2({
-                theme: 'bootstrap-5',
-                width: '100%',
-                placeholder: 'Escriba para buscar EPS...',
-                allowClear: true,
+                theme: 'bootstrap-5', width: '100%', placeholder: 'Escriba para buscar EPS...', allowClear: true,
                 dropdownParent: $('#codigo_aseguradora').parent()
             });
+            $('#codigo_dpto').select2({ theme: 'bootstrap-5', width: '100%', placeholder: 'Buscar departamento...' });
 
-            $('#codigo_dpto').select2({
-                theme: 'bootstrap-5',
-                width: '100%',
-                placeholder: 'Buscar departamento...'
-            });
-
-            // --- B. LÓGICA DE MUNICIPIOS (LO QUE FALTABA) ---
+            // --- B. LÓGICA DE MUNICIPIOS ---
             const departamentoSelect = document.getElementById('codigo_dpto');
             const municipioSelect = document.getElementById('codigo_mpio');
-            
-            // Importante: Jinja renderiza esto como texto JSON válido
-            // Usamos 'default("[]")' para evitar errores si la variable llega vacía
             const todosLosMunicipios = JSON.parse('{{ municipios_json | default("[]") | safe }}');
 
-            // Función para filtrar y llenar
             function cargarMunicipios() {
                 const codigoDepto = departamentoSelect.value;
-                
-                // Limpiar opciones anteriores
                 municipioSelect.innerHTML = '<option value="">Seleccione un municipio</option>';
                 
-                if (!codigoDepto) {
-                    municipioSelect.disabled = true;
-                    return;
-                }
+                if (!codigoDepto) { municipioSelect.disabled = true; return; }
 
-                // Filtrar municipios que pertenezcan a ese departamento
                 const municipiosFiltrados = todosLosMunicipios.filter(m => m.codigo_departamento === codigoDepto);
-
                 if (municipiosFiltrados.length > 0) {
                     municipioSelect.disabled = false;
                     municipiosFiltrados.forEach(muni => {
                         const option = document.createElement('option');
-                        option.value = muni.codigo;
-                        option.textContent = muni.nombre;
+                        option.value = muni.codigo; option.textContent = muni.nombre;
                         municipioSelect.appendChild(option);
                     });
-                } else {
-                    municipioSelect.disabled = true;
-                }
+                } else { municipioSelect.disabled = true; }
             }
-
-            // Escuchar cambios. Como usamos Select2 (jQuery), usamos 'change' de jQuery para asegurar compatibilidad
             $('#codigo_dpto').on('change', cargarMunicipios);
         });
-    </script>
 
-    <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // --- C. LÓGICA DE EDAD, GUARDADO Y DENTIGRAMA (Tu código original) ---
-            
-            // 1. Cálculo de Edad
+            // --- C. LÓGICA DE EDAD ---
             const fechaNacimientoInput = document.getElementById('fecha_nacimiento');
             const edadInput = document.getElementById('edad');
             if (fechaNacimientoInput && edadInput) { 
@@ -137,50 +112,51 @@
                 });
             }
 
-            // 2. Guardado del Formulario
+            // --- D. GUARDADO DEL FORMULARIO (Vinculando con el dentigrama nuevo) ---
             const mainForm = document.getElementById('patientMainForm');
             const mainSaveButton = document.getElementById('mainSaveButton'); 
-            const dentigramaUrlInput = document.getElementById('dentigrama_url_input');
-
+            
+            // Botón específico del acordeón del dentigrama (para guardar solo dentigrama si se desea, o manual)
+            // Pero aquí manejamos el GUARDADO GENERAL del paciente
             if (mainForm && mainSaveButton) {
-                const mainSaveButtonHandler = async function(event) { 
+                mainSaveButton.addEventListener('click', async function(event) { 
                     event.preventDefault(); 
                     mainSaveButton.disabled = true;
-                    mainSaveButton.textContent = 'Guardando Paciente...';
+                    mainSaveButton.textContent = 'Guardando...';
                     
                     try {
-                        let finalDentigramUrl = dentigramaUrlInput.value; 
-                        const formData = new FormData(mainForm); 
-                        formData.set('dentigrama_canvas', finalDentigramUrl || ''); 
+                        // 1. Obtener la imagen del dentigrama SVG (Función nueva del V6)
+                        // Si la función svgToPng no está expuesta globalmente, el input hidden ya debería
+                        // tener el valor si hicimos clic en "Guardar Cambios al Dentigrama".
+                        // PERO, para asegurar que se guarde al crear paciente:
+                        const dentigramaUrlInput = document.getElementById('dentigrama_url_input');
+                        const svgElement = document.getElementById('svgDentigrama');
+                        
+                        // Si existe la función global svgToPng (la definimos en editor_dentigrama.js), la usamos:
+                        if (svgElement && typeof window.svgToPng === 'function') {
+                             const base64 = await window.svgToPng(svgElement);
+                             dentigramaUrlInput.value = base64;
+                        }
 
+                        // 2. Enviar Formulario
+                        const formData = new FormData(mainForm); 
+                        
                         const response = await fetch(mainForm.action, {
-                            method: mainForm.method, 
-                            body: formData,
-                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                            method: mainForm.method, body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' }
                         });
 
                         const result = await response.json(); 
                         if (result.success) {
-                            alert(result.message || "Paciente guardado exitosamente.");
                             window.location.href = result.redirect_url; 
                         } else {
                             throw new Error(result.error || "Error desconocido.");
                         }
                     } catch (error) {
-                        alert("Hubo un error: " + error.message);
+                        alert("Error: " + error.message);
                         mainSaveButton.disabled = false;
                         mainSaveButton.textContent = 'Guardar';
                     }
-                }; 
-                mainSaveButton.addEventListener('click', mainSaveButtonHandler);
-            }
-
-            // 3. Inicializar Dentigrama al abrir acordeón
-            const dentigramaCollapse = document.getElementById('collapseDentigrama');
-            if (dentigramaCollapse) {
-                dentigramaCollapse.addEventListener('shown.bs.collapse', function () {
-                    if (typeof window.initializeDentigram === 'function') window.initializeDentigram(); 
-                });
+                }); 
             }
         });
     </script>

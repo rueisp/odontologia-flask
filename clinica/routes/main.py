@@ -282,3 +282,10 @@ def debug_rutas():
         html += f"<li><strong>{ruta['rule']}</strong> → {ruta['endpoint']} ({', '.join(ruta['methods'])})</li>"
     html += "</ul>"
     return html
+
+# ==========================================
+# RUTA TEMPORAL PARA PRUEBAS DE DENTIGRAMA SVG
+# ==========================================
+@main_bp.route('/prueba_dentigrama')
+def prueba_dentigrama():
+    return render_template('prueba_dentigrama_svg.html')

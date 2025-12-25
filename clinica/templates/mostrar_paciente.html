@@ -238,13 +238,11 @@
                     
                     {% if paciente.dentigrama_canvas %}
                     <div class="gallery-item-new full-width-grid" data-bs-toggle="modal" data-bs-target="#modalDentigrama" title="Haz clic para ampliar">
-                        <div class="dentigrama-preview-overlay-container">
-                            <img src="{{ url_for('static', filename='img/plantilla_dentigrama.png') }}" 
-                                 alt="Plantilla de dentigrama" 
-                                 class="dentigrama-fondo-preview">
+                        <div class="dentigrama-preview-container">
                             <img src="{{ paciente.dentigrama_canvas }}" 
-                                 alt="Trazos del dentigrama" 
-                                 class="dentigrama-trazos-preview">
+                                alt="Dentigrama del Paciente" 
+                                class="img-fluid rounded border"
+                                style="width: 100%; height: auto; object-fit: contain;">
                         </div>
                         <h5 class="mt-2 text-sm font-medium text-gray-700">Dentigrama</h5>
                     </div>
@@ -392,8 +390,7 @@
 {# --- FIN: MODAL PARA AMPLIAR IMAGEN DE PERFIL --- #}
 
 
-{# Modales para imágenes y dentigrama (sin cambios estructurales mayores) #}
-{# Modal para Dentigrama (adaptado para trazos transparentes) #}
+{# Modal para Dentigrama (CORREGIDO Y LIMPIO) #}
 {% if paciente.dentigrama_canvas %}
 <div class="modal fade" id="modalDentigrama" tabindex="-1" aria-labelledby="modalDentigramaLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
@@ -404,14 +401,10 @@
             </div>
             <div class="modal-body">
                 <div class="dentigrama-modal-content" style="position: relative; width: 800px; height: 413px; margin: auto;">
-                    <img src="{{ url_for('static', filename='img/plantilla_dentigrama.png') }}" 
-                         class="dentigrama-fondo" 
-                         alt="Plantilla de dentigrama" 
-                         style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain;">
                     <img src="{{ paciente.dentigrama_canvas }}" 
-                         class="dentigrama-trazos" 
-                         alt="Trazos del dentigrama"
-                         style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain;">
+                        class="dentigrama-trazos" 
+                        alt="Trazos del dentigrama"
+                        style="width: 100%; height: 100%; object-fit: contain; background: white;">
                 </div>
             </div>
         </div>
