@@ -34,13 +34,18 @@
             <div class="card-custom">
                 <h3><i data-lucide="user-circle" class="card-icon"></i>Datos Personales</h3>
                 {# --- INICIO: AÑADIDO PARA MOSTRAR IMAGEN DE PERFIL --- #}
+                <!-- ... código anterior ... -->
                 <div class="text-center mb-3">
                     <img id="profile-picture-preview-display"
-                         src="{{ paciente.imagen_perfil_url or url_for('static', filename='img/placeholder_avatar.png') }}"
-                         alt="Imagen de Perfil"
-                         class="rounded-circle border border-2 shadow"
-                         style="width: 120px; height: 120px; object-fit: cover; cursor: pointer;">
+                        {# AHORA USAMOS LA FUNCIÓN PARA OBTENER EL THUMBNAIL TRANSFORMADO #}
+                        src="{{ get_transformed_profile_image_url(paciente.imagen_perfil_url) or url_for('static', filename='img/placeholder_avatar.png') }}"
+                        {# ATRIBUTO CLAVE: data-original-url para el modal/vista ampliada #}
+                        data-original-url="{{ paciente.imagen_perfil_url or url_for('static', filename='img/placeholder_avatar.png') }}"
+                        alt="Imagen de Perfil"
+                        class="rounded-circle border border-2 shadow"
+                        style="width: 160px; height: 160px; object-fit: cover; cursor: pointer;">
                 </div>
+                <!-- ... código posterior ... -->
                 {# --- FIN: AÑADIDO PARA MOSTRAR IMAGEN DE PERFIL --- #}
                 <div class="data-grid">
                     <div class="data-item"><span class="label">Documento</span><span class="value">{{ paciente.tipo_documento }} {{ paciente.documento }}</span></div>
@@ -370,16 +375,14 @@
 </div> <!-- FIN de .container-custom -->
 
 
-{# --- INICIO: MODAL PARA AMPLIAR IMAGEN DE PERFIL --- #}
+{# --- MODAL ACTUALIZADO --- #}
 <div class="modal fade" id="avatarZoomModal" tabindex="-1" aria-labelledby="avatarZoomModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered modal-xl"> <div class="modal-content shadow-lg">
             <div class="modal-header">
-                <h5 class="modal-title" id="avatarZoomModalLabel">Imagen de Perfil</h5>
+                <h5 class="modal-title" id="avatarZoomModalLabel">Visualización de Radiografía / Perfil</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body text-center">
-                <img id="zoomedAvatarImage" src="" class="img-fluid rounded" alt="Imagen de Perfil Ampliada">
+            <div class="modal-body p-0 text-center bg-dark"> <img id="zoomedAvatarImage" src="" class="img-fluid" alt="Imagen Ampliada" style="max-height: 85vh; width: auto;">
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
@@ -452,40 +455,72 @@
 {% block scripts %}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // lucide.createIcons(); // COMENTADO: Ya se llama en base.html
-
-            // Lógica para abrir/cerrar "Mostrar más"
-            document.querySelectorAll('.toggle-read-more-btn').forEach(button => {
+            // --- LÓGICA PARA "MOSTRAR MÁS" (Manteniendo tu estructura original) ---
+            const toggleButtons = document.querySelectorAll('.toggle-read-more-btn');
+            toggleButtons.forEach(button => {
                 button.addEventListener('click', function() {
-                    const targetId = this.dataset.target;
-                    const targetElement = document.getElementById(targetId);
-                    if (targetElement) {
-                        targetElement.classList.toggle('collapsed');
-                        if (targetElement.classList.contains('collapsed')) {
-                            this.textContent = 'Mostrar más';
-                        } else {
-                            this.textContent = 'Mostrar menos';
-                        }
+                    const targetId = this.getAttribute('data-target');
+                    const section = document.getElementById(targetId);
+                    if (section) {
+                        section.classList.toggle('collapsed');
+                        this.textContent = section.classList.contains('collapsed') ? 'Mostrar más' : 'Mostrar menos';
                     }
                 });
             });
 
-            // --- INICIO: LÓGICA JAVASCRIPT PARA EL MODAL DE ZOOM DEL AVATAR ---
+            // --- INICIO: LÓGICA JAVASCRIPT PARA EL MODAL DE ZOOM DEL AVATAR (OPTIMIZADO) ---
             const profilePictureDisplay = document.getElementById('profile-picture-preview-display'); 
             const avatarZoomModalElement = document.getElementById('avatarZoomModal');
             const zoomedAvatarImage = document.getElementById('zoomedAvatarImage');
+            const modalBody = avatarZoomModalElement ? avatarZoomModalElement.querySelector('.modal-body') : null;
 
-            if (profilePictureDisplay && avatarZoomModalElement && zoomedAvatarImage) {
+            if (profilePictureDisplay && avatarZoomModalElement && zoomedAvatarImage && modalBody) {
                 const avatarZoomModal = new bootstrap.Modal(avatarZoomModalElement);
+                
                 profilePictureDisplay.addEventListener('click', function() {
-                    zoomedAvatarImage.src = this.src; 
+                    const originalUrl = this.getAttribute('data-original-url'); 
+                    modalBody.innerHTML = '';
+                    
+                    // 1. Creamos el elemento imagen pero oculto (opacity 0)
+                    const img = document.createElement('img');
+                    img.style.opacity = '0';
+                    img.style.transition = 'opacity 0.3s ease-in-out'; // Aquí está la fluidez
+                    img.className = 'img-fluid rounded';
+                    img.style.maxHeight = '85vh';
+
+                    // 2. Lógica de URL (PDF a JPG)
+                    let finalUrl = originalUrl;
+                    if (originalUrl && originalUrl.toLowerCase().endsWith('.pdf')) {
+                        finalUrl = originalUrl.replace(/\.pdf$/i, '.jpg');
+                        if (finalUrl.includes('upload/')) {
+                            finalUrl = finalUrl.replace('upload/', 'upload/f_auto,q_auto,w_1200,c_fit/');
+                        }
+                    }
+
+                    // 3. Solo mostramos la imagen cuando el navegador confirme que ya cargó
+                    img.onload = function() {
+                        img.style.opacity = '1'; // Aparece suavemente
+                    };
+
+                    img.src = finalUrl;
+                    modalBody.appendChild(img);
+                    
                     avatarZoomModal.show();
-                    console.log("Mostrar Paciente Script: Avatar image clicked for zoom.");
                 });
+                
+                // Limpieza al cerrar el modal
+                avatarZoomModalElement.addEventListener('hidden.bs.modal', function () {
+                    if (modalBody) {
+                        modalBody.innerHTML = ''; 
+                        // Devolvemos el elemento imagen base para el siguiente clic
+                        modalBody.appendChild(zoomedAvatarImage);
+                        zoomedAvatarImage.src = ''; 
+                    }
+                });
+
             } else {
-                console.warn("Mostrar Paciente Script Warning: No se encontraron los elementos para la funcionalidad de zoom del avatar en mostrar_paciente.");
+                console.warn("Error: No se encontraron elementos para el zoom del avatar.");
             }
-            // --- FIN: LÓGICA MODAL DE ZOOM ---
         });
     </script>
-{% endblock %} {# Cierra {% block scripts %} #}
+{% endblock %}

@@ -10,6 +10,7 @@ import pytz
 # --- IMPORTACIONES ---
 from ..extensions import db
 from ..models import Factura, Cita, Paciente, Procedimiento
+from sqlalchemy.orm import joinedload
 # Importamos la nueva función de limpieza
 from ..utils import limpiar_texto_rips
 
@@ -48,8 +49,11 @@ def vista_reportes():
             rango_fin_siguiente_dia_local = fecha_fin_local_date + timedelta(days=1)
             rango_fin_utc = local_timezone.localize(datetime.combine(rango_fin_siguiente_dia_local, time.min)).astimezone(pytz.utc)
 
-            # --- CONSULTA DE FACTURAS ---
-            facturas_en_periodo = Factura.query.filter(
+            # --- CONSULTA DE FACTURAS (CON EAGER LOADING) ---
+            facturas_en_periodo = Factura.query.options(
+                joinedload(Factura.paciente),
+                joinedload(Factura.citas).joinedload(Cita.procedimientos)
+            ).filter(
                 Factura.fecha_factura >= rango_inicio_utc,
                 Factura.fecha_factura < rango_fin_utc
             ).order_by(Factura.fecha_factura.desc()).all()
@@ -96,7 +100,7 @@ def vista_reportes():
                     depto_final = mpio_final[:2]
 
                     linea_us = [
-                        paciente.tipo_documento or '',
+                        paciente.tipo_documento_rips or '',
                         paciente.documento or '',
                         limpiar_texto_rips(paciente.codigo_aseguradora or paciente.aseguradora, 6),
                         str(paciente.tipo_usuario_rips or '1'),
@@ -106,7 +110,7 @@ def vista_reportes():
                         limpiar_texto_rips(paciente.segundo_nombre),
                         str(edad),
                         unidad_medida,
-                        "M" if paciente.genero_rips == 'M' else "F", 
+                        paciente.genero_rips or paciente.get_genero_rips() or "M", 
                         depto_final,  # <--- Usamos la variable calculada
                         mpio_final,   # <--- Usamos la variable calculada
                         paciente.zona_residencia or "U"
@@ -171,7 +175,7 @@ def vista_reportes():
                         linea_ac = [
                             limpiar_texto_rips(factura.numero_factura),
                             DATOS_PRESTADOR["codigo_habilitacion"],
-                            paciente.tipo_documento or '',
+                            paciente.tipo_documento_rips or '',
                             paciente.documento or '',
                             fecha_cita_str,
                             "", # Número Autorización
@@ -183,43 +187,43 @@ def vista_reportes():
                             cita.diagnostico_relacionado2 or "",
                             cita.diagnostico_relacionado3 or "",
                             cita.tipo_diagnostico_principal or "1",
-                            str(int(factura.valor_total or 0)), # Valor consulta
+                            str(int(valor_total_reporte or 0)), # Valor consulta
                             str(int(factura.valor_cuota_moderadora or 0)),
-                            str(int(factura.valor_total or 0))  # Valor neto
+                            str(int(valor_total_reporte or 0))  # Valor neto
                         ]
                         lineas_ac.append(",".join(linea_ac))
 
                     # --- ARCHIVO AP (PROCEDIMIENTOS) ---
-                for proc in cita.procedimientos:
-                    
-                    # 1. LÓGICA DE CORRECCIÓN DE DIAGNÓSTICO (FIX CIE10)
-                    # Obtenemos el diagnóstico o usamos K029 por defecto
-                    dx_principal = proc.diagnostico_cie10 or "K029"
-                    dx_principal = dx_principal.strip() # Quitamos espacios
-                    
-                    # Si el código tiene solo 3 letras (Ej: "K02"), le agregamos un "9" al final -> "K029"
-                    # Esto evita el rechazo por longitud inválida.
-                    if len(dx_principal) == 3:
-                        dx_principal += "9"
+                    for proc in cita.procedimientos:
+                        
+                        # 1. LÓGICA DE CORRECCIÓN DE DIAGNÓSTICO (FIX CIE10)
+                        # Obtenemos el diagnóstico o usamos K029 por defecto
+                        dx_principal = proc.diagnostico_cie10 or "K029"
+                        dx_principal = dx_principal.strip() # Quitamos espacios
+                        
+                        # Si el código tiene solo 3 letras (Ej: "K02"), le agregamos un "9" al final -> "K029"
+                        # Esto evita el rechazo por longitud inválida.
+                        if len(dx_principal) == 3:
+                            dx_principal += "9"
 
-                    linea_ap = [
-                        limpiar_texto_rips(factura.numero_factura),
-                        DATOS_PRESTADOR["codigo_habilitacion"],
-                        paciente.tipo_documento or '',
-                        paciente.documento or '',
-                        fecha_cita_str,
-                        "", # Número Autorización
-                        proc.codigo_cups or '',
-                        "1", # Ámbito (1=Ambulatorio)
-                        "1", # Finalidad (1=Diagnóstico/Terapéutico)
-                        "",  # Personal que atiende
-                        dx_principal, # <--- AQUÍ USAMOS LA VARIABLE CORREGIDA
-                        "",  # Diag Relacionado
-                        "",  # Complicación
-                        "1", # Forma realización (1=Directa)
-                        str(int(proc.valor or 0))
-                    ]
-                    lineas_ap.append(",".join(linea_ap))
+                        linea_ap = [
+                            limpiar_texto_rips(factura.numero_factura),
+                            DATOS_PRESTADOR["codigo_habilitacion"],
+                            paciente.tipo_documento_rips or '',
+                            paciente.documento or '',
+                            fecha_cita_str,
+                            "", # Número Autorización
+                            proc.codigo_cups or '',
+                            "1", # Ámbito (1=Ambulatorio)
+                            "1", # Finalidad (1=Diagnóstico/Terapéutico)
+                            "",  # Personal que atiende
+                            dx_principal, # <--- AQUÍ USAMOS LA VARIABLE CORREGIDA
+                            "",  # Diag Relacionado
+                            "",  # Complicación
+                            "1", # Forma realización (1=Directa)
+                            str(int(proc.valor or 0))
+                        ]
+                        lineas_ap.append(",".join(linea_ap))
 
             # ==================================================================
             # GENERACIÓN ARCHIVO CT (CONTROL)

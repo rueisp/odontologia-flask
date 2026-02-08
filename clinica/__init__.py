@@ -7,6 +7,7 @@ import cloudinary
 from dotenv import load_dotenv
 import logging
 from flask.json import dumps as json_dumps
+from .utils import get_transformed_profile_image_url
 
 # Cargar .env solo localmente
 if os.path.exists('.env'):
@@ -96,6 +97,11 @@ def create_app():
              response.headers['Pragma'] = 'no-cache'
              response.headers['Expires'] = '0'
         return response
+    
+
+    @app.context_processor
+    def utility_processor():
+        return dict(get_transformed_profile_image_url=get_transformed_profile_image_url)
 
     # --- 2. INICIALIZAR EXTENSIONES ---
     db.init_app(app)

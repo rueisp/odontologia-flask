@@ -34,20 +34,3 @@ body {
     color: white;
 }
 
-/* 
-   ========== ZONA ELIMINADA / COMENTADA ========== 
-   Todo lo de abajo se ha comentado porque causaba conflictos 
-   con el nuevo diseño de cápsulas y vidrio.
-*/
-
-/*
-.panel {
-    background-color: #f2f2f2;
-    padding: 30px;
-    border-right: 1px solid #ccc;
-}
-
-.login-body, .container-login, .formulario-google {
-   ... (Estilos del login antiguo) ...
-}
-*/

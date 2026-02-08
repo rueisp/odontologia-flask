@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 nombres_meses = [calendar.month_name[i] for i in range(1, 13)]
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -258,3 +258,29 @@ def limpiar_texto_rips(texto, longitud_max=None):
         texto_limpio = texto_limpio[:longitud_max]
         
     return texto_limpio
+
+
+# clinica/utils.py (AGREGAR ESTA FUNCIÓN)
+
+def get_transformed_profile_image_url(original_url):
+    """
+    Inserta la transformación de Cloudinary para forzar el tamaño y formato (JPEG),
+    permitiendo que los PDFs se muestren como miniaturas de imagen.
+    
+    Transformación: f_jpg,w_120,h_120,c_fill (Formato JPG, 120x120, Crop/Fill)
+    """
+    if not original_url or '/upload/' not in original_url:
+        # Retorna la URL si está vacía o si no es de Cloudinary (por ejemplo, el placeholder)
+        return original_url
+
+    # Cloudinary usa 'f_jpg' para forzar la conversión a JPG, lo que genera la miniatura del PDF.
+    TRANSFORMATION = 'f_jpg,q_auto:eco,fl_progressive,w_200,h_120,c_fit'
+    
+    # Dividir la URL en la parte de 'upload' e insertar la transformación
+    parts = original_url.split('/upload/', 1)
+    
+    if len(parts) == 2:
+        # URL formateada: base_url/upload/TRANSFORMACION/path_del_recurso
+        return f"{parts[0]}/upload/{TRANSFORMATION}/{parts[1]}"
+        
+    return original_url
