@@ -534,3 +534,22 @@ class AuditoriaAcceso(db.Model):
     
     def __repr__(self):
         return f'<AuditoriaAcceso {self.tipo_accion} - {self.usuario_email or "Sistema"}>'    
+    
+
+class PagoPaciente(db.Model):
+    __tablename__ = 'pagos_paciente'
+
+    id = db.Column(db.Integer, primary_key=True)  # Cambiado de UUID a Integer
+    paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=False)
+    fecha = db.Column(db.Date, nullable=False, default=date.today)
+    descripcion = db.Column(db.Text, nullable=False, default='')
+    monto = db.Column(db.Integer, nullable=False, default=0)
+    metodo_pago = db.Column(db.Text, nullable=True)
+    observacion = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+
+    # Relación con Paciente (opcional pero útil)
+    paciente = db.relationship('Paciente', backref=db.backref('pagos_paciente', lazy='dynamic', cascade='all, delete-orphan'))
+
+    def __repr__(self):
+        return f'<PagoPaciente {self.fecha} - ${self.monto}>'    

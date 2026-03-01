@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Pago de {{ paciente.nombres }} {{ paciente.apellidos }}{% endblock %}
+
+{% block head_extra %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/perfil_paciente.css') }}">
+    <style>
+        .editar-pago-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .editar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .form-pago {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+        .btn-actualizar {
+            background: #007bff;
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-actualizar:hover {
+            background: #0069d9;
+        }
+        .btn-cancelar {
+            background: #6c757d;
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-right: 0.5rem;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="editar-pago-container">
+    <div class="editar-header">
+        <h1><i data-lucide="edit-3" style="width: 32px; height: 32px; margin-right: 10px;"></i>Editar Pago de {{ paciente.nombres }} {{ paciente.apellidos }}</h1>
+        <a href="{{ url_for('pacientes.pagos_paciente', paciente_id=paciente.id) }}" class="btn-cancelar">
+            <i data-lucide="arrow-left" class="btn-icon"></i> Cancelar
+        </a>
+    </div>
+
+    <div class="form-pago">
+        <form action="{{ url_for('pacientes.editar_pago_paciente', pago_id=pago.id) }}" method="post">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="fecha">Fecha *</label>
+                    <input type="date" id="fecha" name="fecha" value="{{ pago.fecha }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="descripcion">Descripción *</label>
+                    <input type="text" id="descripcion" name="descripcion" value="{{ pago.descripcion }}" placeholder="Ej: Limpieza, Consulta..." required>
+                </div>
+                <div class="form-group">
+                    <label for="monto">Monto (COP) *</label>
+                    <input type="number" id="monto" name="monto" value="{{ pago.monto }}" min="0" step="1000" required>
+                </div>
+                <div class="form-group">
+                    <label for="metodo_pago">Método de Pago</label>
+                    <select id="metodo_pago" name="metodo_pago">
+                        <option value="">Seleccione...</option>
+                        <option value="Efectivo" {% if pago.metodo_pago == 'Efectivo' %}selected{% endif %}>Efectivo</option>
+                        <option value="Tarjeta" {% if pago.metodo_pago == 'Tarjeta' %}selected{% endif %}>Tarjeta</option>
+                        <option value="Transferencia" {% if pago.metodo_pago == 'Transferencia' %}selected{% endif %}>Transferencia</option>
+                        <option value="Nequi" {% if pago.metodo_pago == 'Nequi' %}selected{% endif %}>Nequi</option>
+                        <option value="Daviplata" {% if pago.metodo_pago == 'Daviplata' %}selected{% endif %}>Daviplata</option>
+                    </select>
+                </div>
+                <div class="form-group" style="grid-column: span 2;">
+                    <label for="observacion">Observación</label>
+                    <textarea id="observacion" name="observacion" rows="3" placeholder="Notas adicionales...">{{ pago.observacion or '' }}</textarea>
+                </div>
+            </div>
+            <div style="text-align: right; margin-top: 1rem;">
+                <button type="submit" class="btn-actualizar">
+                    <i data-lucide="save" style="width: 18px; height: 18px;"></i> Actualizar Pago
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        });
+    </script>
+{% endblock %}

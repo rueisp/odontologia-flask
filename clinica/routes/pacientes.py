@@ -8,7 +8,7 @@ a pacientes_services.py para mejor mantenibilidad.
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
 from datetime import date, datetime
-from clinica.models import Paciente, EPS, Municipio
+from clinica.models import Paciente, PagoPaciente, EPS, Municipio
 from ..extensions import db
 import json 
 from sqlalchemy import or_
@@ -193,6 +193,136 @@ def borrar_paciente(id):
     flash(resultado['message'], 'success' if resultado['success'] else 'danger')
     return redirect(url_for('pacientes.lista_pacientes'))
 
+# ============================================================
+# RUTAS PARA CONTROL DE PAGOS DE PACIENTES
+# ============================================================
+
+@pacientes_bp.route('/<int:paciente_id>/pagos', methods=['GET'])
+@login_required
+def pagos_paciente(paciente_id):
+    """Muestra el historial de pagos de un paciente"""
+    from clinica.models import PagoPaciente, Paciente
+    from datetime import date
+    
+    paciente = Paciente.query.filter_by(id=paciente_id, is_deleted=False).first_or_404()
+    
+    # Verificar permisos
+    if not current_user.is_admin and paciente.odontologo_id != current_user.id:
+        flash('No tienes permiso para ver este paciente.', 'danger')
+        return redirect(url_for('pacientes.lista_pacientes'))
+    
+    pagos = PagoPaciente.query.filter_by(paciente_id=paciente_id).order_by(PagoPaciente.fecha.desc()).all()
+    total_pagos = sum(p.monto for p in pagos)
+    today = date.today().isoformat()
+    
+    return render_template('pacientes/pagos_paciente.html',
+                         paciente=paciente,
+                         pagos=pagos,
+                         total_pagos=total_pagos,
+                         today=today)
+
+
+@pacientes_bp.route('/<int:paciente_id>/pagos/agregar', methods=['POST'])
+@login_required
+def agregar_pago_paciente(paciente_id):
+    """Agrega un nuevo pago a un paciente"""
+    from clinica.models import PagoPaciente, Paciente
+    from clinica.extensions import db
+    
+    paciente = Paciente.query.filter_by(id=paciente_id, is_deleted=False).first_or_404()
+    
+    # Verificar permisos
+    if not current_user.is_admin and paciente.odontologo_id != current_user.id:
+        flash('No tienes permiso para modificar este paciente.', 'danger')
+        return redirect(url_for('pacientes.lista_pacientes'))
+    
+    try:
+        nuevo_pago = PagoPaciente(
+            paciente_id=paciente_id,
+            fecha=request.form.get('fecha'),
+            descripcion=request.form.get('descripcion'),
+            monto=int(request.form.get('monto', 0)),
+            metodo_pago=request.form.get('metodo_pago'),
+            observacion=request.form.get('observacion')
+        )
+        
+        db.session.add(nuevo_pago)
+        db.session.commit()
+        
+        flash('Pago registrado correctamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al registrar el pago: {str(e)}', 'danger')
+    
+    return redirect(url_for('pacientes.pagos_paciente', paciente_id=paciente_id))
+
+
+# ============================================================
+# RUTAS PARA EDITAR Y ELIMINAR PAGOS DE PACIENTES
+# ============================================================
+
+@pacientes_bp.route('/pago/<int:pago_id>/editar', methods=['GET', 'POST'])
+@login_required
+def editar_pago_paciente(pago_id):
+    """Edita un pago existente"""
+    from clinica.models import PagoPaciente, Paciente
+    
+    pago = PagoPaciente.query.get_or_404(pago_id)
+    paciente = Paciente.query.get_or_404(pago.paciente_id)
+    
+    # Verificar permisos
+    if not current_user.is_admin and paciente.odontologo_id != current_user.id:
+        flash('No tienes permiso para modificar este pago.', 'danger')
+        return redirect(url_for('pacientes.lista_pacientes'))
+    
+    if request.method == 'POST':
+        try:
+            pago.fecha = request.form.get('fecha')
+            pago.descripcion = request.form.get('descripcion')
+            pago.monto = int(request.form.get('monto', 0))
+            pago.metodo_pago = request.form.get('metodo_pago')
+            pago.observacion = request.form.get('observacion')
+            
+            db.session.commit()
+            flash('Pago actualizado correctamente.', 'success')
+            return redirect(url_for('pacientes.pagos_paciente', paciente_id=paciente.id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al actualizar el pago: {str(e)}', 'danger')
+            return redirect(url_for('pacientes.pagos_paciente', paciente_id=paciente.id))
+    
+    # GET: mostrar formulario con datos cargados
+    today = date.today().isoformat()
+    return render_template('pacientes/editar_pago_paciente.html',
+                         pago=pago,
+                         paciente=paciente,
+                         today=today)
+
+
+@pacientes_bp.route('/pago/<int:pago_id>/borrar', methods=['POST'])
+@login_required
+def borrar_pago_paciente(pago_id):
+    """Elimina un pago"""
+    from clinica.models import PagoPaciente, Paciente
+    
+    pago = PagoPaciente.query.get_or_404(pago_id)
+    paciente = Paciente.query.get_or_404(pago.paciente_id)
+    
+    # Verificar permisos
+    if not current_user.is_admin and paciente.odontologo_id != current_user.id:
+        flash('No tienes permiso para eliminar este pago.', 'danger')
+        return redirect(url_for('pacientes.lista_pacientes'))
+    
+    try:
+        db.session.delete(pago)
+        db.session.commit()
+        flash('Pago eliminado correctamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar el pago: {str(e)}', 'danger')
+    
+    return redirect(url_for('pacientes.pagos_paciente', paciente_id=paciente.id))
+
 
 @pacientes_bp.route('/upload_dentigrama', methods=['POST'])
 def upload_dentigrama():
@@ -234,6 +364,9 @@ def upload_dentigrama():
             'public_id': public_id_created, # <--- NUEVO: Lo devolvemos al front
             'message': 'Dentigrama procesado correctamente'
         }), 200
+    
+
+    
 
     except Exception as e:
         print(f"Error al subir dentigrama: {e}")

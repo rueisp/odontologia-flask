@@ -340,9 +340,15 @@
                 </div>
                 <hr>
                 <h4 class="h6 mb-3 mt-4">Añadir Nueva Evolución</h4>
+                <!-- Busca la parte del formulario de evolución y reemplázala por esta -->
                 <form action="{{ url_for('evoluciones.agregar_evolucion', paciente_id=paciente.id) }}" method="post" class="evolucion-form"> 
-                    <div class="mb-3">
-                        <textarea name="descripcion" class="form-control" rows="3" placeholder="Escribe aquí la nueva evolución..." required></textarea>
+                    <div class="mb-3 position-relative">
+                        <textarea id="evolucion-textarea" name="descripcion" class="form-control" rows="3" placeholder="Escribe aquí la nueva evolución..." required></textarea>
+                        
+                        <!-- Botón de Dictado por Voz -->
+                        <button type="button" id="btn-dictado" class="btn-dictado" title="Dictar evolución">
+                            <i data-lucide="mic" id="mic-icon"></i>
+                        </button>
                     </div>
                     <button type="submit" class="btn-custom btn-secondary-custom w-100">Guardar Evolución</button>
                 </form>
@@ -361,8 +367,14 @@
                     </a>
                     <!-- ▲▲▲ FIN NUEVO BOTÓN ▲▲▲ -->
                     {# ESTE ES EL NUEVO BOTÓN QUE DEBES AGREGAR #}
+                    <!--
                     <a href="{{ url_for('calendario.historial_citas_paciente', paciente_id=paciente.id) }}" class="btn-custom btn-primary-custom">
                         <i data-lucide="history" class="btn-icon"></i> Ver Historial de Citas para Facturar
+                    </a>
+                    -->
+                    <a href="{{ url_for('pacientes.pagos_paciente', paciente_id=paciente.id) }}" class="btn-custom mt-2"
+                        style="background-color: #6c757d; color: white; border: none;">
+                        <i data-lucide="dollar-sign" class="btn-icon"></i> Control de Pagos del Paciente
                     </a>
                     
                     <a href="{{ url_for('export.exportar_excel', id=paciente.id) }}" class="btn-custom btn-success-custom"><i data-lucide="file-spreadsheet" class="btn-icon"></i> Exportar a Excel</a>
@@ -523,4 +535,6 @@
             }
         });
     </script>
+
+    <script src="{{ url_for('static', filename='js/dictado_evolucion.js') }}?v=5"></script>    
 {% endblock %}
