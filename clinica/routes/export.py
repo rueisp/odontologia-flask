@@ -12,92 +12,112 @@ from docx.shared import Inches, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 import re
 import pytz 
+from sqlalchemy.orm import load_only  # <--- ESTA LÍNEA FALTABA
 
-# --- Importaciones de tus Modelos (AGREGAMOS EPS y Municipio) ---
-from ..models import db, Paciente, Evolucion, EPS, Municipio
+# --- Importaciones de tus Modelos ---
+from ..models import db, Paciente, Evolucion
 
 # --- Creación del Blueprint ---
 export_bp = Blueprint('export', __name__)
 
-# --- FUNCIÓN AUXILIAR PARA OBTENER NOMBRES REALES ---
-def obtener_nombres_rips(paciente):
-    """
-    Busca los nombres reales de EPS, Municipio y Departamento 
-    basado en los códigos del paciente. Retorna un diccionario.
-    """
-    # 1. Aseguradora (EPS)
-    nombre_eps = paciente.aseguradora or 'No especificado'
-    if paciente.codigo_aseguradora:
-        cod_eps = str(paciente.codigo_aseguradora).strip()
-        eps_obj = EPS.query.filter(EPS.codigo.ilike(cod_eps)).first()
-        if eps_obj:
-            nombre_eps = eps_obj.nombre
-        # Si no lo encuentra, nos quedamos con lo que tenga paciente.aseguradora
 
-    # 2. Municipio y Departamento
-    nombre_muni = paciente.municipio or 'No especificado'
-    nombre_depto = paciente.departamento or 'No especificado'
-
-    if paciente.codigo_municipio and paciente.codigo_departamento:
-        cod_mpio = str(paciente.codigo_municipio).strip()
-        cod_dpto = str(paciente.codigo_departamento).strip()
-
-        # Intento 1: Búsqueda exacta
-        mpio_obj = Municipio.query.filter_by(codigo=cod_mpio).first()
-        
-        # Intento 2: Código corto
-        if not mpio_obj and len(cod_mpio) > 2:
-            cod_corto = cod_mpio[-3:] 
-            mpio_obj = Municipio.query.filter_by(codigo=cod_corto, codigo_departamento=cod_dpto).first()
-
-        if mpio_obj:
-            nombre_muni = mpio_obj.nombre
-            nombre_depto = mpio_obj.nombre_departamento
-
-    return {
-        'aseguradora': nombre_eps,
-        'municipio': nombre_muni,
-        'departamento': nombre_depto
-    }
-
-
-# --- Exportar a Excel (MEJORADO) ---
+# --- Exportar a Excel (OPTIMIZADO) ---
 @export_bp.route('/exportar_excel/<int:id>')
 def exportar_excel(id):
-    paciente = Paciente.query.get_or_404(id)
+    # Cargar solo el paciente con los campos que vamos a exportar
+    paciente = db.session.query(Paciente).options(
+        load_only(
+            Paciente.id,
+            Paciente.primer_nombre,
+            Paciente.segundo_nombre,
+            Paciente.primer_apellido,
+            Paciente.segundo_apellido,
+            Paciente.tipo_documento,
+            Paciente.documento,
+            Paciente.fecha_nacimiento,
+            Paciente.edad,
+            Paciente.email,
+            Paciente.telefono,
+            Paciente.direccion,
+            Paciente.barrio,
+            Paciente.alergias,
+            Paciente.motivo_consulta,
+            Paciente.enfermedad_actual,
+            Paciente.observaciones,
+            Paciente.dentigrama_canvas,
+            Paciente.imagen_perfil_url
+        )
+    ).get_or_404(id)
     
-    # Obtenemos los nombres bonitos
-    nombres_rips = obtener_nombres_rips(paciente)
-
     datos = {"Campo": [], "Valor": []}
-    campos = [ "id", "nombres", "apellidos", "tipo_documento", "documento", "fecha_nacimiento", "edad", "email", "telefono", "genero", "estado_civil", "direccion", "barrio", "municipio", "departamento", "aseguradora", "tipo_vinculacion", "ocupacion", "referido_por", "nombre_responsable", "telefono_responsable", "parentesco", "motivo_consulta", "enfermedad_actual", "antecedentes_personales", "antecedentes_familiares", "antecedentes_quirurgicos", "antecedentes_hemorragicos", "farmacologicos", "reaccion_medicamentos", "alergias", "habitos", "cepillado", "examen_fisico", "ultima_visita_odontologo", "plan_tratamiento", "observaciones"]
     
-    for campo in campos:
-        # Si el campo es uno de los que calculamos, usamos el valor calculado
-        if campo in nombres_rips:
-            valor = nombres_rips[campo]
-        else:
-            valor = getattr(paciente, campo, "")
-            
-        datos["Campo"].append(campo.replace("_", " ").capitalize())
-        datos["Valor"].append(valor if valor else "No disponible")
+    # SOLO los campos que realmente existen y se usan
+    campos_exportar = [
+        ("ID", paciente.id),
+        ("Primer Nombre", paciente.primer_nombre),
+        ("Segundo Nombre", paciente.segundo_nombre),
+        ("Primer Apellido", paciente.primer_apellido),
+        ("Segundo Apellido", paciente.segundo_apellido),
+        ("Tipo Documento", paciente.tipo_documento),
+        ("Documento", paciente.documento),
+        ("Fecha Nacimiento", paciente.fecha_nacimiento.strftime('%d/%m/%Y') if paciente.fecha_nacimiento else 'N/A'),
+        ("Edad", paciente.edad),
+        ("Email", paciente.email or 'N/A'),
+        ("Teléfono", paciente.telefono),
+        ("Dirección", paciente.direccion or 'N/A'),
+        ("Barrio", paciente.barrio or 'N/A'),
+        ("Alergias", paciente.alergias or 'No especificado'),
+        ("Motivo Consulta", paciente.motivo_consulta or 'No especificado'),
+        ("Enfermedad Actual", paciente.enfermedad_actual or 'No especificado'),
+        ("Observaciones", paciente.observaciones or 'No especificado')
+    ]
+    
+    for campo, valor in campos_exportar:
+        datos["Campo"].append(campo)
+        datos["Valor"].append(valor if valor is not None else "No disponible")
         
     df = pd.DataFrame(datos)
     output = BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df.to_excel(writer, index=False, sheet_name='Paciente')
     output.seek(0)
-    return send_file(output, download_name=f"Paciente_{paciente.id}.xlsx", as_attachment=True)
+    
+    filename = f"Paciente_{paciente.documento or paciente.id}.xlsx"
+    return send_file(output, download_name=filename, as_attachment=True)
 
 
-# --- Exportar a Word (MEJORADO) ---
+# --- Exportar a Word (OPTIMIZADO) ---
 @export_bp.route('/exportar_word/<int:id>')
 def exportar_word(id):
-    paciente = Paciente.query.get_or_404(id)
+    # Cargar paciente con campos necesarios
+    paciente = db.session.query(Paciente).options(
+        load_only(
+            Paciente.id,
+            Paciente.primer_nombre,
+            Paciente.segundo_nombre,
+            Paciente.primer_apellido,
+            Paciente.segundo_apellido,
+            Paciente.tipo_documento,
+            Paciente.documento,
+            Paciente.fecha_nacimiento,
+            Paciente.edad,
+            Paciente.email,
+            Paciente.telefono,
+            Paciente.direccion,
+            Paciente.barrio,
+            Paciente.alergias,
+            Paciente.motivo_consulta,
+            Paciente.enfermedad_actual,
+            Paciente.observaciones
+        )
+    ).get_or_404(id)
+    
+    # Cargar evoluciones del paciente
+    evoluciones = db.session.query(Evolucion).options(
+        load_only(Evolucion.fecha, Evolucion.descripcion)
+    ).filter(Evolucion.paciente_id == id).order_by(Evolucion.fecha.asc()).all()
+    
     doc = Document()
-
-    # Obtenemos los nombres bonitos para usarlos en la tabla
-    nombres_rips = obtener_nombres_rips(paciente)
 
     # Estilo de fuente por defecto
     style = doc.styles['Normal']
@@ -131,76 +151,71 @@ def exportar_word(id):
 
     doc.add_paragraph() 
 
-    # --- DATOS DE FILIACIÓN (USANDO NOMBRES RIPS) ---
+    # --- DATOS DE FILIACIÓN (SOLO CAMPOS ESENCIALES) ---
     doc.add_heading('1. Datos de Filiación', level=2)
     campos_filiacion = [
-        ("Nombres", paciente.nombres), ("Apellidos", paciente.apellidos),
-        ("Tipo Doc.", paciente.tipo_documento), ("Documento", paciente.documento),
+        ("Nombres", f"{paciente.primer_nombre} {paciente.segundo_nombre or ''}".strip()),
+        ("Apellidos", f"{paciente.primer_apellido} {paciente.segundo_apellido or ''}".strip()),
+        ("Tipo Doc.", paciente.tipo_documento),
+        ("Documento", paciente.documento),
         ("Fecha Nac.", paciente.fecha_nacimiento.strftime('%d/%m/%Y') if paciente.fecha_nacimiento else 'N/A'),
         ("Edad", paciente.edad),
-        ("Email", paciente.email), ("Teléfono", paciente.telefono),
-        ("Género", paciente.genero), ("Estado Civil", paciente.estado_civil),
-        ("Dirección", paciente.direccion), ("Ocupación", paciente.ocupacion),
-        # AQUÍ USAMOS LOS NOMBRES CALCULADOS:
-        ("Municipio", nombres_rips['municipio']), ("Departamento", nombres_rips['departamento']),
-        ("Aseguradora", nombres_rips['aseguradora']), ("Tipo Vinculación", paciente.tipo_vinculacion)
+        ("Email", paciente.email or 'N/A'),
+        ("Teléfono", paciente.telefono),
+        ("Dirección", paciente.direccion or 'N/A'),
+        ("Barrio", paciente.barrio or 'N/A')
     ]
     crear_tabla_formato(doc, campos_filiacion, una_columna=False, label_font_size=Pt(7), value_font_size=Pt(7), vertical_align_top=True)
     doc.add_paragraph()
 
-    # --- ANAMNESIS (Se mantiene igual) ---
-    doc.add_heading('2. Anamnesis y Antecedentes', level=2)
-    campos_anamnesis = [
+    # --- INFORMACIÓN CLÍNICA ---
+    doc.add_heading('2. Información Clínica', level=2)
+    campos_clinicos = [
         ("Motivo de Consulta", limpiar_texto_para_word(paciente.motivo_consulta)),
         ("Enfermedad Actual", limpiar_texto_para_word(paciente.enfermedad_actual)),
-        ("Antec. Personales", limpiar_texto_para_word(paciente.antecedentes_personales)),
-        ("Antec. Familiares", limpiar_texto_para_word(paciente.antecedentes_familiares)),
-        ("Antec. Quirúrgicos", limpiar_texto_para_word(paciente.antecedentes_quirurgicos)),
-        ("Antec. Hemorrágicos", limpiar_texto_para_word(paciente.antecedentes_hemorragicos)),
-        ("Farmacológicos", limpiar_texto_para_word(paciente.farmacologicos)),
-        ("Reacción a Med.", limpiar_texto_para_word(paciente.reaccion_medicamentos)),
         ("Alergias", limpiar_texto_para_word(paciente.alergias)),
-        ("Hábitos", limpiar_texto_para_word(paciente.habitos)),
-        ("Cepillado", limpiar_texto_para_word(paciente.cepillado)),
-        ("Examen Físico", limpiar_texto_para_word(paciente.examen_fisico)),
-        ("Última Visita Od.", limpiar_texto_para_word(paciente.ultima_visita_odontologo)),
-        ("Plan de Tratamiento", limpiar_texto_para_word(paciente.plan_tratamiento)),
         ("Observaciones", limpiar_texto_para_word(paciente.observaciones))
     ]
-    crear_tabla_formato(doc, campos_anamnesis, una_columna=False, label_font_size=Pt(7), value_font_size=Pt(7), vertical_align_top=True)
+    crear_tabla_formato(doc, campos_clinicos, una_columna=False, label_font_size=Pt(7), value_font_size=Pt(7), vertical_align_top=True)
     doc.add_paragraph()
 
-    # --- EVOLUCIÓN (Se mantiene la corrección de zona horaria) ---
+    # --- EVOLUCIÓN ---
     doc.add_heading('3. Evolución del Paciente', level=2)
-    tabla_evos = doc.add_table(rows=1, cols=2)
-    tabla_evos.style = 'Table Grid'
-    tabla_evos.columns[0].width = Inches(1.25)
-    tabla_evos.columns[1].width = Inches(5.25)
-    hdr_cells = tabla_evos.rows[0].cells
-    hdr_cells[0].text = 'Fecha'; hdr_cells[0].paragraphs[0].runs[0].bold = True
-    hdr_cells[1].text = 'Descripción de la Evolución'; hdr_cells[1].paragraphs[0].runs[0].bold = True
+    if evoluciones:
+        tabla_evos = doc.add_table(rows=1, cols=2)
+        tabla_evos.style = 'Table Grid'
+        tabla_evos.columns[0].width = Inches(1.25)
+        tabla_evos.columns[1].width = Inches(5.25)
+        hdr_cells = tabla_evos.rows[0].cells
+        hdr_cells[0].text = 'Fecha'
+        hdr_cells[0].paragraphs[0].runs[0].bold = True
+        hdr_cells[1].text = 'Descripción de la Evolución'
+        hdr_cells[1].paragraphs[0].runs[0].bold = True
 
-    for evo in paciente.evoluciones.order_by(Evolucion.fecha.asc()):
-        row_cells = tabla_evos.add_row().cells
-        
-        if evo.fecha.tzinfo is None: 
-            fecha_evo_utc = evo.fecha.replace(tzinfo=pytz.utc)
-        else: 
-            fecha_evo_utc = evo.fecha
+        for evo in evoluciones:
+            row_cells = tabla_evos.add_row().cells
+            
+            # Manejo de zona horaria
+            if evo.fecha.tzinfo is None: 
+                fecha_evo_utc = evo.fecha.replace(tzinfo=pytz.utc)
+            else: 
+                fecha_evo_utc = evo.fecha
 
-        fecha_evo_local = fecha_evo_utc.astimezone(local_timezone)
-        row_cells[0].text = fecha_evo_local.strftime('%d/%m/%Y %H:%M') 
-        row_cells[1].text = evo.descripcion
+            fecha_evo_local = fecha_evo_utc.astimezone(local_timezone)
+            row_cells[0].text = fecha_evo_local.strftime('%d/%m/%Y %H:%M') 
+            row_cells[1].text = evo.descripcion
+    else:
+        doc.add_paragraph("No hay evoluciones registradas.")
 
     output = BytesIO()
     doc.save(output)
     output.seek(0)
+    
     download_filename = f"Historia_Clinica_{paciente.documento or paciente.id}.docx"
     return send_file(output, download_name=download_filename, as_attachment=True)
 
 
-# --- FUNCIONES AUXILIARES (Sin cambios) ---
-
+# --- FUNCIONES AUXILIARES ---
 def limpiar_texto_para_word(texto):
     if texto is None: return ""
     texto = str(texto)
@@ -258,29 +273,3 @@ def crear_tabla_formato(doc, campos, una_columna=False, label_font_size=None, va
             p_value_der.paragraph_format.space_after = Pt(0)
             p_value_der.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
             p_value_der.alignment = WD_ALIGN_PARAGRAPH.LEFT
-
-# --- FUNCIÓN AUXILIAR add_image_to_doc (se mantiene igual) ---
-def add_image_to_doc(doc, ruta_relativa_db, width=3.0):
-    """Añade una imagen directamente al documento si es una ruta local. Ignora URLs externas."""
-    if ruta_relativa_db and not ruta_relativa_db.startswith(('http://', 'https://')):
-        ruta_absoluta = os.path.join(current_app.root_path, 'static', ruta_relativa_db)
-        if os.path.exists(ruta_absoluta):
-            try:
-                doc.add_picture(ruta_absoluta, width=Inches(width))
-            except Exception as e:
-                doc.add_paragraph(f"(Error al insertar imagen desde local: {e})")
-
-# --- FUNCIÓN AUXILIAR add_image_to_cell (se mantiene igual) ---
-def add_image_to_cell(cell, ruta_relativa_db, label, width=3.0):
-    """Añade una etiqueta y una imagen dentro de una celda de tabla si es una ruta local. Ignora URLs externas."""
-    cell.text = ''
-    p = cell.add_paragraph()
-    p.add_run(f"{label}:").bold = True
-
-    if ruta_relativa_db and not ruta_relativa_db.startswith(('http://', 'https://')):
-        ruta_absoluta = os.path.join(current_app.root_path, 'static', ruta_relativa_db)
-        if os.path.exists(ruta_absoluta):
-            try:
-                cell.add_paragraph().add_run().add_picture(ruta_absoluta, width=Inches(width))
-            except Exception as e:
-                cell.add_paragraph(f"(Error al insertar imagen desde local en celda: {e})")

@@ -8,7 +8,7 @@ from flask_login import login_required, current_user
 from sqlalchemy.orm import joinedload
 from ..utils import extract_public_id_from_url
 from ..extensions import db
-from ..models import Paciente, Cita, Evolucion, AuditLog, Procedimiento, Factura
+from ..models import Paciente, Cita, Evolucion, AuditLog  # ← ELIMINADOS Procedimiento y Factura
 try:
     from . import utils
 except ImportError:
@@ -33,15 +33,13 @@ def ver_papelera():
         else:
             # --- FILTRO PARA USUARIO NORMAL (DOCTOR) ---
             
-            # 1. Filtro para pacientes (Este ya estaba correcto, usa 'odontologo_id')
+            # 1. Filtro para pacientes
             pacientes_eliminados = Paciente.query.filter_by(
                 is_deleted=True, 
                 odontologo_id=current_user.id
             ).order_by(Paciente.deleted_at.desc()).limit(20).all()
 
-            # 2. Filtro para citas (ESTA ES LA CORRECCIÓN)
-            # Usamos .join() para "unir" temporalmente la tabla Cita con la tabla Paciente
-            # y luego filtramos por el 'odontologo_id' del paciente asociado.
+            # 2. Filtro para citas
             citas_eliminadas = Cita.query.join(Paciente).filter(
                 Cita.is_deleted == True,
                 Paciente.odontologo_id == current_user.id
@@ -150,58 +148,38 @@ def eliminar_permanentemente():
     try:
         log_descripcion_base = f"{target_model_str} (ID: {target_id})"
         
-        # --- 👇▼▼▼ INICIO DEL BLOQUE MODIFICADO ▼▼▼👇 ---
         if target_model_str == "Paciente":
-            # --- INICIO DE LA DEPURACIÓN ---
+            # --- DEPURACIÓN ---
             print("=============================================")
             print(f"INICIANDO BORRADO PERMANENTE DEL PACIENTE ID: {objeto_a_eliminar.id}")
             print(f"URL del Dentigrama: {objeto_a_eliminar.dentigrama_canvas}")
-            print(f"URL de Imagen 1: {objeto_a_eliminar.imagen_1}")
-            print(f"URL de Imagen 2: {objeto_a_eliminar.imagen_2}")
             print("---------------------------------------------")
-            # --- FIN DE LA DEPURACIÓN ---
 
-            # --- NUEVA LÓGICA: Eliminar imágenes de Cloudinary ---
-            urls_a_borrar = [
-                objeto_a_eliminar.dentigrama_canvas,
-                objeto_a_eliminar.imagen_1,
-                objeto_a_eliminar.imagen_2
-            ]
+            # Eliminar imágenes de Cloudinary
+            if objeto_a_eliminar.dentigrama_canvas:
+                public_id = extract_public_id_from_url(objeto_a_eliminar.dentigrama_canvas)
+                if public_id:
+                    try:
+                        cloudinary.uploader.destroy(public_id)
+                        current_app.logger.info(f"Éxito al eliminar de Cloudinary: {public_id}")
+                    except Exception as e_cloud:
+                        current_app.logger.error(f"Fallo al eliminar de Cloudinary {public_id}: {e_cloud}")
 
-            for url in urls_a_borrar:
-                if url:
-                    public_id = extract_public_id_from_url(url)
-                    if public_id:
-                        try:
-                            # Le pedimos a Cloudinary que destruya la imagen
-                            cloudinary.uploader.destroy(public_id)
-                            current_app.logger.info(f"Éxito al eliminar de Cloudinary: {public_id}")
-                        except Exception as e_cloud:
-                            # Si falla, solo lo registramos, pero no detenemos el proceso
-                            current_app.logger.error(f"Fallo al eliminar de Cloudinary {public_id}: {e_cloud}")
+            # Eliminar TODAS las EVOLUCIONES asociadas al paciente
+            Evolucion.query.filter_by(paciente_id=target_id).delete(synchronize_session=False)
+            current_app.logger.info(f"Eliminadas evoluciones del paciente {target_id}.")
+
+            # Eliminar TODAS las CITAS asociadas al paciente
+            Cita.query.filter_by(paciente_id=target_id).delete(synchronize_session=False)
+            current_app.logger.info(f"Eliminadas citas del paciente {target_id}.")
+
+        elif target_model_str == "Cita":
+            # Para citas, no hay acciones adicionales
+            pass
             
-            # --- 👇▼▼▼ INICIO DEL BLOQUE DE ELIMINACIÓN EN CASCADA CORREGIDO ▼▼▼👇 ---
-
-        # 1. Eliminar TODOS los PROCEDIMIENTOS asociados a las citas del paciente
-        cita_ids_del_paciente = db.session.query(Cita.id).filter_by(paciente_id=target_id).subquery()
-        Procedimiento.query.filter(Procedimiento.cita_id.in_(cita_ids_del_paciente)).delete(synchronize_session=False)
-        current_app.logger.info(f"Eliminados procedimientos asociados a citas del paciente {target_id}.")
-
-        # 2. Eliminar TODAS las EVOLUCIONES asociadas al paciente
-        Evolucion.query.filter_by(paciente_id=target_id).delete(synchronize_session=False)
-        current_app.logger.info(f"Eliminadas evoluciones del paciente {target_id}.")
-
-        # 3. Eliminar TODAS las CITAS asociadas al paciente
-        # ESTE PASO VA AHORA, ANTES DE ELIMINAR LAS FACTURAS
-        Cita.query.filter_by(paciente_id=target_id).delete(synchronize_session=False)
-        current_app.logger.info(f"Eliminadas citas del paciente {target_id}.")
-
-        # 4. Eliminar TODAS las FACTURAS asociadas al paciente
-        # ESTE PASO VA AHORA, DESPUÉS DE ELIMINAR LAS CITAS
-        Factura.query.filter_by(paciente_id=target_id).delete(synchronize_session=False)
-        current_app.logger.info(f"Eliminadas facturas del paciente {target_id}.")
-
-        # --- ▲▲▲ FIN DEL BLOQUE DE ELIMINACIÓN EN CASCADA CORREGIDO ▲▲▲ ---
+        elif target_model_str == "Evolucion":
+            # Para evoluciones, no hay acciones adicionales
+            pass
 
         # Eliminar el objeto de la DB (Hard Delete)
         db.session.delete(objeto_a_eliminar)

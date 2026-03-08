@@ -101,12 +101,25 @@ body {
 /* --- ESTILOS DE DATOS DENTRO DE LAS TARJETAS --- */
 .data-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* 2 columnas adaptativas */
-    gap: 18px;
+    grid-template-columns: repeat(2, 1fr); /* SIEMPRE 2 columnas */
+    gap: 16px;
 }
-@media (max-width: 1200px) { 
-    .data-grid { grid-template-columns: 1fr; }
+
+/* Móvil: mismo comportamiento (2 columnas) pero más compacto */
+@media (max-width: 600px) {
+    .data-grid {
+        gap: 12px;
+    }
+    
+    .data-item .label {
+        font-size: 11px;
+    }
+    
+    .data-item .value {
+        font-size: 13px;
+    }
 }
+
 .data-item .label {
     display: block;
     font-weight: 500;
@@ -114,12 +127,14 @@ body {
     font-size: 13px;
     margin-bottom: 4px;
 }
+
 .data-item .value {
     color: #111827;
     font-weight: 500;
     font-size: 15px;
     word-break: break-word; 
 }
+
 .data-item .value.text-area {
     white-space: normal;
     font-size: 14px;
@@ -129,11 +144,12 @@ body {
     border-radius: 8px;
     display: block;
     color: #343a40;
-}
-.data-grid .data-item.full-width {
-    grid-column: 1 / -1; 
+    grid-column: span 2; /* Ocupa ambas columnas */
 }
 
+.data-grid .data-item.full-width {
+    grid-column: span 2; /* Ocupa ambas columnas */
+}
 
 /* --- ESTILOS PARA EL OVERLAY DEL DENTIGRAMA EN LA VISTA PREVIA --- */
 .dentigrama-preview-overlay-container {
@@ -610,3 +626,90 @@ body {
     100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
 
+/* =======================================================
+   NUEVO: HEADER CON IMAGEN DE PERFIL
+   ======================================================= */
+
+/* Header más grande y alineado con las columnas */
+.profile-header {
+    background: linear-gradient(135deg, #1a1f2c 0%, #2c3e50 100%);
+    padding: 20px 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+}
+
+.header-avatar-large {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid rgb(44, 41, 41);
+    box-shadow: 0 5px 20px rgba(41, 38, 38, 0.3);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    transform: scale(1.2); /* Agranda solo la imagen */
+    margin-left: 10px; /* Compensa el espacio */
+}
+
+.header-avatar-large:hover {
+    transform: scale(1.25);
+}
+
+.header-info h1 {
+    margin: 0;
+    font-size: 1.7rem;
+    font-weight: 600;
+    color: white;
+}
+
+.header-info p {
+    margin: 2px 0 0;
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.7);
+}
+
+/* Hacer las columnas más anchas */
+.profile-layout-new {
+    grid-template-columns: 1.3fr 1.1fr 1.1fr; /* Primera columna más ancha */
+    gap: 25px;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .profile-layout-new {
+        grid-template-columns: 1.2fr 1fr 1fr;
+    }
+}
+
+@media (max-width: 992px) {
+    .profile-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+    
+    .header-left {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .profile-layout-new {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Opcional: Si quieres la imagen aún más grande */
+.header-avatar-xlarge {
+    width: 100px;
+    height: 100px;
+}

@@ -30,7 +30,7 @@
     <form action="{{ url_for('pacientes.crear_paciente') }}" method="post" enctype="multipart/form-data" id="patientMainForm">
         
         {# El acordeón contiene: Datos Personales, Ubicación/RIPS, Dentigrama, Imágenes, etc. #}
-        {% include '_accordion_registro_paciente.html' with context %} 
+        {% include '_accordion_registro_paciente_simple.html' with context %} 
         
         <div class="mt-5 mb-5 d-flex gap-3 justify-content-center">
             <button type="submit" class="btn btn-dark" id="mainSaveButton">Guardar</button>

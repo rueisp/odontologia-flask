@@ -242,42 +242,34 @@
                             <!-- Número (Centrado y redondo) -->
                             <span class="day-number">{{ dia.fecha.day }}</span>
 
-                            <!-- Área Clicable para añadir cita (Ocupa el fondo) -->
-                            <a href="{{ url_for('calendario.registrar_cita', fecha=dia.fecha.strftime('%Y-%m-%d'), next=request.full_path) }}" 
-                               class="add-hitbox" title="Añadir Cita"></a>
+                            <!-- Área Clicable - SIEMPRE lleva a vista diaria -->
+                            <a href="{{ url_for('calendario.vista_diaria', fecha=dia.fecha.strftime('%Y-%m-%d')) }}" 
+                            class="add-hitbox" title="Ver día"></a>
 
                             <!-- INDICADORES DE CITAS (Píldoras o Puntos) -->
                             {% if dia.citas %}
-                                <div class="w-full px-1 flex flex-col gap-1 items-center z-20 pointer-events-none"> <!-- z-20 para estar sobre el hitbox -->
+                                <div class="w-full px-1 flex flex-col gap-1 items-center z-20"> <!-- Quitamos pointer-events-none -->
                                     
                                     <!-- Opción A: Si hay pocas citas (1 o 2), mostrar píldoras con nombre -->
                                     {% if dia.citas|length <= 2 %}
                                         {% for cita in dia.citas %}
-                                            <!-- Usamos un botón invisible sobre la píldora para abrir el modal -->
-                                            <div class="relative w-full">
+                                            <!-- Enlace directo a la vista diaria -->
+                                            <a href="{{ url_for('calendario.vista_diaria', fecha=dia.fecha.strftime('%Y-%m-%d')) }}" 
+                                            class="relative w-full block">
                                                 <div class="event-pill">
                                                     {{ cita.hora }} {{ cita.paciente_nombre_completo.split()[0] }}
                                                 </div>
-                                                <button class="absolute inset-0 w-full h-full cursor-pointer pointer-events-auto"
-                                                        data-bs-toggle="modal" data-bs-target="#modalCitas"
-                                                        data-fecha="{{ dia.fecha.strftime('%Y-%m-%d') }}"
-                                                        data-citas="{{ dia.citas|tojson|e }}">
-                                                </button>
-                                            </div>
+                                            </a>
                                         {% endfor %}
                                     
                                     <!-- Opción B: Si hay muchas citas, mostrar puntos o contador -->
                                     {% else %}
-                                        <div class="relative w-full">
+                                        <a href="{{ url_for('calendario.vista_diaria', fecha=dia.fecha.strftime('%Y-%m-%d')) }}" 
+                                        class="relative w-full block">
                                             <div class="event-pill bg-gray-100 text-gray-600 border-l-4 border-gray-400 text-center font-bold">
                                                 {{ dia.citas|length }} Citas
                                             </div>
-                                            <button class="absolute inset-0 w-full h-full cursor-pointer pointer-events-auto"
-                                                    data-bs-toggle="modal" data-bs-target="#modalCitas"
-                                                    data-fecha="{{ dia.fecha.strftime('%Y-%m-%d') }}"
-                                                    data-citas="{{ dia.citas|tojson|e }}">
-                                            </button>
-                                        </div>
+                                        </a>
                                     {% endif %}
                                 </div>
                             {% endif %}
@@ -291,84 +283,5 @@
     </div>
 </div>
 
-<!-- Modal de Citas (Estilo iOS Sheet) -->
-<div class="modal fade" id="modalCitas" tabindex="-1" aria-labelledby="modalCitasLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content rounded-[2rem] border-none shadow-2xl">
-            <div class="modal-header border-b-0 pb-0">
-                <h5 class="modal-title font-bold text-2xl text-gray-900" id="modalCitasLabel">Detalles</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-5">
-                <div id="citas-lista-modal" class="space-y-3">
-                    <!-- Aquí se inyectan las citas -->
-                </div>
-            </div>
-            <div class="modal-footer border-t-0 pt-0">
-                <button type="button" class="w-full bg-gray-100 text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition" data-bs-dismiss="modal">Cerrar</button>
-            </div>
-        </div>
-    </div>
-</div>
 
-{% endblock %}
-
-{% block scripts %}
-    <script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script> 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            lucide.createIcons();
-
-            const modalCitas = document.getElementById('modalCitas');
-            if (modalCitas) {
-                modalCitas.addEventListener('show.bs.modal', function (event) {
-                    const button = event.relatedTarget; 
-                    const fechaStr = button.getAttribute('data-fecha');
-                    const citasJson = button.getAttribute('data-citas');
-
-                    let citas = [];
-                    try {
-                        citas = JSON.parse(citasJson); 
-                    } catch (e) {
-                        console.error("Error JSON:", e);
-                        return;
-                    }
-
-                    const modalTitle = modalCitas.querySelector('#modalCitasLabel');
-                    const fechaObj = new Date(fechaStr + 'T00:00:00');
-                    // Título estilo iOS: "Viernes, 28 de Noviembre"
-                    modalTitle.textContent = fechaObj.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
-                    modalTitle.style.textTransform = 'capitalize';
-
-                    const citasListaModal = modalCitas.querySelector('#citas-lista-modal');
-                    citasListaModal.innerHTML = ''; 
-
-                    if (citas.length > 0) {
-                        citas.sort((a, b) => (a.hora < b.hora ? -1 : 1));                        
-                        citas.forEach(cita => {
-                            const citaDiv = document.createElement('div');
-                            // Tarjeta de cita en Modal
-                            citaDiv.className = 'flex items-center gap-4 bg-white p-3 rounded-2xl border border-gray-100 shadow-sm';
-                            
-                            citaDiv.innerHTML = `
-                                <div class="flex-shrink-0 w-12 text-center">
-                                    <span class="block text-sm font-bold text-gray-900">${cita.hora}</span>
-                                </div>
-                                <div class="border-l-2 border-red-500 h-8 mx-2"></div>
-                                <div class="flex-grow">
-                                    <p class="font-bold text-gray-900 text-sm">${cita.paciente_nombre_completo}</p>
-                                    <p class="text-xs text-gray-500">${cita.motivo || 'Consulta General'}</p>
-                                </div>
-                                <a href="${cita.edit_url}" class="text-gray-400 hover:text-black">
-                                    <i data-lucide="chevron-right" class="w-5 h-5"></i>
-                                </a>
-                            `;
-                            citasListaModal.appendChild(citaDiv);
-                        });
-                        lucide.createIcons();
-                    }
-                });
-            }
-        });
-    </script>
 {% endblock %}

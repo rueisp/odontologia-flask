@@ -131,13 +131,7 @@ def create_app():
         from .routes.calendario import calendario_bp
         from .routes.export import export_bp
         from .routes.papelera import papelera_bp
-        from .routes.reportes import reportes_bp
-        from .routes.facturacion import facturacion_bp
-        from .routes.procedimientos import procedimientos_bp
-        from .routes.api import api_bp
         from .routes.planes import planes_bp
-        from clinica.routes.procedimientos_ajax import procedimientos_ajax_bp
-
 
 
 
@@ -149,12 +143,8 @@ def create_app():
         app.register_blueprint(calendario_bp, url_prefix='/calendario')
         app.register_blueprint(export_bp, url_prefix='/export')
         app.register_blueprint(papelera_bp, url_prefix='/papelera')
-        app.register_blueprint(reportes_bp)
-        app.register_blueprint(facturacion_bp)
-        app.register_blueprint(procedimientos_bp)
-        app.register_blueprint(api_bp)
         app.register_blueprint(planes_bp)
-        app.register_blueprint(procedimientos_ajax_bp)
+
 
         @app.route('/awake')
         def awake():

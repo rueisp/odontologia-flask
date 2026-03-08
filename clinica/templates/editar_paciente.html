@@ -30,13 +30,17 @@
 
     {% include '_flash_messages.html' %}
 
-    <form action="{{ url_for('pacientes.editar_paciente', id=paciente.id) }}" method="POST" enctype="multipart/form-data" id="patientEditForm">
+    <form action="{{ url_for('pacientes.editar_paciente', id=paciente.id) }}" 
+      method="POST" 
+      enctype="multipart/form-data" 
+      id="patientEditForm"
+      onsubmit="return true;">
         
-        {# Reutilizamos el mismo acordeón que en Registrar #}
-        {% include '_accordion_registro_paciente.html' with context %}
+        {# Usamos el nuevo acordeón simplificado #}
+        {% include '_accordion_registro_paciente_simple.html' with context %}
         
         <div class="mt-5 mb-5 d-flex gap-3 justify-content-center">
-            <button type="submit" class="btn btn-dark" id="editSaveButton">Guardar Cambios</button>
+            <button type="submit" class="btn btn-dark">Guardar Cambios</button>
             <a href="{{ url_for('pacientes.mostrar_paciente', id=paciente.id) }}" class="btn btn-secondary">Cancelar</a>
         </div>
     </form>
@@ -47,84 +51,14 @@
 {% block scripts %}
     {{ super() }}
 
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
+    <!-- Solo mantener lo necesario -->
     <script src="{{ url_for('static', filename='js/editor_dentigrama.js') }}"></script> 
     <script src="{{ url_for('static', filename='js/avatar_upload.js') }}"></script> 
 
     <script>
-        $(document).ready(function() {
-            // --- A. INICIALIZAR SELECT2 ---
-            $('#codigo_aseguradora').select2({
-                theme: 'bootstrap-5',
-                width: '100%',
-                placeholder: 'Escriba para buscar EPS...',
-                allowClear: true,
-                dropdownParent: $('#codigo_aseguradora').parent()
-            });
-
-            $('#codigo_dpto').select2({
-                theme: 'bootstrap-5',
-                width: '100%',
-                placeholder: 'Buscar departamento...'
-            });
-
-            // --- B. LÓGICA DE MUNICIPIOS (CON PRE-SELECCIÓN) ---
-            const departamentoSelect = document.getElementById('codigo_dpto');
-            const municipioSelect = document.getElementById('codigo_mpio');
-            
-            // Datos pasados desde Flask
-            const todosLosMunicipios = JSON.parse('{{ municipios_json | default("[]") | safe }}');
-            const municipioGuardado = "{{ paciente.codigo_mpio or '' }}"; // El valor actual en BD
-
-            function cargarMunicipios() {
-                const codigoDepto = departamentoSelect.value;
-                municipioSelect.innerHTML = '<option value="">Seleccione un municipio</option>';
-
-                if (!codigoDepto) {
-                    municipioSelect.disabled = true;
-                    return;
-                }
-
-                const municipiosFiltrados = todosLosMunicipios.filter(m => m.codigo_departamento === codigoDepto);
-
-                if (municipiosFiltrados.length > 0) {
-                    municipioSelect.disabled = false;
-                    municipiosFiltrados.forEach(muni => {
-                        const option = document.createElement('option');
-                        option.value = muni.codigo;
-                        option.textContent = muni.nombre;
-                        
-                        // CLAVE: Si el código coincide con el guardado, lo seleccionamos
-                        if (muni.codigo === municipioGuardado) {
-                            option.selected = true;
-                        }
-                        
-                        municipioSelect.appendChild(option);
-                    });
-                } else {
-                    municipioSelect.disabled = true;
-                }
-            }
-
-            // Escuchar cambios
-            $('#codigo_dpto').on('change', function() {
-                // Al cambiar manualmente, recargamos (se perderá la selección guardada, lo cual es correcto)
-                cargarMunicipios();
-            });
-
-            // Ejecutar al cargar la página para mostrar el municipio actual
-            if (departamentoSelect.value) {
-                cargarMunicipios();
-            }
-        });
-    </script>
-
-    <script>
         document.addEventListener('DOMContentLoaded', function() {
             try {
-                // --- C. CÁLCULO DE EDAD ---
+                // --- CÁLCULO DE EDAD ---
                 const fechaNacimientoInput = document.getElementById('fecha_nacimiento');
                 const edadInput = document.getElementById('edad');
                 if (fechaNacimientoInput && edadInput) { 
@@ -138,52 +72,9 @@
                         edadInput.value = edad >= 0 ? edad : '';
                     };
                     fechaNacimientoInput.addEventListener('change', calcularEdad);
-                    // No llamamos a calcularEdad() aquí porque el valor ya viene renderizado del servidor,
-                    // pero si prefieres recalcularlo en JS, descomenta la siguiente línea:
-                    // calcularEdad(); 
                 }
 
-                // --- D. LÓGICA DE GUARDADO (AJAX) ---
-                const patientEditForm = document.getElementById('patientEditForm');
-                const editSaveButton = document.getElementById('editSaveButton'); 
-                
-                if (patientEditForm && editSaveButton) {
-                    editSaveButton.addEventListener('click', async (event) => { 
-                        event.preventDefault(); 
-                        
-                        editSaveButton.disabled = true;
-                        const originalText = editSaveButton.textContent;
-                        editSaveButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
-                        
-                        try {
-                            const formData = new FormData(patientEditForm);
-                            // IMPORTANTE: Manejo del dentigrama si existe el input oculto
-                            const dentigramaInput = document.getElementById('dentigrama_url_input');
-                            if(dentigramaInput) {
-                                formData.set('dentigrama_canvas', dentigramaInput.value || '');
-                            }
-
-                            const response = await fetch(patientEditForm.action, { 
-                                method: 'POST', 
-                                body: formData 
-                            });
-                            
-                            const result = await response.json();
-                            
-                            if (!response.ok) throw new Error(result.error || 'Error del servidor');
-                            
-                            alert(result.message || "Paciente actualizado correctamente.");
-                            if (result.redirect_url) window.location.href = result.redirect_url;
-                            
-                        } catch (error) {
-                            alert("Error al actualizar: " + error.message);
-                            editSaveButton.disabled = false;
-                            editSaveButton.innerHTML = originalText;
-                        }
-                    });
-                }
-
-                // --- E. DENTIGRAMA ---
+                // --- DENTIGRAMA ---
                 const dentigramaCollapse = document.getElementById('collapseDentigrama');
                 if (dentigramaCollapse) {
                     dentigramaCollapse.addEventListener('shown.bs.collapse', () => {
@@ -192,7 +83,7 @@
                 }
                 
             } catch (e) {
-                console.error("Error en el script de editar_paciente.html:", e);
+                console.error("Error en el script:", e);
             }
         }); 
     </script>

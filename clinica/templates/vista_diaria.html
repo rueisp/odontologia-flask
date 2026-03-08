@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}Vista Diaria - {{ fecha_seleccionada.strftime('%d/%m/%Y') }}{% endblock %}
+
+{% block head_extra %}
+<style>
+    .time-slot {
+        border-bottom: 1px solid #f0f0f0;
+        transition: background-color 0.2s;
+    }
+    .time-slot:hover {
+        background-color: #f9fafb;
+    }
+    .time-slot:hover .edit-icon {
+        opacity: 1;
+    }
+    .edit-icon {
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+    .mini-calendar-day {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+    }
+    .mini-calendar-day:hover {
+        background-color: #f3f4f6;
+    }
+    .mini-calendar-day.selected {
+        background-color: #000;
+        color: white;
+        font-weight: 600;
+    }
+    .mini-calendar-day.other-month {
+        color: #d1d5db;
+    }
+    .appointment-input {
+        width: 100%;
+        border: none;
+        background: transparent;
+        padding: 8px 12px;
+        font-size: 0.95rem;
+        outline: none;
+    }
+    .appointment-input:focus {
+        background-color: white;
+        box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
+        border-radius: 8px;
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="relative min-h-screen bg-gray-50">
+    <div class="max-w-6xl mx-auto p-4 lg:p-6">
+        
+        <!-- Cabecera con navegación -->
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-4">
+                <h1 class="text-2xl font-bold text-gray-900">
+                    {% set dias_semana = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'] %}
+                    {% set meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'] %}
+                    {{ dias_semana[fecha_seleccionada.weekday()]|capitalize }}, {{ fecha_seleccionada.day }} de {{ meses[fecha_seleccionada.month - 1] }} de {{ fecha_seleccionada.year }}
+                </h1>
+                
+                <div class="flex gap-1">
+                    <a href="{{ url_for('calendario.vista_diaria', fecha=(fecha_seleccionada - timedelta(days=1)).strftime('%Y-%m-%d')) }}" 
+                    class="p-2 hover:bg-gray-200 rounded-full transition">
+                        <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                    </a>
+                    <a href="{{ url_for('calendario.vista_diaria', fecha=(fecha_seleccionada + timedelta(days=1)).strftime('%Y-%m-%d')) }}" 
+                    class="p-2 hover:bg-gray-200 rounded-full transition">
+                        <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                    </a>
+                    <a href="{{ url_for('calendario.vista_diaria') }}" class="ml-2 px-3 py-1 text-sm bg-black text-white rounded-full hover:bg-gray-800 transition">
+                        Hoy
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Botones de navegación agrupados a la derecha -->
+            <div class="flex items-center gap-2">
+                <!-- Botón para volver al calendario -->
+                <a href="{{ url_for('calendario.mostrar_calendario') }}" 
+                class="p-2 hover:bg-gray-200 rounded-full transition"
+                title="Volver al calendario mensual">
+                    <i data-lucide="calendar" class="w-5 h-5"></i>
+                </a>
+                
+                <!-- Botón para ir al panel principal -->
+                <a href="{{ url_for('main.index') }}" 
+                class="p-2 hover:bg-gray-200 rounded-full transition"
+                title="Ir al inicio">
+                    <i data-lucide="home" class="w-5 h-5"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Panel izquierdo: Mini calendario -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-2xl shadow-sm p-4 sticky top-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-gray-900">{{ nombre_mes }} {{ anio_actual }}</h3>
+                        <div class="flex gap-1">
+                            <a href="{{ url_for('calendario.vista_diaria', fecha=(fecha_seleccionada.replace(month=mes_actual-1 if mes_actual>1 else 12, year=anio_actual-1 if mes_actual==1 else anio_actual)).strftime('%Y-%m-%d')) }}" 
+                               class="p-1 hover:bg-gray-100 rounded-full">
+                                <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                            </a>
+                            <a href="{{ url_for('calendario.vista_diaria', fecha=(fecha_seleccionada.replace(month=mes_actual+1 if mes_actual<12 else 1, year=anio_actual+1 if mes_actual==12 else anio_actual)).strftime('%Y-%m-%d')) }}" 
+                               class="p-1 hover:bg-gray-100 rounded-full">
+                                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Días de la semana -->
+                    <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-gray-400 mb-2">
+                        <div>D</div><div>L</div><div>M</div><div>M</div><div>J</div><div>V</div><div>S</div>
+                    </div>
+                    
+                    <!-- Cuadrícula del mes -->
+                    {% for semana in calendario_mes %}
+                    <div class="grid grid-cols-7 gap-1 mb-1">
+                        {% for dia in semana %}
+                            {% if dia != 0 %}
+                                {% set dia_fecha = fecha_seleccionada.replace(day=dia) %}
+                                <a href="{{ url_for('calendario.vista_diaria', fecha=dia_fecha.strftime('%Y-%m-%d')) }}" 
+                                   class="mini-calendar-day {% if dia_fecha == fecha_seleccionada %}selected{% endif %}">
+                                    {{ dia }}
+                                </a>
+                            {% else %}
+                                <div class="mini-calendar-day other-month"></div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                    
+                    <div class="mt-4 pt-4 border-t border-gray-100">
+                        <a href="{{ url_for('calendario.registrar_cita', fecha=fecha_seleccionada.strftime('%Y-%m-%d')) }}" 
+                           class="w-full py-2 bg-black text-white text-sm font-bold rounded-xl hover:bg-gray-800 transition flex items-center justify-center gap-2">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            Nueva Cita
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Panel derecho: Franjas horarias -->
+            <div class="lg:col-span-3">
+                <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+                    <!-- Cabecera de horas -->
+                    <div class="grid grid-cols-12 bg-gray-50 border-b border-gray-200 py-2 px-4 text-xs font-semibold text-gray-500">
+                        <div class="col-span-2">Hora</div>
+                        <div class="col-span-8">Paciente</div>
+                        <div class="col-span-2 text-right">Acciones</div>
+                    </div>
+                    
+                    <!-- Lista de franjas -->
+                    <div class="divide-y divide-gray-100">
+                        {% for franja in franjas %}
+                        <div class="time-slot grid grid-cols-12 items-center px-4 py-1 relative group">
+                            <div class="col-span-2 text-sm font-medium text-gray-700">
+                                {{ franja.hora_display }}
+                            </div>
+                            
+                            <div class="col-span-8 relative">
+                                {% if franja.cita %}
+                                    {% set url_editar = franja.cita.edit_url %}
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                                        <input type="text" 
+                                            class="appointment-input font-medium cursor-pointer hover:bg-gray-50"
+                                            value="{{ franja.cita.paciente_nombre }} {{ franja.cita.paciente_apellidos }}"
+                                            onclick="window.location.href='{{ url_editar }}'"
+                                            readonly
+                                            data-cita-id="{{ franja.cita.id }}">
+                                        <span class="text-xs text-gray-400">{{ franja.cita.motivo|truncate(20) }}</span>
+                                    </div>
+                                {% else %}
+                                    {% set url_nueva = url_for('calendario.registrar_cita', fecha=fecha_seleccionada.strftime('%Y-%m-%d'), hora=franja.hora) %}
+                                    <input type="text" 
+                                        class="appointment-input text-gray-400 placeholder-gray-300 cursor-pointer hover:bg-gray-50"
+                                        placeholder="+ Agendar cita"
+                                        onclick="window.location.href='{{ url_nueva }}'"
+                                        readonly>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-span-2 text-right">
+                                {% if franja.cita %}
+                                    <a href="{{ franja.cita.edit_url }}" 
+                                       class="edit-icon inline-flex items-center gap-1 text-xs text-gray-400 hover:text-black transition">
+                                        <i data-lucide="pencil" class="w-3 h-3"></i>
+                                        <span class="hidden sm:inline">Editar</span>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        lucide.createIcons();
+    });
+</script>
+{% endblock %}

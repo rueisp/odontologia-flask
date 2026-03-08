@@ -24,20 +24,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const telefonoPacienteHeader = document.getElementById('telefonoPaciente');
 
     // Elementos del DOM en el panel derecho (sección "Datos")
-    const estadoPacienteSpan = document.getElementById('estadoPaciente');
-    const generoEdadSpan = document.getElementById('generoEdad');
     const fechaNacimientoSpan = document.getElementById('fechaNacimiento');
     const direccionPacienteSpan = document.getElementById('direccionPaciente');
     const emailPacienteSpan = document.getElementById('emailPaciente');
-    const ocupacionPacienteSpan = document.getElementById('ocupacionPaciente');
-    const aseguradoraPacienteSpan = document.getElementById('aseguradoraPaciente');
     const alergiasPacienteSpan = document.getElementById('alergiasPaciente');
     const enfermedadPacienteSpan = document.getElementById('enfermedadPaciente');
+    
+    // NUEVOS CAMPOS - Información clínica simplificada
+    const barrioPacienteSpan = document.getElementById('barrioPaciente');
+    const motivoConsultaPacienteSpan = document.getElementById('motivoConsultaPaciente');
+    const observacionesPacienteSpan = document.getElementById('observacionesPaciente');
 
     // Elementos del DOM en el panel derecho (sección "Citas")
     const ultimaCitaSpan = document.getElementById('ultimaCita');
     const proximaCitaPanelDerechoSpan = document.getElementById('proximaCitaPanelDerecho');
-    const motivoFrecuenteSpan = document.getElementById('motivoFrecuente');
 
     // Elementos del DOM en el panel derecho (sección "Imágenes")
     const dentigramaDisplayContainer = document.getElementById('dentigramaDisplayContainer');
@@ -82,108 +82,127 @@ document.addEventListener('DOMContentLoaded', () => {
         noImgElement.classList.remove('hidden');
     }
 
-    // Función para limpiar o resetear el panel derecho
-    function clearRightPanel() {
-        const setText = (element, text) => {
-            if (element) element.textContent = text;
-        };
+// Función para limpiar o resetear el panel derecho
+function clearRightPanel() {
+    const setText = (element, text) => {
+        if (element) element.textContent = text;
+    };
 
-        setText(nombrePacienteHeader, 'No especificado');
-        setText(documentoPacienteHeader, 'No especificado');
-        setText(telefonoPacienteHeader, 'No especificado');
+    setText(nombrePacienteHeader, 'No especificado');
+    setText(documentoPacienteHeader, 'No especificado');
+    setText(telefonoPacienteHeader, 'No especificado');
 
-        // Sección "Datos"
-        setText(estadoPacienteSpan, 'No especificado');
-        setText(generoEdadSpan, 'N/A • No especificada');
-        setText(fechaNacimientoSpan, 'No especificado');
-        setText(direccionPacienteSpan, 'No especificado');
-        setText(emailPacienteSpan, 'No especificado');
-        setText(ocupacionPacienteSpan, 'No especificado');
-        setText(aseguradoraPacienteSpan, 'No especificado');
-        setText(alergiasPacienteSpan, 'No especificado');
-        setText(enfermedadPacienteSpan, 'No especificado');
+    // Sección "Datos" - SOLO CAMPOS EXISTENTES
+    setText(fechaNacimientoSpan, 'No especificado');
+    setText(direccionPacienteSpan, 'No especificado');
+    setText(emailPacienteSpan, 'No especificado');
+    setText(alergiasPacienteSpan, 'No especificado');
+    setText(enfermedadPacienteSpan, 'No especificado');
+    setText(barrioPacienteSpan, 'No especificado');
+    setText(motivoConsultaPacienteSpan, 'No especificado');
+    setText(observacionesPacienteSpan, 'No especificado');
 
-        // Sección "Citas"
-        setText(ultimaCitaSpan, 'No hay citas anteriores registradas');
-        setText(proximaCitaPanelDerechoSpan, 'No tiene próximas citas');
-        setText(motivoFrecuenteSpan, 'No especificado');
+    // Sección "Citas"
+    setText(ultimaCitaSpan, 'No hay citas anteriores registradas');
+    setText(proximaCitaPanelDerechoSpan, 'No tiene próximas citas');
 
-        // Sección "Imágenes"
-        hideImage(dentigramaDisplayContainer, dentigramaDisplay, noDentigrama);
-        hideImage(imagen1DisplayContainer, imagen1Display, noImagen1);
-        hideImage(imagen2DisplayContainer, imagen2Display, noImagen2);
+    // Sección "Imágenes" - SOLO DENTIGRAMA
+    hideImage(dentigramaDisplayContainer, dentigramaDisplay, noDentigrama);
 
-        if (panelControles) panelControles.style.display = 'none';
-        pacienteSeleccionado = null;
-        if (inputBusqueda) inputBusqueda.value = '';
+    if (panelControles) panelControles.style.display = 'none';
+    pacienteSeleccionado = null;
+    if (inputBusqueda) inputBusqueda.value = '';
+}
+
+// --- Lógica para el cambio de pestañas en el panel derecho ---
+function mostrarSeccion(seccionIdActiva) {
+    const idsSeccionesPanelDerecho = ['datos', 'citas', 'imagenes'];
+
+    idsSeccionesPanelDerecho.forEach(idPanel => {
+        const el = document.getElementById(`seccion-${idPanel}`);
+        if (el) el.classList.add('hidden');
+    });
+
+    const seccionActivaEl = document.getElementById(`seccion-${seccionIdActiva}`);
+    if (seccionActivaEl) seccionActivaEl.classList.remove('hidden');
+
+    // Actualizar estilo de los botones de pestañas del panel DERECHO
+    document.querySelectorAll('.tab-btn-panel-derecho').forEach(btn => {
+        btn.classList.remove('border-black', 'text-black', 'font-semibold');
+        btn.classList.add('text-gray-600', 'border-transparent');
+    });
+
+    // Activar el botón correspondiente a la sección activa
+    const btnActiva = document.querySelector(`.tab-btn-panel-derecho[data-seccion="${seccionIdActiva}"]`);
+    if (btnActiva) {
+        btnActiva.classList.add('border-black', 'text-black', 'font-semibold');
+        btnActiva.classList.remove('text-gray-600', 'border-transparent');
+    }
+}
+
+// Añadir event listeners a los botones de pestañas del panel derecho
+const tabButtons = document.querySelectorAll('.tab-btn-panel-derecho');
+tabButtons.forEach(button => {
+    button.addEventListener('click', function () {
+        const seccion = this.dataset.seccion;
+        if (seccion) {
+            mostrarSeccion(seccion);
+        }
+    });
+});
+
+
+// Función para actualizar el panel derecho con los datos del paciente
+function actualizarPanelDerechoConPaciente(datos) {
+    console.log('Datos recibidos:', datos); // Para depurar
+    
+    if (!datos) {
+        clearRightPanel();
+        return;
     }
 
+    pacienteSeleccionado = datos;
 
-    // Función para actualizar el panel derecho con los datos del paciente
-    function actualizarPanelDerechoConPaciente(datos) {
-        if (!datos) {
-            clearRightPanel();
-            return;
+    const setText = (id_element, value, defaultValue = 'No especificado') => {
+        const el = document.getElementById(id_element);
+        if (el) {
+            el.textContent = value || defaultValue;
+        } else {
+            console.warn(`Elemento ${id_element} no encontrado`);
         }
+    };
 
-        pacienteSeleccionado = datos;
+    // Cabecera
+    setText('nombrePaciente', datos.nombre);
+    setText('documentoPaciente', datos.documento);
+    setText('telefonoPaciente', datos.telefono);
+    
+    // Sección Datos - Usando los nuevos IDs
+    setText('edadPaciente', datos.edad || 'No especificada');
+    setText('fechaNacimiento', datos.fecha_nacimiento);
+    setText('direccionPaciente', datos.direccion);
+    setText('barrioPaciente', datos.barrio);
+    setText('emailPaciente', datos.email);
+    setText('alergiasPaciente', datos.alergias);
+    setText('motivoConsultaPaciente', datos.motivo_consulta);
+    setText('enfermedadPaciente', datos.enfermedad_actual);
+    setText('observacionesPaciente', datos.observaciones);
 
-        const setText = (id_element, value, defaultValue = 'No especificado') => {
-            const el = document.getElementById(id_element);
-            if (el) el.textContent = value || defaultValue;
-        };
+    // Sección Citas
+    setText('ultimaCita', datos.ultima_cita_info);
+    setText('proximaCitaPanelDerecho', datos.proxima_cita_paciente_info);
 
-        setText('nombrePaciente', datos.nombre);
-        const edadDisplay = datos.edad === 'No especificada' ? 'No especificada' : `${datos.edad} años`;
-        setText('generoEdad', `${datos.genero || 'N/A'} • ${edadDisplay}`);
-        setText('fechaNacimiento', datos.fecha_nacimiento);
-        setText('estadoPaciente', datos.estado);
-        setText('documentoPaciente', datos.documento);
-        setText('telefonoPaciente', datos.telefono);
-        setText('direccionPaciente', datos.direccion);
-        setText('emailPaciente', datos.email);
-        setText('ocupacionPaciente', datos.ocupacion);
-        setText('aseguradoraPaciente', datos.aseguradora);
-        setText('alergiasPaciente', datos.alergias);
-        setText('enfermedadPaciente', datos.enfermedad_actual);
 
-        setText('ultimaCita', datos.ultima_cita_info);
-        setText('proximaCitaPanelDerecho', datos.proxima_cita_paciente_info);
-        setText('motivoFrecuente', datos.motivo_frecuente_info);
+    // Imágenes
+    displayImage(dentigramaDisplayContainer, dentigramaDisplay, noDentigrama, datos.dentigrama_url);
 
-        displayImage(dentigramaDisplayContainer, dentigramaDisplay, noDentigrama, datos.dentigrama_url);
-        displayImage(imagen1DisplayContainer, imagen1Display, noImagen1, datos.imagen_1);
-        displayImage(imagen2DisplayContainer, imagen2Display, noImagen2, datos.imagen_2);
-
-        if (panelControles) {
-            panelControles.style.display = 'flex';
-
-            const editUrlBase = panelControles.dataset.editUrlBase;
-            const citasUrlBase = panelControles.dataset.citasUrlBase;
-
-            if (btnEditarPacienteEl) {
-                btnEditarPacienteEl.onclick = function () {
-                    if (pacienteSeleccionado && pacienteSeleccionado.id) {
-                        window.location.href = editUrlBase.replace('0', pacienteSeleccionado.id);
-                    } else {
-                        alert('Por favor, selecciona un paciente válido.');
-                    }
-                };
-            }
-
-            if (btnVerCitasHistorialEl) {
-                btnVerCitasHistorialEl.onclick = function () {
-                    if (pacienteSeleccionado && pacienteSeleccionado.id) {
-                        window.location.href = citasUrlBase.replace('0', pacienteSeleccionado.id);
-                    } else {
-                        alert('Por favor, selecciona un paciente válido.');
-                    }
-                };
-            }
-        }
-
-        mostrarSeccion('datos');
+    if (panelControles) {
+        panelControles.style.display = 'flex';
+        // ... resto del código de botones
     }
+
+    mostrarSeccion('datos');
+}
 
     // Variable para el input temporal (MOVIDA FUERA DEL BLOQUE IF)
     let tempHiddenPatientIdInput = null;
@@ -201,48 +220,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Al cargar la página, limpia el panel derecho
     clearRightPanel();
 
-    // --- Lógica para el cambio de pestañas en el panel derecho ---
-    const tabButtons = document.querySelectorAll('.tab-btn-panel-derecho');
-    const sections = {
-        'datos': document.getElementById('seccion-datos'),
-        'citas': document.getElementById('seccion-citas'),
-        'imagenes': document.getElementById('seccion-imagenes')
-    };
-
-    function mostrarSeccion(seccionIdActiva) {
-        const idsSeccionesPanelDerecho = ['datos', 'citas', 'imagenes'];
-
-        idsSeccionesPanelDerecho.forEach(idPanel => {
-            const el = document.getElementById(`seccion-${idPanel}`);
-            if (el) el.classList.add('hidden');
-        });
-
-        const seccionActivaEl = document.getElementById(`seccion-${seccionIdActiva}`);
-        if (seccionActivaEl) seccionActivaEl.classList.remove('hidden');
-
-        // Actualizar estilo de los botones de pestañas del panel DERECHO
-        document.querySelectorAll('.tab-btn-panel-derecho').forEach(btn => {
-            btn.classList.remove('border-black', 'text-black', 'font-semibold');
-            btn.classList.add('text-gray-600', 'border-transparent');
-        });
-
-        // Activar el botón correspondiente a la sección activa
-        const btnActiva = document.querySelector(`.tab-btn-panel-derecho[data-seccion="${seccionIdActiva}"]`);
-        if (btnActiva) {
-            btnActiva.classList.add('border-black', 'text-black', 'font-semibold');
-            btnActiva.classList.remove('text-gray-600', 'border-transparent');
-        }
-    }
-
-    // Añadir event listeners a los botones de pestañas del panel derecho
-    tabButtons.forEach(button => {
-        button.addEventListener('click', function () {
-            const seccion = this.dataset.seccion;
-            if (seccion) {
-                mostrarSeccion(seccion);
-            }
-        });
-    });
 
     // Llamada inicial para mostrar la sección de 'datos' en el panel derecho
     const primerTabPanelDerecho = document.querySelector('.tab-btn-panel-derecho[data-seccion="datos"]');

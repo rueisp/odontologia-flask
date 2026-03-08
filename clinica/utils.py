@@ -42,96 +42,139 @@ def convertir_a_fecha(valor_str):
     except (ValueError, TypeError):
         return None
 
-# --- FUNCIÓN get_index_panel_data (¡CORREGIDA PARA NO DEVOLVER FECHAS FORMATADAS!) ---
+# --- FUNCIÓN get_index_panel_data OPTIMIZADA (SIN CAMPOS INNECESARIOS) ---
 def get_index_panel_data(today_date: date, current_time: time):
-    """Función para obtener los datos necesarios para el panel de inicio."""
+    """Función optimizada para obtener los datos necesarios para el panel de inicio."""
+    from sqlalchemy.orm import load_only, joinedload
+    from sqlalchemy import or_, and_
+    import locale
+    
     datos_panel = {}
-
-    # Las variables 'fecha_actual_formateada' y 'fecha_actual_corta'
-    # ya no se gestionan ni se devuelven desde aquí.
-    # Ahora se formatean y se pasan directamente desde main.py al template.
-
-
-    # --- CONSULTA BASE PARA CITAS DEL DASHBOARD ---
-    base_query_citas = Cita.query.outerjoin(Paciente, Cita.paciente_id == Paciente.id).filter(
+    
+    # --- CONSULTA BASE PARA CITAS (SOLO IDs para conteos) ---
+    # Primero obtenemos solo los IDs de las citas de hoy para filtrar después
+    citas_hoy_ids_query = db.session.query(Cita.id).filter(
+        Cita.fecha == today_date,
         Cita.is_deleted == False
     )
-
+    
+    # Filtrar por permisos
     if hasattr(current_user, 'is_admin') and not current_user.is_admin:
-        base_query_citas = base_query_citas.filter(
+        citas_hoy_ids_query = citas_hoy_ids_query.outerjoin(Paciente, Cita.paciente_id == Paciente.id).filter(
             or_(
                 Paciente.odontologo_id == current_user.id,
                 Cita.paciente_id == None
             )
         )
-
-    # 2. Estadísticas: Citas de hoy
-    citas_hoy_count = base_query_citas.filter(Cita.fecha == today_date).count()
+    
+    # 2. Estadísticas: Citas de hoy (conteo rápido)
+    citas_hoy_count = citas_hoy_ids_query.count()
     datos_panel['estadisticas'] = {'citas_hoy': citas_hoy_count or 0}
-
-    # 3. Próxima cita
-    proxima_cita_obj = base_query_citas.filter(
+    
+    # 3. Próxima cita (OPTIMIZADA - SOLO CAMPOS NECESARIOS)
+    proxima_cita_query = Cita.query.options(
+        load_only(
+            Cita.id, 
+            Cita.fecha, 
+            Cita.hora, 
+            Cita.motivo,
+            Cita.paciente_id,
+            Cita.paciente_nombres_str,
+            Cita.paciente_apellidos_str
+        )
+    ).filter(
         or_(
             Cita.fecha > today_date,
             and_(Cita.fecha == today_date, Cita.hora >= current_time)
+        ),
+        Cita.is_deleted == False
+    )
+    
+    # Filtrar por permisos
+    if hasattr(current_user, 'is_admin') and not current_user.is_admin:
+        proxima_cita_query = proxima_cita_query.outerjoin(Paciente, Cita.paciente_id == Paciente.id).filter(
+            or_(
+                Paciente.odontologo_id == current_user.id,
+                Cita.paciente_id == None
+            )
         )
-    ).options(joinedload(Cita.paciente))\
-     .order_by(Cita.fecha, Cita.hora)\
-     .first()
-
+    
+    proxima_cita_obj = proxima_cita_query.order_by(Cita.fecha, Cita.hora).first()
+    
     proxima_cita_data = None
     if proxima_cita_obj:
-        # Guardamos el locale original antes de cambiarlo
-        locale_original_time = locale.getlocale(locale.LC_TIME)
-        try:
-            locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
-            fecha_cita_str_buffer = proxima_cita_obj.fecha.strftime("%d %b, %Y")
-        except locale.Error:
-            logger.warning("Locale 'es_ES.UTF-8' no disponible. Usando locale por defecto.")
-            locale.setlocale(locale.LC_TIME, '')
-            fecha_cita_str_buffer = proxima_cita_obj.fecha.strftime("%d %b, %Y")
-        finally:
-            # Restaurar el locale original
-            if locale_original_time != (None, None):
-                try:
-                    locale.setlocale(locale.LC_TIME, locale_original_time)
-                except locale.Error:
-                    logger.warning(f"Advertencia: No se pudo restaurar el locale original {locale_original_time} para LC_TIME.")
-
+        # Formatear fecha
+        fecha_cita_str_buffer = proxima_cita_obj.fecha.strftime("%d %b, %Y")
         hora_cita_str = proxima_cita_obj.hora.strftime("%I:%M %p")
-
+        
+        # Obtener nombre del paciente (sin cargar todo el objeto)
         paciente_nombre_proxima_cita = "Paciente sin registrar"
-        if proxima_cita_obj.paciente and not proxima_cita_obj.paciente.is_deleted:
-            paciente_nombre_proxima_cita = f"{proxima_cita_obj.paciente.nombres} {proxima_cita_obj.paciente.apellidos}"
-        elif proxima_cita_obj.paciente_nombres_str and proxima_cita_obj.paciente_apellidos_str:
-            paciente_nombre_proxima_cita = f"{proxima_cita_obj.paciente_nombres_str} {proxima_cita_obj.paciente_apellidos_str}"
+        if proxima_cita_obj.paciente_id:
+            # Cargar SOLO el nombre del paciente si existe
+            paciente = db.session.query(Paciente).options(
+                load_only(Paciente.nombres, Paciente.apellidos)
+            ).get(proxima_cita_obj.paciente_id)
+            if paciente and not paciente.is_deleted:
+                paciente_nombre_proxima_cita = f"{paciente.nombres} {paciente.apellidos}"
         elif proxima_cita_obj.paciente_nombres_str:
-            paciente_nombre_proxima_cita = proxima_cita_obj.paciente_nombres_str
-
+            paciente_nombre_proxima_cita = f"{proxima_cita_obj.paciente_nombres_str} {proxima_cita_obj.paciente_apellidos_str or ''}".strip()
+        
         proxima_cita_data = {
             'fecha_formateada': f"{fecha_cita_str_buffer} a las {hora_cita_str}",
             'paciente_nombre': paciente_nombre_proxima_cita,
             'motivo': proxima_cita_obj.motivo or "No especificado"
         }
     datos_panel['proxima_cita'] = proxima_cita_data
-
-
-    # 5. Lista de citas de hoy
-    citas_de_hoy_lista_query = base_query_citas.filter(Cita.fecha == today_date)
-    citas_de_hoy_lista = citas_de_hoy_lista_query.options(joinedload(Cita.paciente))\
-                                                .order_by(Cita.hora)\
-                                                .all()
-
+    
+    # 5. Lista de citas de hoy (OPTIMIZADA)
+    citas_de_hoy_lista_query = Cita.query.options(
+        load_only(
+            Cita.id,
+            Cita.hora,
+            Cita.motivo,
+            Cita.doctor,
+            Cita.estado,
+            Cita.paciente_id,
+            Cita.paciente_nombres_str,
+            Cita.paciente_apellidos_str
+        )
+    ).filter(
+        Cita.fecha == today_date,
+        Cita.is_deleted == False
+    )
+    
+    # Filtrar por permisos
+    if hasattr(current_user, 'is_admin') and not current_user.is_admin:
+        citas_de_hoy_lista_query = citas_de_hoy_lista_query.outerjoin(Paciente, Cita.paciente_id == Paciente.id).filter(
+            or_(
+                Paciente.odontologo_id == current_user.id,
+                Cita.paciente_id == None
+            )
+        )
+    
+    citas_de_hoy_lista = citas_de_hoy_lista_query.order_by(Cita.hora).all()
+    
+    # Recopilar IDs de pacientes para carga eficiente
+    paciente_ids = list(set([c.paciente_id for c in citas_de_hoy_lista if c.paciente_id]))
+    pacientes_dict = {}
+    if paciente_ids:
+        pacientes = db.session.query(Paciente).options(
+            load_only(Paciente.id, Paciente.nombres, Paciente.apellidos, Paciente.is_deleted)
+        ).filter(Paciente.id.in_(paciente_ids)).all()
+        for p in pacientes:
+            pacientes_dict[p.id] = p
+    
     citas_hoy_procesadas = []
     for cita_item in citas_de_hoy_lista:
         paciente_nombre_completo = "Paciente sin registrar"
-        if cita_item.paciente and not cita_item.paciente.is_deleted:
-            paciente_nombre_completo = f"{cita_item.paciente.nombres} {cita_item.paciente.apellidos}"
-        elif cita_item.paciente_nombres_str and cita_item.paciente_apellidos_str:
-            paciente_nombre_completo = f"{cita_item.paciente_nombres_str} {cita_item.paciente_apellidos_str}"
+        
+        if cita_item.paciente_id and cita_item.paciente_id in pacientes_dict:
+            paciente = pacientes_dict[cita_item.paciente_id]
+            if not paciente.is_deleted:
+                paciente_nombre_completo = f"{paciente.nombres} {paciente.apellidos}"
         elif cita_item.paciente_nombres_str:
-            paciente_nombre_completo = cita_item.paciente_nombres_str
-
+            paciente_nombre_completo = f"{cita_item.paciente_nombres_str} {cita_item.paciente_apellidos_str or ''}".strip()
+        
         citas_hoy_procesadas.append({
             'id': cita_item.id,
             'hora_formateada': cita_item.hora.strftime("%I:%M %p"),
@@ -140,11 +183,10 @@ def get_index_panel_data(today_date: date, current_time: time):
             'doctor': cita_item.doctor,
             'estado': cita_item.estado,
         })
+    
     datos_panel['citas_del_dia'] = citas_hoy_procesadas
-
+    
     return datos_panel
-
-
 # --- VERSIÓN MEJORADA DE extract_public_id_from_url (se mantiene igual) ---
 def extract_public_id_from_url(url):
     """
@@ -228,36 +270,6 @@ def delete_from_cloudinary(url):
     return False # La URL estaba vacía
 
 
-# =========================================================================
-# === FUNCIONES DE LIMPIEZA PARA RIPS Y REPORTES ===
-# =========================================================================
-
-def limpiar_texto_rips(texto, longitud_max=None):
-    """
-    Sanitiza un texto para ser usado en archivos planos (CSV/TXT).
-    1. Elimina comas (reemplaza por espacios).
-    2. Elimina saltos de línea.
-    3. Elimina espacios dobles.
-    4. Trunca a longitud máxima si se especifica.
-    """
-    if not texto:
-        return ""
-    
-    # Asegurar que es string
-    texto_limpio = str(texto)
-    
-    # Reemplazar caracteres peligrosos para CSV
-    texto_limpio = texto_limpio.replace(',', ' ').replace(';', ' ')
-    texto_limpio = texto_limpio.replace('\r\n', ' ').replace('\n', ' ')
-    
-    # Eliminar espacios dobles y espacios al inicio/final
-    texto_limpio = " ".join(texto_limpio.split())
-    
-    # Truncar si es necesario
-    if longitud_max and len(texto_limpio) > longitud_max:
-        texto_limpio = texto_limpio[:longitud_max]
-        
-    return texto_limpio
 
 
 # clinica/utils.py (AGREGAR ESTA FUNCIÓN)

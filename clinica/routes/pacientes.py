@@ -8,37 +8,65 @@ a pacientes_services.py para mejor mantenibilidad.
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
 from datetime import date, datetime
-from clinica.models import Paciente, PagoPaciente, EPS, Municipio
+from clinica.models import Paciente, PagoPaciente
 from ..extensions import db
 import json 
 from sqlalchemy import or_
 import cloudinary.uploader  # <--- AGREGA ESTO
 from clinica.decorators.limites import verificar_limite_pacientes
+from sqlalchemy.orm import load_only
+from clinica.campos_activos import load_only_paciente_activo
 # Importar servicios
+# Importar servicios de pacientes
 from .pacientes_services import (
     listar_pacientes_service,
     obtener_paciente_service,
-    agregar_evolucion_service,
     crear_paciente_service,
     editar_paciente_service,
     borrar_paciente_service,
     subir_dentigrama_service
 )
 
+# Importar servicios de evoluciones
+from .pacientes_evoluciones import agregar_evolucion_service
 
 pacientes_bp = Blueprint('pacientes', __name__, url_prefix='/pacientes')
+
+
+@pacientes_bp.route('/crear', methods=['GET', 'POST'])
+@login_required
+def crear_paciente():
+    """Crea un nuevo paciente"""
+    if request.method == 'POST':
+        resultado = crear_paciente_service(request.form, request.files, current_user)
+        
+        if resultado['success']:
+            flash(resultado['message'], 'success')
+            return redirect(url_for('pacientes.lista_pacientes'))
+        else:
+            flash(resultado['message'], 'danger')
+            return render_template('registrar_paciente.html', paciente=None)
+    
+    # GET - Mostrar formulario vacío
+    return render_template('registrar_paciente.html', paciente=None)
 
 
 @pacientes_bp.route('/lista', methods=['GET'])
 @login_required
 def lista_pacientes():
     page = request.args.get('page', 1, type=int)
-    search_query = request.args.get('buscar', '').strip() # Obtener lo que escribes en el buscador
+    search_query = request.args.get('buscar', '').strip()
     
-    # Consulta base
-    query = Paciente.query
+    # ✅ CONSULTA OPTIMIZADA - Solo campos activos
+    query = db.session.query(Paciente).options(
+        load_only_paciente_activo()
+    ).filter(Paciente.is_deleted == False)
 
-    # ▼▼▼ LÓGICA DE BÚSQUEDA (ESTO ES LO QUE PROBABLEMENTE FALTA) ▼▼▼
+    # Filtrar por odontólogo si no es admin
+    if not current_user.is_admin:
+        query = query.filter(Paciente.odontologo_id == current_user.id)
+
+    # Lógica de búsqueda
     if search_query:
         search_term = f"%{search_query}%"
         query = query.filter(
@@ -48,7 +76,6 @@ def lista_pacientes():
                 Paciente.documento.ilike(search_term)
             )
         )
-    # ▲▲▲ FIN LÓGICA DE BÚSQUEDA ▲▲▲
 
     # Ordenar y paginar
     pacientes = query.order_by(Paciente.id.desc()).paginate(page=page, per_page=6, error_out=False)
@@ -74,117 +101,44 @@ def mostrar_paciente(id):
                           current_full_path=request.full_path)
 
 
-# En clinica/routes/pacientes.py
-
-# ... (asegúrate de tener todas tus importaciones al principio: Blueprint, jsonify, etc.)
-
-@pacientes_bp.route('/crear', methods=['GET', 'POST'])
-@login_required
-# @verificar_limite_pacientes  # ← NUEVO DECORADOR
-def crear_paciente():
-    """Crea un nuevo paciente y maneja respuestas tanto AJAX como normales."""
-
-    # --- LÓGICA PARA CARGAR DATOS (tu código original, perfecto) ---
-    eps_list = EPS.query.filter_by(activa=True).order_by(EPS.nombre).all()
-    departamentos_query = db.session.query(
-        Municipio.codigo_departamento, 
-        Municipio.nombre_departamento
-    ).distinct().order_by(Municipio.nombre_departamento).all()
-    departamentos_list = [{'codigo': d.codigo_departamento, 'nombre': d.nombre_departamento} for d in departamentos_query]
-    
-    municipios = Municipio.query.order_by(Municipio.nombre).all()
-    municipios_json = json.dumps([m.to_dict() for m in municipios])
-
-
-    # ===================================================================
-    # ▼▼▼ SECCIÓN POST MODIFICADA PARA RESPONDER JSON ▼▼▼
-    # ===================================================================
-    if request.method == 'POST':
-        # Llamamos a tu servicio, que ya funciona y guarda los datos
-        resultado = crear_paciente_service(request.form, request.files, current_user)
-        
-        if resultado['success']:
-            # Si el guardado fue exitoso, creamos una respuesta JSON de éxito.
-            # El JavaScript usará 'redirect_url' para saber a dónde ir.
-            return jsonify({
-                'success': True,
-                'message': resultado['message'],
-                'redirect_url': url_for('pacientes.lista_pacientes')
-            }), 200
-        else:
-            # Si el servicio devolvió un error, creamos una respuesta JSON de error.
-            # El JavaScript mostrará el 'error' en un alert.
-            return jsonify({
-                'success': False,
-                'error': resultado['message']
-            }), 400 # 400 es un código de "Bad Request", apropiado para un error de formulario.
-
-    # ===================================================================
-    # ▲▲▲ FIN DE LA SECCIÓN POST MODIFICADA ▲▲▲
-    # ===================================================================
-
-    # --- MANEJO DE LA PETICIÓN GET (tu código original, perfecto) ---
-    paciente_vacio = Paciente()
-    return render_template('registrar_paciente.html', 
-                         paciente=paciente_vacio,
-                         eps_list=eps_list,
-                         departamentos_list=departamentos_list,
-                         municipios_json=municipios_json)
-
-
 @pacientes_bp.route('/<int:id>/editar', methods=['GET', 'POST'])
 @login_required
 def editar_paciente(id):
-    """Edita un paciente existente"""
-
-    # --- LÓGICA PARA CARGAR DATOS DE LOS SELECTORES (AÑADIDA) ---
-    # La necesitamos en el GET para mostrar el formulario y en el POST si hubiera un error que re-renderice
-    eps_list = EPS.query.filter_by(activa=True).order_by(EPS.nombre).all()
-    departamentos_query = db.session.query(
-        Municipio.codigo_departamento, 
-        Municipio.nombre_departamento
-    ).distinct().order_by(Municipio.nombre_departamento).all()
-    departamentos_list = [{'codigo': d.codigo_departamento, 'nombre': d.nombre_departamento} for d in departamentos_query]
+    """Edita un paciente existente - Versión simplificada"""
     
-    municipios = Municipio.query.order_by(Municipio.nombre).all()
-    # Asumiendo que tienes un método to_dict() en el modelo Municipio
-    municipios_json = json.dumps([m.to_dict() for m in municipios])
-
-
-    # --- LÓGICA POST (sin cambios) ---
     if request.method == 'POST':
-        # Tu lógica de servicio se encarga de procesar los datos, incluyendo los nuevos campos
-        # 'codigo_dpto' y 'codigo_mpio' que vendrán en request.form
+        # Procesar el formulario de edición
         resultado = editar_paciente_service(id, request.form, request.files, current_user)
         
         if resultado['success']:
             flash(resultado['message'], 'success')
-            return jsonify({
-                'message': resultado['message'],
-                'redirect_url': url_for('pacientes.mostrar_paciente', id=id)
-            }), 200
+            # Redirigir a la vista del paciente
+            return redirect(url_for('pacientes.mostrar_paciente', id=id))
         else:
-            return jsonify({'error': resultado['message']}), 500
+            flash(resultado['message'], 'danger')
+            return redirect(url_for('pacientes.editar_paciente', id=id))
 
-    # --- LÓGICA GET (MODIFICADA) ---
-    # Buscamos al paciente a editar
-    query = Paciente.query.filter_by(id=id, is_deleted=False)
-    if not current_user.is_admin:
-        query = query.filter_by(odontologo_id=current_user.id)
-    paciente = query.first_or_404()
+    # --- LÓGICA GET - USANDO EL SERVICIO OPTIMIZADO ---
+    # Obtener datos del paciente con SOLO los campos necesarios
+    paciente_data, evoluciones, public_id = obtener_paciente_service(id, current_user)
     
-    # Formatear fecha para el formulario (tu código original)
-    if isinstance(paciente.fecha_nacimiento, (date, datetime)):
-        paciente.fecha_nacimiento = paciente.fecha_nacimiento.strftime('%Y-%m-%d')
-    else:
-        paciente.fecha_nacimiento = ''
+    # Convertir el diccionario a un objeto para el template
+    from types import SimpleNamespace
+    paciente = SimpleNamespace(**paciente_data)
+    
+    # Formatear fecha para el input type="date"
+    if hasattr(paciente, 'fecha_nacimiento') and paciente.fecha_nacimiento and paciente.fecha_nacimiento != 'N/A':
+        try:
+            from datetime import datetime
+            fecha_obj = datetime.strptime(paciente.fecha_nacimiento, '%d/%m/%Y')
+            paciente.fecha_nacimiento = fecha_obj.strftime('%Y-%m-%d')
+        except:
+            paciente.fecha_nacimiento = ''
 
-    # --- Renderizamos la plantilla pasando TODOS los datos necesarios ---
+    # Renderizar template sin datos de ubicación
     return render_template('editar_paciente.html', 
-                           paciente=paciente,
-                           eps_list=eps_list,
-                           departamentos_list=departamentos_list,
-                           municipios_json=municipios_json)
+                           paciente=paciente)
+
 @pacientes_bp.route('/<int:id>/borrar', methods=['POST'])
 @login_required
 def borrar_paciente(id):
@@ -365,9 +319,81 @@ def upload_dentigrama():
             'message': 'Dentigrama procesado correctamente'
         }), 200
     
-
-    
-
     except Exception as e:
         print(f"Error al subir dentigrama: {e}")
+        return jsonify({'error': str(e)}), 500
+    
+@pacientes_bp.route('/obtener_paciente_ajax/<int:id>', methods=['GET'])
+@login_required
+def obtener_paciente_ajax(id):
+    """Endpoint JSON para el panel derecho del dashboard"""
+    try:
+        from .pacientes_services import obtener_paciente_service
+        from clinica.models import Cita
+        from datetime import date, datetime
+        from sqlalchemy import or_
+        
+        paciente_data, evoluciones, public_id = obtener_paciente_service(id, current_user)
+        
+        # --- OBTENER DATOS DE CITAS REALES ---
+        # Última cita (fecha anterior a hoy)
+        ultima_cita = Cita.query.filter(
+            Cita.paciente_id == id,
+            Cita.is_deleted == False,
+            Cita.fecha < date.today()
+        ).order_by(
+            Cita.fecha.desc(), 
+            Cita.hora.desc()
+        ).first()
+        
+        # Próxima cita (fecha posterior a hoy, o hoy pero con hora posterior)
+        proxima_cita = Cita.query.filter(
+            Cita.paciente_id == id,
+            Cita.is_deleted == False,
+            or_(
+                Cita.fecha > date.today(),
+                (Cita.fecha == date.today()) & (Cita.hora > datetime.now().time())
+            )
+        ).order_by(Cita.fecha, Cita.hora).first()
+        
+        # Formatear última cita
+        ultima_cita_info = "No hay citas anteriores"
+        if ultima_cita:
+            fecha_str = ultima_cita.fecha.strftime('%d/%m/%Y')
+            hora_str = ultima_cita.hora.strftime('%H:%M') if ultima_cita.hora else ''
+            motivo = ultima_cita.motivo or 'Sin motivo'
+            ultima_cita_info = f"{fecha_str} {hora_str} - {motivo}"
+        
+        # Formatear próxima cita
+        proxima_cita_info = "No tiene próximas citas"
+        if proxima_cita:
+            fecha_str = proxima_cita.fecha.strftime('%d/%m/%Y')
+            hora_str = proxima_cita.hora.strftime('%H:%M') if proxima_cita.hora else ''
+            motivo = proxima_cita.motivo or 'Sin motivo'
+            proxima_cita_info = f"{fecha_str} {hora_str} - {motivo}"
+        
+        # Mapear los campos
+        response_data = {
+            'id': paciente_data.get('id'),
+            'nombre': f"{paciente_data.get('primer_nombre', '')} {paciente_data.get('primer_apellido', '')}".strip(),
+            'documento': paciente_data.get('documento', 'No especificado'),
+            'telefono': paciente_data.get('telefono', 'No especificado'),
+            'edad': paciente_data.get('edad', 'No especificada'),
+            'fecha_nacimiento': paciente_data.get('fecha_nacimiento', 'No especificado'),
+            'direccion': paciente_data.get('direccion', 'No especificado'),
+            'barrio': paciente_data.get('barrio', 'No especificado'),
+            'email': paciente_data.get('email', 'No especificado'),
+            'alergias': paciente_data.get('alergias', 'No especificado'),
+            'motivo_consulta': paciente_data.get('motivo_consulta', 'No especificado'),
+            'enfermedad_actual': paciente_data.get('enfermedad_actual', 'No especificado'),
+            'observaciones': paciente_data.get('observaciones', 'No especificado'),
+            'dentigrama_url': paciente_data.get('dentigrama_canvas', None),
+            'ultima_cita_info': ultima_cita_info,
+            'proxima_cita_paciente_info': proxima_cita_info
+        }
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        print(f"Error en obtener_paciente_ajax: {e}")
         return jsonify({'error': str(e)}), 500

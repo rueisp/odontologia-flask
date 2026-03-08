@@ -4,8 +4,8 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from datetime import date, datetime, time, timedelta
 import calendar
 from ..models import db, Cita, Paciente, AuditLog
-from sqlalchemy.orm import joinedload
-from sqlalchemy import or_, extract, func, exc as sqlalchemy_exc
+from sqlalchemy.orm import joinedload, load_only
+from sqlalchemy import or_, extract, func, exc as sqlalchemy_exc, and_
 from urllib.parse import urlparse, urljoin
 import uuid
 import os
@@ -13,7 +13,7 @@ from flask_login import current_user, login_required
 from uuid import uuid4
 from ..utils import convertir_a_fecha
 from urllib.parse import quote_plus
-
+from clinica.campos_activos import CAMPOS_PACIENTE_ACTIVOS
 import pytz  # <-- important import
 
 calendario_bp = Blueprint('calendario', __name__, url_prefix='/calendario')
@@ -99,34 +99,79 @@ def mostrar_calendario():
         anio_actual = now_in_local_tz.year
         mes_actual = now_in_local_tz.month
 
-    query_citas = Cita.query.outerjoin(Paciente, Cita.paciente_id == Paciente.id).options(joinedload(Cita.paciente)).filter(
+    # Consulta base de citas
+    query_citas = Cita.query.options(
+        load_only(
+            Cita.id,
+            Cita.paciente_id,
+            Cita.fecha,
+            Cita.hora,
+            Cita.motivo,
+            Cita.doctor,
+            Cita.estado,
+            Cita.observaciones,
+            Cita.paciente_nombres_str,
+            Cita.paciente_apellidos_str,
+            Cita.paciente_telefono_str
+        )
+    ).filter(
         Cita.is_deleted == False,
         extract('year', Cita.fecha) == anio_actual,
         extract('month', Cita.fecha) == mes_actual
     )
-
+    
+    # Filtrar por permisos SIN usar Paciente directamente
     if not current_user.is_admin:
+        # Obtener IDs de pacientes del usuario actual
+        from ..models import Paciente
+        paciente_ids_subq = db.session.query(Paciente.id).filter(
+            Paciente.odontologo_id == current_user.id,
+            Paciente.is_deleted == False
+        ).subquery()
+        
         query_citas = query_citas.filter(
             or_(
-                Paciente.odontologo_id == current_user.id,
+                Cita.paciente_id.in_(paciente_ids_subq),
                 Cita.paciente_id == None
             )
         )
     else:
-        query_citas = query_citas.filter(or_(Paciente.is_deleted == False, Cita.paciente_id == None))
+        # Admin ve todas las citas, pero excluimos las de pacientes eliminados
+        from ..models import Paciente
+        query_citas = query_citas.outerjoin(
+            Paciente, Cita.paciente_id == Paciente.id
+        ).filter(
+            or_(
+                Paciente.is_deleted == False,
+                Cita.paciente_id == None
+            )
+        )
 
     citas_del_mes = query_citas.order_by(Cita.fecha, Cita.hora).all()
     current_full_path_for_template = request.full_path
 
+    # Procesar citas para el template
     citas_para_construir = []
     for cita_obj in citas_del_mes:
         paciente_nombre_completo = "Paciente sin registrar"
-        if cita_obj.paciente and not cita_obj.paciente.is_deleted:
-            paciente_nombre_completo = f"{cita_obj.paciente.nombres} {cita_obj.paciente.apellidos}"
-        elif cita_obj.paciente_nombres_str and cita_obj.paciente_apellidos_str:
-            paciente_nombre_completo = f"{cita_obj.paciente_nombres_str} {cita_obj.paciente_apellidos_str}"
-        elif cita_obj.paciente_nombres_str:
-            paciente_nombre_completo = cita_obj.paciente_nombres_str
+        
+        # Intentar obtener el paciente de la base de datos si existe
+        if cita_obj.paciente_id:
+            from ..models import Paciente
+            paciente = Paciente.query.get(cita_obj.paciente_id)
+            if paciente and not paciente.is_deleted:
+                paciente_nombre_completo = f"{paciente.nombres} {paciente.apellidos}"
+            else:
+                if cita_obj.paciente_nombres_str and cita_obj.paciente_apellidos_str:
+                    paciente_nombre_completo = f"{cita_obj.paciente_nombres_str} {cita_obj.paciente_apellidos_str}"
+                elif cita_obj.paciente_nombres_str:
+                    paciente_nombre_completo = cita_obj.paciente_nombres_str
+        else:
+            if cita_obj.paciente_nombres_str and cita_obj.paciente_apellidos_str:
+                paciente_nombre_completo = f"{cita_obj.paciente_nombres_str} {cita_obj.paciente_apellidos_str}"
+            elif cita_obj.paciente_nombres_str:
+                paciente_nombre_completo = cita_obj.paciente_nombres_str
+        
         citas_para_construir.append({
             'id': cita_obj.id,
             'fecha': cita_obj.fecha.strftime('%Y-%m-%d'),
@@ -163,12 +208,14 @@ def mostrar_calendario():
 def registrar_cita():
     next_url_get = request.args.get('next')
     fecha_preseleccionada_str = request.args.get('fecha') if request.method == 'GET' else None
+    hora_preseleccionada_str = request.args.get('hora') if request.method == 'GET' else None  # ← NUEVO
     form_values = {
         'paciente_preseleccionado_id': '',
         'paciente_preseleccionado_nombre': '',
         'paciente_nombres_val': '', 'paciente_apellidos_val': '', 'paciente_edad_val': '',
         'paciente_documento_val': '', 'paciente_telefono_val': '',
         'fecha_val': fecha_preseleccionada_str or '', 'hora_val': '',
+        'hora_val': hora_preseleccionada_str or '',  # ← NUEVO
         'doctor_val': '', 'motivo_val': '', 'observaciones_val': '',
         'next_url': next_url_get or '',
     }
@@ -258,10 +305,12 @@ def registrar_cita():
 @calendario_bp.route('/editar_cita/<int:cita_id>', methods=['GET', 'POST'])
 @login_required
 def editar_cita(cita_id):
-    cita_obj = Cita.query.options(joinedload(Cita.paciente)).get_or_404(cita_id)
-    if not current_user.is_admin and cita_obj.paciente and cita_obj.paciente.odontologo_id != current_user.id:
-        flash("Acceso denegado. No tienes permiso para editar esta cita.", "danger")
-        return redirect(url_for('.mostrar_calendario'))
+    cita_obj = Cita.query.get_or_404(cita_id)
+    if not current_user.is_admin and cita_obj.paciente_id:
+        paciente = Paciente.query.get(cita_obj.paciente_id)
+        if paciente and paciente.odontologo_id != current_user.id:
+            flash("Acceso denegado. No tienes permiso para editar esta cita.", "danger")
+            return redirect(url_for('.mostrar_calendario'))
     query_pacientes_para_dropdown = Paciente.query.filter_by(is_deleted=False)
     if not current_user.is_admin:
         query_pacientes_para_dropdown = query_pacientes_para_dropdown.filter_by(odontologo_id=current_user.id)
@@ -450,3 +499,126 @@ def actualizar_estado_cita(cita_id):
         db.session.rollback()
         current_app.logger.error(f"Error al actualizar estado de cita ID {cita_id} a '{nuevo_estado}': {e}", exc_info=True)
         return jsonify({'success': False, 'message': 'Ocurrió un error al actualizar el estado de la cita.'}), 500
+    
+@calendario_bp.route('/dia', methods=['GET'])
+@login_required
+def vista_diaria():
+    from datetime import time, timedelta, datetime, date
+    from sqlalchemy.orm import load_only
+    
+    # Obtener fecha de la URL o usar hoy
+    fecha_str = request.args.get('fecha')
+    if fecha_str:
+        try:
+            fecha_seleccionada = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+        except ValueError:
+            fecha_seleccionada = date.today()
+    else:
+        fecha_seleccionada = date.today()
+    
+    # CONSULTA OPTIMIZADA - SOLO los campos necesarios
+    query_citas = Cita.query.options(
+        load_only(
+            Cita.id, 
+            Cita.paciente_id, 
+            Cita.fecha, 
+            Cita.hora, 
+            Cita.motivo, 
+            Cita.doctor, 
+            Cita.estado,
+            Cita.paciente_nombres_str,
+            Cita.paciente_apellidos_str,
+            Cita.paciente_telefono_str
+        )
+    ).filter(
+        Cita.fecha == fecha_seleccionada,
+        Cita.is_deleted == False
+    )
+    
+    # Cargar pacientes relacionados por separado (MUCHO MÁS RÁPIDO)
+    citas_del_dia = query_citas.all()
+    paciente_ids = list(set([c.paciente_id for c in citas_del_dia if c.paciente_id]))
+    
+    # Obtener SOLO los datos de pacientes que necesitamos
+    pacientes_dict = {}
+    if paciente_ids:
+        pacientes = Paciente.query.options(
+            load_only(
+                Paciente.id,
+                Paciente.nombres,
+                Paciente.apellidos,
+                Paciente.telefono
+            )
+        ).filter(Paciente.id.in_(paciente_ids)).all()
+        
+        for p in pacientes:
+            pacientes_dict[p.id] = p
+    
+    # Organizar citas por hora
+    citas_por_hora = {}
+    for cita in citas_del_dia:
+        hora_key = cita.hora.strftime('%H:%M')
+        
+        # Obtener datos del paciente (de la caché o de los campos guardados)
+        if cita.paciente_id and cita.paciente_id in pacientes_dict:
+            paciente = pacientes_dict[cita.paciente_id]
+            paciente_nombre = paciente.nombres or ''
+            paciente_apellidos = paciente.apellidos or ''
+            paciente_telefono = paciente.telefono or ''
+        else:
+            paciente_nombre = cita.paciente_nombres_str or ''
+            paciente_apellidos = cita.paciente_apellidos_str or ''
+            paciente_telefono = cita.paciente_telefono_str or ''
+        
+        # Verificar permisos
+        if not current_user.is_admin:
+            if cita.paciente_id and cita.paciente_id in pacientes_dict:
+                if pacientes_dict[cita.paciente_id].odontologo_id != current_user.id:
+                    continue
+            # Si no tiene paciente, todos pueden verlo (citas genéricas)
+        
+        citas_por_hora[hora_key] = {
+            'id': cita.id,
+            'paciente_nombre': paciente_nombre,
+            'paciente_apellidos': paciente_apellidos,
+            'paciente_telefono': paciente_telefono,
+            'motivo': cita.motivo or '',
+            'doctor': cita.doctor,
+            'estado': cita.estado,
+            'edit_url': url_for('calendario.editar_cita', cita_id=cita.id, next=request.full_path)
+        }
+    
+    # Generar franjas de 30 minutos
+    franjas = []
+    hora_inicio = time(8, 0)
+    hora_fin = time(18, 0)
+    
+    hora_actual = datetime.combine(fecha_seleccionada, hora_inicio)
+    hora_fin_dt = datetime.combine(fecha_seleccionada, hora_fin)
+    
+    while hora_actual <= hora_fin_dt:
+        hora_str = hora_actual.strftime('%H:%M')
+        franjas.append({
+            'hora': hora_str,
+            'hora_display': hora_actual.strftime('%I:%M %p'),
+            'cita': citas_por_hora.get(hora_str, None)
+        })
+        hora_actual += timedelta(minutes=30)
+    
+    # Mini calendario
+    mes_actual = fecha_seleccionada.month
+    anio_actual = fecha_seleccionada.year
+    nombre_mes = NOMBRES_MESES_ESP[mes_actual - 1]
+    
+    import calendar
+    cal = calendar.monthcalendar(anio_actual, mes_actual)
+    
+    return render_template('vista_diaria.html',
+                          fecha_seleccionada=fecha_seleccionada,
+                          franjas=franjas,
+                          mes_actual=mes_actual,
+                          anio_actual=anio_actual,
+                          nombre_mes=nombre_mes,
+                          calendario_mes=cal,
+                          nombres_meses=NOMBRES_MESES_ESP,
+                          timedelta=timedelta)
