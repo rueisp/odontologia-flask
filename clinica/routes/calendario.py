@@ -265,6 +265,19 @@ def registrar_cita():
             except ValueError:
                 flash("Formato de fecha u hora inválido.", "error")
                 return render_template('registrar_cita.html', form_values=form_values)
+            
+            # Verificar si ya existe una cita en ese horario
+            cita_existente = Cita.query.filter(
+                Cita.fecha == fecha_obj,
+                Cita.hora == hora_obj,
+                Cita.is_deleted == False
+            ).first()
+
+            if cita_existente:
+                flash(f"Ya existe una cita para el {fecha_str} a las {hora_str}. Por favor, selecciona otro horario.", "error")
+                return render_template('registrar_cita.html', form_values=form_values)
+
+
             nueva_cita = Cita(
                 fecha=fecha_obj,
                 hora=hora_obj,
@@ -636,3 +649,27 @@ def vista_diaria():
                           calendario_mes=cal,
                           nombres_meses=NOMBRES_MESES_ESP,
                           timedelta=timedelta)
+
+@calendario_bp.route('/verificar_disponibilidad', methods=['GET'])
+@login_required
+def verificar_disponibilidad():
+    """Verifica si un horario está disponible para agendar una cita"""
+    fecha_str = request.args.get('fecha')
+    hora_str = request.args.get('hora')
+    
+    if not fecha_str or not hora_str:
+        return jsonify({'disponible': False, 'error': 'Faltan parámetros'})
+    
+    try:
+        fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+        hora_obj = datetime.strptime(hora_str, '%H:%M').time()
+        
+        cita_existente = Cita.query.filter(
+            Cita.fecha == fecha_obj,
+            Cita.hora == hora_obj,
+            Cita.is_deleted == False
+        ).first()
+        
+        return jsonify({'disponible': cita_existente is None})
+    except Exception as e:
+        return jsonify({'disponible': False, 'error': str(e)})

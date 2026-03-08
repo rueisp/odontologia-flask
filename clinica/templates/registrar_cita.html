@@ -310,6 +310,29 @@
             } else {
                 toggleNewPatientFields(true);
             }
+            
+            // 👇 NUEVO: Validación de disponibilidad de horario 👇
+            const horaInput = document.getElementById('hora');
+            const fechaInput = document.getElementById('fecha');
+            
+            if (horaInput && fechaInput) {
+                horaInput.addEventListener('change', function() {
+                    const fecha = fechaInput.value;
+                    const hora = this.value;
+                    
+                    if (fecha && hora) {
+                        fetch(`/calendario/verificar_disponibilidad?fecha=${fecha}&hora=${hora}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                if (!data.disponible) {
+                                    alert('Este horario ya está ocupado. Por favor, selecciona otro.');
+                                    this.value = '';
+                                }
+                            })
+                            .catch(error => console.error('Error verificando disponibilidad:', error));
+                    }
+                });
+            }
         });
     </script>
 {% endblock %}
