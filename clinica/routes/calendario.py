@@ -408,14 +408,19 @@ def historial_citas_paciente(paciente_id):
                            citas=citas_procesadas,
                            hay_citas_pendientes=hay_citas_pendientes)
 
-# --- FUNCIÓN ELIMINAR CITA ---
+# --- FUNCIÓN ELIMINAR CITA (CORREGIDA) ---
 @calendario_bp.route('/eliminar_cita/<int:cita_id>', methods=['POST'])
 @login_required
 def eliminar_cita(cita_id):
-    cita_a_mover_papelera = Cita.query.options(joinedload(Cita.paciente)).get_or_404(cita_id)
-    if not current_user.is_admin and cita_a_mover_papelera.paciente and cita_a_mover_papelera.paciente.odontologo_id != current_user.id:
-        flash("Acceso denegado. No tienes permiso para eliminar esta cita.", "danger")
-        return redirect(url_for('.mostrar_calendario'))
+    cita_a_mover_papelera = Cita.query.get_or_404(cita_id)
+    
+    # Verificar permisos
+    if not current_user.is_admin and cita_a_mover_papelera.paciente_id:
+        paciente = Paciente.query.get(cita_a_mover_papelera.paciente_id)
+        if paciente and paciente.odontologo_id != current_user.id:
+            flash("Acceso denegado. No tienes permiso para eliminar esta cita.", "danger")
+            return redirect(url_for('.mostrar_calendario'))
+    
     if cita_a_mover_papelera.is_deleted:
         flash('Esta cita ya se encuentra en la papelera.', 'info')
         next_url_fallback = url_for('.mostrar_calendario',
@@ -424,34 +429,41 @@ def eliminar_cita(cita_id):
         if cita_a_mover_papelera.paciente_id:
             next_url_fallback = url_for('pacientes.mostrar_paciente', id=cita_a_mover_papelera.paciente_id)
         return redirect(request.form.get('next') or next_url_fallback)
+    
+    # Obtener nombre del paciente para el log
     paciente_nombre_log = "Desconocido"
-    if cita_a_mover_papelera.paciente:
-        paciente_nombre_log = f"{cita_a_mover_papelera.paciente.nombres} {cita_a_mover_papelera.paciente.apellidos}"
+    if cita_a_mover_papelera.paciente_id:
+        paciente = Paciente.query.get(cita_a_mover_papelera.paciente_id)
+        if paciente:
+            paciente_nombre_log = f"{paciente.nombres} {paciente.apellidos}"
+    elif cita_a_mover_papelera.paciente_nombres_str:
+        paciente_nombre_log = f"{cita_a_mover_papelera.paciente_nombres_str} {cita_a_mover_papelera.paciente_apellidos_str or ''}".strip()
+    
     log_descripcion_detalle = (
         f"Cita (ID: {cita_a_mover_papelera.id}) "
         f"para el paciente '{paciente_nombre_log}' (Paciente ID: {cita_a_mover_papelera.paciente_id}) "
         f"del {cita_a_mover_papelera.fecha.strftime('%d/%m/%Y')} a las {cita_a_mover_papelera.hora.strftime('%H:%M')} "
         f"con Dr(a). {cita_a_mover_papelera.doctor or 'N/A'}. Motivo: {cita_a_mover_papelera.motivo or 'No especificado'}."
     )
+    
     cita_id_para_log = cita_a_mover_papelera.id
     next_url = request.form.get('next')
     anio_cita_fallback = cita_a_mover_papelera.fecha.year
     mes_cita_fallback = cita_a_mover_papelera.fecha.month
     paciente_id_fallback = cita_a_mover_papelera.paciente_id
+    
     try:
         cita_a_mover_papelera.is_deleted = True
         cita_a_mover_papelera.deleted_at = datetime.now(pytz.timezone('America/Bogota'))
+        
         audit_entry = AuditLog(
             action_type="SOFT_DELETE_CITA",
             description=f"Cita movida a la papelera: {log_descripcion_detalle}",
             target_model="Cita",
             target_id=cita_id_para_log,
+            user_id=current_user.id if current_user.is_authenticated else None,
+            user_username=current_user.username if current_user.is_authenticated else "Sistema/Desconocido"
         )
-        if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
-            audit_entry.user_id = current_user.id
-            audit_entry.user_username = current_user.username
-        else:
-            audit_entry.user_username = "Sistema/Desconocido"
         db.session.add(audit_entry)
         db.session.commit()
         flash("Cita movida a la papelera y acción registrada.", "success")
@@ -459,6 +471,7 @@ def eliminar_cita(cita_id):
         db.session.rollback()
         flash(f"Error al mover la cita a la papelera: {str(e)}", "error")
         current_app.logger.error(f"Error detallado al mover cita ID {cita_id} a la papelera o registrar auditoría: {e}", exc_info=True)
+    
     if next_url and is_safe_url(next_url):
         return redirect(next_url)
     if paciente_id_fallback:
@@ -467,6 +480,7 @@ def eliminar_cita(cita_id):
         except Exception:
             current_app.logger.warning(f"No se pudo redirigir a la vista del paciente {paciente_id_fallback}, yendo al calendario.")
     return redirect(url_for('.mostrar_calendario', anio=anio_cita_fallback, mes=mes_cita_fallback))
+
 
 # --- FUNCIÓN ACTUALIZAR ESTADO CITA ---
 @calendario_bp.route('/cita/actualizar_estado/<int:cita_id>', methods=['POST'])
