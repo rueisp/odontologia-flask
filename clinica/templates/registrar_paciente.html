@@ -112,12 +112,10 @@
                 });
             }
 
-            // --- D. GUARDADO DEL FORMULARIO (Vinculando con el dentigrama nuevo) ---
+            // --- D. GUARDADO DEL FORMULARIO (CORREGIDO) ---
             const mainForm = document.getElementById('patientMainForm');
             const mainSaveButton = document.getElementById('mainSaveButton'); 
-            
-            // Botón específico del acordeón del dentigrama (para guardar solo dentigrama si se desea, o manual)
-            // Pero aquí manejamos el GUARDADO GENERAL del paciente
+
             if (mainForm && mainSaveButton) {
                 mainSaveButton.addEventListener('click', async function(event) { 
                     event.preventDefault(); 
@@ -125,26 +123,33 @@
                     mainSaveButton.textContent = 'Guardando...';
                     
                     try {
-                        // 1. Obtener la imagen del dentigrama SVG (Función nueva del V6)
-                        // Si la función svgToPng no está expuesta globalmente, el input hidden ya debería
-                        // tener el valor si hicimos clic en "Guardar Cambios al Dentigrama".
-                        // PERO, para asegurar que se guarde al crear paciente:
+                        // 1. Obtener la imagen del dentigrama SVG
                         const dentigramaUrlInput = document.getElementById('dentigrama_url_input');
                         const svgElement = document.getElementById('svgDentigrama');
                         
-                        // Si existe la función global svgToPng (la definimos en editor_dentigrama.js), la usamos:
                         if (svgElement && typeof window.svgToPng === 'function') {
-                             const base64 = await window.svgToPng(svgElement);
-                             dentigramaUrlInput.value = base64;
+                            const base64 = await window.svgToPng(svgElement);
+                            dentigramaUrlInput.value = base64;
                         }
 
                         // 2. Enviar Formulario
                         const formData = new FormData(mainForm); 
                         
                         const response = await fetch(mainForm.action, {
-                            method: mainForm.method, body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                            method: mainForm.method, 
+                            body: formData, 
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                            redirect: 'manual' // 👈 Importante: no seguir redirecciones automáticamente
                         });
 
+                        // 3. Verificar si es una redirección (código 302)
+                        if (response.type === 'opaqueredirect' || response.status === 302) {
+                            // Éxito! Redirigir a la lista de pacientes
+                            window.location.href = "{{ url_for('pacientes.lista_pacientes') }}";
+                            return;
+                        }
+
+                        // 4. Si no es redirección, intentar parsear JSON
                         const result = await response.json(); 
                         if (result.success) {
                             window.location.href = result.redirect_url; 
@@ -152,7 +157,8 @@
                             throw new Error(result.error || "Error desconocido.");
                         }
                     } catch (error) {
-                        alert("Error: " + error.message);
+                        console.error('Error:', error);
+                        alert("Error al guardar: " + error.message);
                         mainSaveButton.disabled = false;
                         mainSaveButton.textContent = 'Guardar';
                     }

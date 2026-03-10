@@ -110,10 +110,19 @@ def index():
     # 5. Estadísticas de plan y límites (si es necesario)
     from clinica.services.plan_service import PlanService
     estadisticas_plan = PlanService.obtener_estadisticas_usuario(current_user.id)
-    
+
+    # Calcular citas de hoy para estadisticas
+    citas_hoy_count = len(citas_procesadas)
+
+    # Crear diccionario estadisticas con el formato que espera el template
+    estadisticas = {
+        'citas_hoy': citas_hoy_count
+    }
+
     return render_template(
         "index.html",
         citas_del_dia=citas_procesadas,
+        estadisticas=estadisticas,  # <-- Esta variable reemplaza a citas_hoy_count
         proxima_cita=proxima_cita_info,
         fecha_actual_formateada=fecha_actual_formateada,
         estadisticas_plan=estadisticas_plan,

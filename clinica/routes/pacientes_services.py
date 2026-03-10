@@ -82,7 +82,15 @@ def delete_from_cloudinary(url):
 
 def eliminar_imagenes_paciente(paciente, log_prefix="PACIENTE"):
     """Elimina todas las imágenes de un paciente de Cloudinary."""
-    imagenes = [paciente.imagen_perfil_url, paciente.imagen_1, paciente.imagen_2, paciente.dentigrama_canvas]
+    imagenes = []
+    
+    # Solo agregar URLs que existan en el modelo actual
+    if hasattr(paciente, 'imagen_perfil_url') and paciente.imagen_perfil_url:
+        imagenes.append(paciente.imagen_perfil_url)
+    
+    if hasattr(paciente, 'dentigrama_canvas') and paciente.dentigrama_canvas:
+        imagenes.append(paciente.dentigrama_canvas)
+    
     for url in imagenes:
         delete_from_cloudinary(url)
 

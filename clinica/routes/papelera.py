@@ -27,9 +27,9 @@ def ver_papelera():
             pacientes_eliminados = Paciente.query.filter_by(is_deleted=True)\
                                                 .order_by(Paciente.deleted_at.desc()).limit(20).all()
             
+            # Admin: citas eliminadas (sin joinedload, ya no existe)
             citas_eliminadas = Cita.query.filter_by(is_deleted=True)\
-                                        .options(joinedload(Cita.paciente))\
-                                        .order_by(Cita.deleted_at.desc()).limit(20).all()
+                .order_by(Cita.deleted_at.desc()).limit(20).all()
         else:
             # --- FILTRO PARA USUARIO NORMAL (DOCTOR) ---
             
@@ -39,12 +39,11 @@ def ver_papelera():
                 odontologo_id=current_user.id
             ).order_by(Paciente.deleted_at.desc()).limit(20).all()
 
-            # 2. Filtro para citas
-            citas_eliminadas = Cita.query.join(Paciente).filter(
+            # 2. Filtro para citas (CORREGIDO: eliminado joinedload)
+            citas_eliminadas = Cita.query.join(Paciente, Cita.paciente_id == Paciente.id).filter(
                 Cita.is_deleted == True,
                 Paciente.odontologo_id == current_user.id
-            ).options(joinedload(Cita.paciente))\
-                .order_by(Cita.deleted_at.desc()).limit(20).all()
+            ).order_by(Cita.deleted_at.desc()).limit(20).all()
 
     except Exception as e:
         current_app.logger.error(f"Error al cargar la papelera para el usuario {current_user.id}: {e}", exc_info=True)
@@ -57,6 +56,8 @@ def ver_papelera():
         pacientes_eliminados=pacientes_eliminados, 
         citas_eliminadas=citas_eliminadas
     )
+
+
 
 @papelera_bp.route('/restaurar', methods=['POST'])
 @login_required
