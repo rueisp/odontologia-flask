@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block title %}Mi Suscripción - CloudentApp{% endblock %}
+
+{% block head_extra %}
+<style>
+    .suscripcion-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .suscripcion-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+    }
+    .progreso-bar {
+        height: 8px;
+        background: #e5e7eb;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .progreso-fill {
+        height: 100%;
+        background: #10b981;
+        transition: width 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Encabezado -->
+        <div class="flex items-center justify-between mb-6">
+            <h1 class="text-2xl font-bold text-gray-900">Mi Suscripción</h1>
+            <a href="{{ url_for('planes.mostrar_planes') }}" 
+               class="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i> Volver a planes
+            </a>
+        </div>
+
+        <!-- Tarjeta Principal -->
+        <div class="suscripcion-card bg-white rounded-3xl shadow-xl p-6 mb-6">
+            <!-- Estado y Plan -->
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 pb-6 border-b border-gray-100">
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Plan Actual</p>
+                    <div class="flex items-center gap-3">
+                        <h2 class="text-3xl font-bold text-gray-900">{{ estadisticas.plan_actual|title }}</h2>
+                        {% if estadisticas.es_trial %}
+                        <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full">
+                            TRIAL
+                        </span>
+                        {% else %}
+                        <span class="bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full">
+                            ACTIVO
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="mt-4 md:mt-0 text-right">
+                    <p class="text-sm text-gray-500 mb-1">Estado</p>
+                    <p class="text-lg font-semibold text-gray-900">Al día</p>
+                </div>
+            </div>
+
+            <!-- Estadísticas de Uso -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <!-- Pacientes Hoy -->
+                <div class="bg-gray-50 rounded-xl p-4">
+                    <p class="text-sm text-gray-500 mb-1">Pacientes Hoy</p>
+                    <div class="flex items-end justify-between">
+                        <p class="text-2xl font-bold text-gray-900">{{ estadisticas.pacientes_hoy }}/{{ estadisticas.limite_hoy }}</p>
+                        <span class="text-xs text-gray-500">Límite diario</span>
+                    </div>
+                    <div class="progreso-bar mt-2">
+                        {% set porcentaje = (estadisticas.pacientes_hoy / estadisticas.limite_hoy * 100) if estadisticas.limite_hoy > 0 else 0 %}
+                        <div class="progreso-fill" style="width: {{ porcentaje }}%;"></div>
+                    </div>
+                </div>
+
+                <!-- Tiempo Restante -->
+                <div class="bg-gray-50 rounded-xl p-4">
+                    <p class="text-sm text-gray-500 mb-1">Tiempo Restante</p>
+                    {% if estadisticas.es_trial %}
+                        {% set dias_restantes = estadisticas.dias_restantes_trial or 0 %}
+                        <p class="text-2xl font-bold text-gray-900">{{ dias_restantes }} días</p>
+                        <p class="text-xs text-gray-500">de prueba</p>
+                    {% elif estadisticas.fecha_fin_plan %}
+                        {% set dias_restantes = ((estadisticas.fecha_fin_plan - now).days) if now and estadisticas.fecha_fin_plan else 0 %}
+                        <p class="text-2xl font-bold text-gray-900">{{ dias_restantes }} días</p>
+                        <p class="text-xs text-gray-500">hasta renovación</p>
+                    {% else %}
+                        <p class="text-2xl font-bold text-gray-900">—</p>
+                        <p class="text-xs text-gray-500">plan activo</p>
+                    {% endif %}
+                </div>
+
+                <!-- Días de Trial -->
+                <div class="bg-gray-50 rounded-xl p-4">
+                    <p class="text-sm text-gray-500 mb-1">Días de Trial</p>
+                    {% if estadisticas.es_trial %}
+                        <p class="text-2xl font-bold text-gray-900">{{ estadisticas.dia_trial_actual or 1 }}/7</p>
+                        <p class="text-xs text-gray-500">días transcurridos</p>
+                    {% else %}
+                        <p class="text-2xl font-bold text-gray-900">—</p>
+                        <p class="text-xs text-gray-500">plan de pago</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="flex flex-col sm:flex-row gap-3 mt-4">
+                <a href="{{ url_for('planes.mostrar_planes') }}" 
+                   class="flex-1 bg-black text-white py-3 px-4 rounded-xl font-semibold hover:bg-gray-800 transition text-center">
+                    Cambiar de Plan
+                </a>
+                <button onclick="confirmarCancelacion()" 
+                        class="flex-1 border border-gray-300 text-gray-700 py-3 px-4 rounded-xl font-semibold hover:bg-gray-50 transition">
+                    Cancelar Suscripción
+                </button>
+            </div>
+        </div>
+
+        <!-- Historial de Pagos -->
+        <div class="bg-white rounded-3xl shadow-xl p-6">
+            <h3 class="text-xl font-bold text-gray-900 mb-4">Historial de Pagos</h3>
+            
+            {% if pagos %}
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Fecha</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Plan</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Monto</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for pago in pagos %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-3 text-sm text-gray-700">{{ pago.fecha_pago.strftime('%d/%m/%Y') }}</td>
+                            <td class="px-4 py-3 text-sm text-gray-700">{{ pago.usuario_plan.plan.nombre|title }}</td>
+                            <td class="px-4 py-3 text-sm text-gray-700">${{ "{:,.0f}".format(pago.monto) }}</td>
+                            <td class="px-4 py-3">
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Pagado</span>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="px-4 py-8 text-center text-gray-500">
+                                No hay pagos registrados.
+                                {% if estadisticas.es_trial %}
+                                    <p class="text-sm mt-2">Estás en período de prueba. Al finalizar, podrás realizar tu primer pago.</p>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-8 text-gray-500">
+                <i data-lucide="credit-card" class="w-12 h-12 mx-auto mb-3 text-gray-300"></i>
+                <p>No hay historial de pagos disponible.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Información Adicional -->
+        <div class="mt-6 text-center text-sm text-gray-500">
+            <p>¿Necesitas ayuda? <a href="#" class="text-blue-600 hover:underline">Contacta con soporte</a></p>
+        </div>
+
+    </div>
+</div>
+
+<!-- Modal de Confirmación de Cancelación -->
+<div id="cancelModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-2xl max-w-md mx-4 p-6">
+        <h3 class="text-xl font-bold text-gray-900 mb-4">¿Cancelar suscripción?</h3>
+        <p class="text-gray-600 mb-6">
+            Al cancelar, tu plan seguirá activo hasta el final del período pagado. 
+            Después de eso, se desactivarán las funciones premium.
+        </p>
+        <div class="flex gap-3">
+            <button onclick="cerrarModal()" class="flex-1 px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 transition">
+                No, mantener
+            </button>
+            <form action="{{ url_for('planes.cancelar_suscripcion') }}" method="POST" class="flex-1">
+                <button type="submit" class="w-full px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition">
+                    Sí, cancelar
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function confirmarCancelacion() {
+        document.getElementById('cancelModal').style.display = 'flex';
+    }
+
+    function cerrarModal() {
+        document.getElementById('cancelModal').style.display = 'none';
+    }
+
+    // Cerrar modal al hacer clic fuera
+    window.onclick = function(event) {
+        const modal = document.getElementById('cancelModal');
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    });
+</script>
+{% endblock %}

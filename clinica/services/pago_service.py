@@ -1,8 +1,8 @@
 # clinica/services/pago_service.py
 
-# Asegúrate de que las siguientes líneas de importación sean correctas para tu proyecto
-from clinica.models import SolicitudPago, Plan  
-from clinica.extensions import db 
+from clinica.models import SolicitudPago, Plan, UsuarioPlan
+from clinica.extensions import db
+from datetime import datetime, timedelta
 
 class PagoService:
     
@@ -17,24 +17,19 @@ class PagoService:
         if not plan:
             raise ValueError(f"Plan con ID {plan_id} no encontrado.")
             
-        # ************************************************
-        # ** ESTA ES LA ÚNICA LÍNEA QUE DEBES CAMBIAR **
-        # ************************************************
-        # ANTES: monto_cop = int(plan.precio_mensual)
-        # AHORA: Usa el campo que contiene el valor correcto (20000)
+        # 2. Usar el campo precio_cop (ya está correcto)
         monto_cop = plan.precio_cop
-        # ************************************************
         
-        # 2. Crear el nuevo objeto de SolicitudPago
+        # 3. Crear el nuevo objeto de SolicitudPago
         nueva_solicitud = SolicitudPago(
             user_id=user_id,
             plan_id=plan_id,
-            plan_nombre=plan.nombre, # Usar el nombre del Plan de la DB
-            monto_cop=monto_cop,     # <-- Ahora vale 20000 o 28000
+            plan_nombre=plan.nombre,
+            monto_cop=monto_cop,
             estado='PENDIENTE',
         )
 
-        # 3. Guardar en la base de datos (con manejo de errores)
+        # 4. Guardar en la base de datos
         try:
             db.session.add(nueva_solicitud)
             db.session.commit()
@@ -43,11 +38,48 @@ class PagoService:
             db.session.rollback()
             raise Exception(f"Error al registrar la solicitud de pago: {e}")
 
-
     @staticmethod
     def obtener_solicitud_por_id(solicitud_id):
         """
         Obtiene los datos de la solicitud de pago de la DB.
         """
-        # Consulta el modelo real en la DB
         return SolicitudPago.query.get(solicitud_id)
+
+    @staticmethod
+    def verificar_pago(solicitud_id):
+        """
+        Marca una solicitud como VERIFICADA y activa el plan del usuario.
+        """
+        solicitud = SolicitudPago.query.get(solicitud_id)
+        if not solicitud:
+            return False, "Solicitud no encontrada"
+        
+        # Cambiar estado
+        solicitud.estado = 'VERIFICADO'
+        solicitud.fecha_verificacion = datetime.utcnow()
+        
+        # Activar el plan para el usuario
+        from clinica.services.plan_service import PlanService
+        PlanService.activar_plan(
+            usuario_id=solicitud.user_id,
+            plan_id=solicitud.plan_id
+        )
+        
+        try:
+            db.session.commit()
+            return True, "Pago verificado y plan activado"
+        except Exception as e:
+            db.session.rollback()
+            return False, f"Error al verificar: {e}"
+
+    @staticmethod
+    def cancelar_solicitud(solicitud_id):
+        """
+        Cancela una solicitud de pago pendiente.
+        """
+        solicitud = SolicitudPago.query.get(solicitud_id)
+        if solicitud and solicitud.estado == 'PENDIENTE':
+            solicitud.estado = 'CANCELADO'
+            db.session.commit()
+            return True
+        return False

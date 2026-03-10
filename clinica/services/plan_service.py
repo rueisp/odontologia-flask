@@ -13,18 +13,16 @@ class PlanService:
         planes_a_crear = [
             {
                 'nombre': 'trial',
-                'descripcion': 'Plan de prueba de 30 días',
+                'descripcion': 'Plan de prueba de 7 días',
                 'precio_mensual': 0.0,
-                'limite_pacientes_diario': 10,
+                'limite_pacientes_diario': 20,
                 'limite_pacientes_diario_primeros_7_dias': 20,
-                'duracion_trial_dias': 30,
+                'duracion_trial_dias': 7,
                 'caracteristicas': {
                     'features': [
-                        '30 días completos',
+                        '7 días completos',
                         '20 pacientes/día primeros 7 días',
-                        '10 pacientes/día después',
                         'Acceso completo',
-                        'Soporte básico'
                     ]
                 },
                 'activo': True,
@@ -34,16 +32,14 @@ class PlanService:
                 'nombre': 'basico',
                 'descripcion': 'Plan básico para práctica pequeña',
                 'precio_mensual': 5.0,
-                'limite_pacientes_diario': 25,
-                'limite_pacientes_diario_primeros_7_dias': 25,
+                'limite_pacientes_diario': 20,
+                'limite_pacientes_diario_primeros_7_dias': 20,
                 'duracion_trial_dias': 0,
                 'caracteristicas': {
                     'features': [
-                        '25 pacientes/día',
+                        '20 pacientes/día',
                         'Historial completo',
-                        'Facturación electrónica',
-                        'Backup automático',
-                        'Soporte prioritario'
+                        'Acceso completo',
                     ]
                 },
                 'activo': True,
@@ -59,10 +55,8 @@ class PlanService:
                 'caracteristicas': {
                     'features': [
                         '50 pacientes/día',
-                        'Múltiples usuarios',
-                        'Reportes avanzados',
-                        'Integración RIPS completa',
-                        'Soporte 24/7'
+                        'Historial completo',
+                        'Acceso completo',
                     ]
                 },
                 'activo': True,
@@ -107,10 +101,10 @@ class PlanService:
                     plan_id=plan_trial.id,
                     estado='activo',
                     es_trial=True,
-                    trial_dias_restantes=30,
+                    trial_dias_restantes=7,
                     trial_pacientes_primeros_7_dias=True,
                     fecha_inicio=datetime.utcnow(),
-                    fecha_fin=datetime.utcnow() + timedelta(days=30)
+                    fecha_fin=datetime.utcnow() + timedelta(days=7)
                 )
                 db.session.add(nuevo_usuario_plan)
                 print(f"Trial asignado a usuario: {usuario.email}")
@@ -249,3 +243,21 @@ class PlanService:
             'fecha_fin_plan': plan_info['fecha_fin'],
             'limite_alcanzado': limite_diario.contador_pacientes >= limite_diario.limite_actual
         }
+    
+    @staticmethod
+    def verificar_expiraciones():
+        """Verificar y desactivar planes expirados"""
+        ahora = datetime.utcnow()
+        
+        # Buscar planes activos con fecha_fin pasada
+        expirados = UsuarioPlan.query.filter(
+            UsuarioPlan.estado == 'activo',
+            UsuarioPlan.fecha_fin < ahora
+        ).all()
+        
+        for usuario_plan in expirados:
+            usuario_plan.estado = 'expirado'
+            print(f"Plan {usuario_plan.plan.nombre} expirado para usuario {usuario_plan.usuario_id}")
+        
+        db.session.commit()
+        return len(expirados)

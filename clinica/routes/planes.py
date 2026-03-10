@@ -79,4 +79,51 @@ def instrucciones_pago(solicitud_id):
     return render_template('instrucciones_pago.html', solicitud=solicitud)
 
 
-# ... (deja la ruta mi_suscripcion como está) ...
+@planes_bp.route('/mi-suscripcion')
+@login_required
+def mi_suscripcion():
+    from datetime import datetime
+    from clinica.models import Pago
+    
+    estadisticas = PlanService.obtener_estadisticas_usuario(current_user.id)
+    
+    if not estadisticas:
+        flash('No tienes una suscripción activa.', 'warning')
+        return redirect(url_for('planes.mostrar_planes'))
+    
+    # Obtener pagos del usuario
+    pagos = Pago.query.join(UsuarioPlan).filter(
+        UsuarioPlan.usuario_id == current_user.id
+    ).order_by(Pago.fecha_pago.desc()).all()
+    
+    return render_template(
+        'mi_suscripcion.html', 
+        estadisticas=estadisticas,
+        pagos=pagos,
+        now=datetime.utcnow()
+    )
+
+@planes_bp.route('/cancelar-suscripcion', methods=['POST'])
+@login_required
+def cancelar_suscripcion():
+    """Cancelar la suscripción actual"""
+    try:
+        # Buscar el plan activo del usuario
+        usuario_plan = UsuarioPlan.query.filter_by(
+            usuario_id=current_user.id,
+            estado='activo'
+        ).first()
+        
+        if usuario_plan:
+            usuario_plan.estado = 'cancelado'
+            usuario_plan.fecha_cancelacion = datetime.utcnow()
+            db.session.commit()
+            flash('Tu suscripción ha sido cancelada. Seguirás teniendo acceso hasta el final del período.', 'success')
+        else:
+            flash('No se encontró una suscripción activa.', 'warning')
+            
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al cancelar: {str(e)}', 'danger')
+    
+    return redirect(url_for('planes.mi_suscripcion'))
