@@ -1,33 +1,133 @@
-<!-- templates/instrucciones_pago.html (Ejemplo de contenido) -->
 {% extends "base.html" %}
 
 {% block content %}
 <div class="max-w-3xl mx-auto p-8 bg-white shadow-xl rounded-3xl mt-12">
-    <h1 class="text-3xl font-bold text-gray-900 mb-6">Instrucciones de Pago</h1>
-    <p class="mb-4 text-gray-700">
-    Has elegido el plan 
-    <span class="font-bold">{{ solicitud.plan_nombre|title }}</span> 
-    por:
-    <span class="font-bold text-lg text-blue-600">
-        COP {{ "{:,.0f}".format(solicitud.monto_cop) }}
-    </span>
-</p>
-    <p class="mb-6 text-gray-700 font-semibold">Una vez realizado el pago, envía la confirmación de la transferencia al correo: **rueispitre@gmail.com** o al WhatsApp: **+57 3147953756**.</p>
-
-    <!-- Sección Bancolombia -->
-    <div class="border p-4 rounded-xl mb-4 bg-gray-50">
-        <h2 class="text-xl font-bold text-gray-900 mb-3">Opción 1: Transferencia Bancolombia</h2>
-        <p>Cuenta de Ahorros: 912-11360882</p>
-        <p>Titular: Rueis Pitre</p>
-    </div>
-
-    <!-- Sección Nequi/Daviplata -->
-    <div class="border p-4 rounded-xl mb-4 bg-gray-50">
-        <h2 class="text-xl font-bold text-gray-900 mb-3">Opción 2: Nequi / Daviplata</h2>
-        <p>Número de Celular: +57 3147953756</p>
+    
+    <!-- Encabezado con botón volver -->
+    <div class="flex items-center justify-between mb-4">
+        <h1 class="text-3xl font-bold text-gray-900">Instrucciones de Pago</h1>
+        <a href="{{ url_for('planes.mi_suscripcion') }}" 
+        class="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Volver
+        </a>
     </div>
     
-    <p class="mt-6 text-sm text-gray-500">Activaremos tu plan en un máximo de 2 horas después de verificar tu pago.</p>
+    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-8">
+        <p class="text-gray-800">
+            Has elegido el plan <span class="font-bold text-blue-700">{{ solicitud.plan_nombre|title }}</span> 
+            por: <span class="font-bold text-blue-700">COP {{ "{:,.0f}".format(solicitud.monto_cop) }}</span>
+        </p>
+    </div>
+
+    <!-- Opción 1: Bancolombia -->
+    <div class="border rounded-xl p-6 mb-6 bg-gray-50">
+        <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
+            <span class="w-2 h-6 bg-blue-600 rounded-full"></span>
+            Opción 1: Transferencia Bancolombia
+        </h2>
+        
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <p class="text-gray-700">
+                    <span class="font-semibold">Cuenta de Ahorros:</span> 
+                    <span class="font-mono bg-gray-100 px-2 py-1 rounded">912-11360882</span>
+                </p>
+                <p class="text-gray-700 mt-1">
+                    <span class="font-semibold">Titular:</span> Rueis Pitre
+                </p>
+            </div>
+            
+            <button onclick="copiarBancolombia()" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap">
+                <i data-lucide="copy" class="w-4 h-4"></i>
+                Copiar
+            </button>
+        </div>
+    </div>
+
+    <!-- Opción 2: Nequi / Daviplata -->
+    <div class="border rounded-xl p-6 mb-6 bg-gray-50">
+        <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
+            <span class="w-2 h-6 bg-green-600 rounded-full"></span>
+            Opción 2: Nequi / Daviplata
+        </h2>
+        
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <p class="text-gray-700">
+                    <span class="font-semibold">Número de Celular:</span> 
+                    <span class="font-mono bg-gray-100 px-2 py-1 rounded">+57 3147953756</span>
+                </p>
+            </div>
+            
+            <button onclick="copiarNequi()" 
+                    class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap">
+                <i data-lucide="copy" class="w-4 h-4"></i>
+                Copiar
+            </button>
+        </div>
+    </div>
+
+    <!-- Recordatorio final -->
+    <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mt-8">
+        <h3 class="font-bold text-gray-800 mb-2 flex items-center gap-2">
+            <i data-lucide="alert-circle" class="w-5 h-5 text-yellow-600"></i>
+            Después de pagar:
+        </h3>
+        <p class="text-gray-700">
+            Envía la confirmación a <span class="font-semibold">rueispitre@gmail.com</span> 
+            o al WhatsApp <span class="font-semibold">+57 3147953756</span>
+        </p>
+        <p class="text-sm text-gray-600 mt-3">
+            ⏳ Activaremos tu plan en máximo <span class="font-bold">2 horas</span> después de verificar tu pago.
+        </p>
+    </div>
+
+    <!-- Número de solicitud oculto (se incluye al copiar) -->
+    <div class="text-xs text-gray-400 text-center mt-6">
+        Solicitud #{{ solicitud.id }}
+    </div>
 
 </div>
+
+<script>
+function copiarBancolombia() {
+    const texto = `PAGO PLAN {{ solicitud.plan_nombre|upper }} - COP {{ "{:,.0f}".format(solicitud.monto_cop) }}
+
+🏦 BANCOLOMBIA:
+Cuenta de Ahorros: 912-11360882
+Titular: Rueis Pitre
+
+💰 Valor: COP {{ "{:,.0f}".format(solicitud.monto_cop) }}
+📌 Solicitud #{{ solicitud.id }}
+
+📧 Enviar comprobante a: rueispitre@gmail.com
+📱 WhatsApp: +57 3147953756`;
+
+    navigator.clipboard.writeText(texto).then(() => {
+        alert("✅ Datos de Bancolombia copiados");
+    }).catch(() => {
+        alert("❌ No se pudo copiar. Selecciona manualmente.");
+    });
+}
+
+function copiarNequi() {
+    const texto = `PAGO PLAN {{ solicitud.plan_nombre|upper }} - COP {{ "{:,.0f}".format(solicitud.monto_cop) }}
+
+📱 NEQUI / DAVIPLATA:
+Celular: +57 3147953756
+
+💰 Valor: COP {{ "{:,.0f}".format(solicitud.monto_cop) }}
+📌 Solicitud #{{ solicitud.id }}
+
+📧 Enviar comprobante a: rueispitre@gmail.com
+📱 WhatsApp: +57 3147953756`;
+
+    navigator.clipboard.writeText(texto).then(() => {
+        alert("✅ Número de Nequi/Daviplata copiado");
+    }).catch(() => {
+        alert("❌ No se pudo copiar. Selecciona manualmente.");
+    });
+}
+</script>
 {% endblock %}

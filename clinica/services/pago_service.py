@@ -18,7 +18,7 @@ class PagoService:
             raise ValueError(f"Plan con ID {plan_id} no encontrado.")
             
         # 2. Usar el campo precio_cop (ya está correcto)
-        monto_cop = plan.precio_cop
+        monto_cop = plan.precio_mensual  # Asume que este campo ya tiene el valor correcto en COP
         
         # 3. Crear el nuevo objeto de SolicitudPago
         nueva_solicitud = SolicitudPago(

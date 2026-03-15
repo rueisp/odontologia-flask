@@ -1,5 +1,3 @@
-# clinica/__init__.py
-
 import os
 from flask import Flask
 from .extensions import db, migrate, login_manager 
@@ -22,10 +20,28 @@ def get_attr_safe(obj, attr_name, default_value=None):
     else:
         return getattr(obj, attr_name, default_value)
 
+# --- IMPORTAR BLUEPRINTS AQUÍ (FUERA DE LA FUNCIÓN) ---
+from .routes.main import main_bp
+from .routes.pacientes import pacientes_bp
+from .routes.pacientes_evoluciones import evoluciones_bp
+from .routes.pacientes_ajax import ajax_bp
+from .routes.pacientes_citas import citas_paciente_bp 
+from .routes.calendario import calendario_bp
+from .routes.export import export_bp
+from .routes.papelera import papelera_bp
+from .routes.planes import planes_bp
+
 def create_app():
     """Application Factory Function"""
     
     app = Flask(__name__, instance_relative_config=True) 
+
+    # --- PRUEBA DE DIAGNÓSTICO ---
+    print("="*60)
+    print("RUTAS REGISTRADAS:")
+    # Estos endpoints los agregamos después de registrar blueprints
+    # pero los imprimiremos al final
+    # =============================
 
     # --- 1. CONFIGURACIÓN DE LA APP ---
     app.config.from_mapping(
@@ -59,23 +75,17 @@ def create_app():
     app.logger.info(f"App initialized. DEBUG={app.debug}.")
 
     # --- CORRECCIÓN CRÍTICA DE CLOUDINARY ---
-    # Intentamos obtener la variable global
     cloudinary_url = os.environ.get('CLOUDINARY_URL')
     
-    # 1. Intentar configurar con la URL completa (Prioridad Fly.io)
     if cloudinary_url:
         try:
-            # FORZAMOS la configuración pasando la URL explícitamente
             cloudinary.config(cloudinary_url=cloudinary_url)
             app.logger.info("Cloudinary: Configurado explícitamente usando CLOUDINARY_URL.")
         except Exception as e:
             app.logger.error(f"Cloudinary: Error al configurar con URL: {e}")
-
-    # 2. Si no hay URL, intentar con credenciales individuales (Legacy/Local)
     elif (os.environ.get('CLOUDINARY_CLOUD_NAME') and 
           os.environ.get('CLOUDINARY_API_KEY') and 
           os.environ.get('CLOUDINARY_API_SECRET')):
-        
         cloudinary.config(
             cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
             api_key=os.environ.get('CLOUDINARY_API_KEY'),
@@ -83,7 +93,6 @@ def create_app():
             secure=True
         )
         app.logger.info("Cloudinary: Configurado usando credenciales individuales.")
-    
     else:
         app.logger.warning("CLOUDINARY: ¡No se encontraron credenciales! La subida fallará.")
 
@@ -97,7 +106,6 @@ def create_app():
              response.headers['Pragma'] = 'no-cache'
              response.headers['Expires'] = '0'
         return response
-    
 
     @app.context_processor
     def utility_processor():
@@ -121,34 +129,30 @@ def create_app():
     app.jinja_env.add_extension('jinja2.ext.do')
     app.jinja_env.filters['tojson'] = json_dumps 
 
-    # --- 3. REGISTRAR BLUEPRINTS ---
-    with app.app_context(): 
-        from .routes.main import main_bp
-        from .routes.pacientes import pacientes_bp
-        from .routes.pacientes_evoluciones import evoluciones_bp
-        from .routes.pacientes_ajax import ajax_bp
-        from .routes.pacientes_citas import citas_paciente_bp 
-        from .routes.calendario import calendario_bp
-        from .routes.export import export_bp
-        from .routes.papelera import papelera_bp
-        from .routes.planes import planes_bp
+    # --- 3. REGISTRAR BLUEPRINTS (YA IMPORTADOS ARRIBA) ---
+    app.register_blueprint(main_bp)
+    app.register_blueprint(pacientes_bp)
+    app.register_blueprint(evoluciones_bp)
+    app.register_blueprint(ajax_bp)
+    app.register_blueprint(citas_paciente_bp)
+    app.register_blueprint(calendario_bp, url_prefix='/calendario')
+    app.register_blueprint(export_bp, url_prefix='/export')
+    app.register_blueprint(papelera_bp, url_prefix='/papelera')
+    app.register_blueprint(planes_bp)  # <-- AHORA SÍ DEBERÍA FUNCIONAR
 
-
-
-        app.register_blueprint(main_bp)
-        app.register_blueprint(pacientes_bp)
-        app.register_blueprint(evoluciones_bp)
-        app.register_blueprint(ajax_bp)
-        app.register_blueprint(citas_paciente_bp)
-        app.register_blueprint(calendario_bp, url_prefix='/calendario')
-        app.register_blueprint(export_bp, url_prefix='/export')
-        app.register_blueprint(papelera_bp, url_prefix='/papelera')
-        app.register_blueprint(planes_bp)
-
-
-        @app.route('/awake')
-        def awake():
-            return "Render App Awake", 200
+    @app.route('/awake')
+    def awake():
+        return "Render App Awake", 200
+    
+        # --- MOSTRAR TODAS LAS RUTAS REGISTRADAS ---
+    print("="*60)
+    print("TODAS LAS RUTAS REGISTRADAS:")
+    for rule in app.url_map.iter_rules():
+        print(f"{rule.endpoint}: {rule.rule}")
+    print("="*60)
+    # -----------------------------------------
+    
+    return app
         
     return app
 

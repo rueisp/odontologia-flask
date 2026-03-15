@@ -49,13 +49,25 @@
 <div class="min-h-screen bg-gray-50 py-12">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        <!-- Encabezado -->
-        <div class="text-center mb-12">
-            <h1 class="text-4xl font-bold text-gray-900 mb-4">Planes que se adaptan a tu clínica</h1>
-            <p class="text-xl text-gray-600 max-w-3xl mx-auto">
-                Desde práctica individual hasta clínicas con múltiples profesionales. 
-                Elige el plan perfecto para tu crecimiento.
-            </p>
+        <!-- Encabezado con botón a la derecha -->
+        <div class="relative mb-12">
+            <!-- Botón flotante a la derecha -->
+            <div class="absolute right-0 top-0">
+                <a href="{{ url_for('main.index') }}" 
+                class="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 bg-white px-4 py-2 rounded-full shadow-sm border border-gray-200 transition-colors">
+                    <i data-lucide="home" class="w-4 h-4"></i>
+                    <span>Volver al inicio</span>
+                </a>
+            </div>
+            
+            <!-- Título y texto centrados (como te gustan) -->
+            <div class="text-center">
+                <h1 class="text-4xl font-bold text-gray-900 mb-4">Planes que se adaptan a tu clínica</h1>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                    Desde práctica individual hasta clínicas con múltiples profesionales. 
+                    Elige el plan perfecto para tu crecimiento.
+                </p>
+            </div>
         </div>
 
         <!-- Tarjeta de estado actual -->
@@ -105,12 +117,9 @@
                 <div class="text-center mb-8">
                     <h3 class="text-2xl font-bold text-gray-900 mb-2">{{ plan.nombre|title }}</h3>
                     <div class="flex justify-center items-baseline mb-4">
-                        {% if plan.precio_cop > 0 %}
-                            <!-- Muestra el precio en COP y aplica formato de miles -->
-                            <span class="text-3xl font-bold text-gray-900">COP</span>
-                            <span class="text-5xl font-bold text-gray-900 ml-1">{{ "{:,.0f}".format(plan.precio_cop) }}</span>
+                        {% if plan.precio_mensual > 0 %}
+                            <span class="text-5xl font-bold text-gray-900">${{ "{:,.0f}".format(plan.precio_mensual) }}</span>
                         {% else %}
-                            <!-- Muestra $0 para el plan Trial -->
                             <span class="text-5xl font-bold text-gray-900">$0</span>
                         {% endif %}
                         <span class="text-gray-600 ml-2">/mes</span>
@@ -119,37 +128,29 @@
                 </div>
 
                 <!-- Límites -->
-                <div class="mb-8 p-4 bg-gray-50 rounded-2xl">
-                    <div class="text-center mb-4">
-                        <div class="text-3xl font-bold text-gray-900">{{ plan.limite_pacientes_diario }}</div>
-                        <div class="text-gray-600">pacientes por día</div>
-                    </div>
-                    {% if plan.limite_pacientes_diario_primeros_7_dias > plan.limite_pacientes_diario %}
-                    <div class="text-center text-sm text-blue-600 font-medium">
-                        {{ plan.limite_pacientes_diario_primeros_7_dias }} pacientes/día primeros 7 días (solo trial)
-                    </div>
+                <div class="text-center mb-4">
+                    <div class="text-3xl font-bold text-gray-900">{{ plan.limite_pacientes_diario }}</div>
+                    <div class="text-gray-600">pacientes por día</div>
+                    
+                    <!-- Mostrar límite total desde características -->
+                    {% if plan.caracteristicas and plan.caracteristicas.features %}
+                        {% for feature in plan.caracteristicas.features %}
+                            {% if 'pacientes en total' in feature.lower() or 'pacientes registrados' in feature.lower() %}
+                                <div class="text-sm text-gray-500 mt-2">{{ feature }}</div>
+                            {% endif %}
+                        {% endfor %}
                     {% endif %}
                 </div>
 
                 <!-- Características -->
-                <ul class="feature-list mb-8">
+                <ul class="feature-list mb-8 space-y-3">
                     {% if plan.caracteristicas and plan.caracteristicas.features %}
                         {% for feature in plan.caracteristicas.features %}
-                        <li class="text-gray-700">{{ feature }}</li>
+                        <li class="text-gray-700 flex items-start gap-2">
+                            <span class="text-green-500 font-bold">✅</span>
+                            <span>{{ feature }}</span>
+                        </li>
                         {% endfor %}
-                    {% else %}
-                        <li class="text-gray-700">Historial completo de pacientes</li>
-                        <li class="text-gray-700">Gestión de citas y calendario</li>
-                        <li class="text-gray-700">Facturación electrónica</li>
-                        <li class="text-gray-700">Reportes básicos</li>
-                        {% if plan.nombre == 'basico' or plan.nombre == 'profesional' %}
-                        <li class="text-gray-700">Soporte prioritario</li>
-                        {% endif %}
-                        {% if plan.nombre == 'profesional' %}
-                        <li class="text-gray-700">Múltiples usuarios</li>
-                        <li class="text-gray-700">Reportes avanzados</li>
-                        <li class="text-gray-700">Integración RIPS completa</li>
-                        {% endif %}
                     {% endif %}
                 </ul>
 
@@ -165,7 +166,7 @@
                     </button>
                     {% else %}
                     <a href="{{ url_for('planes.elegir_plan', plan_id=plan.id) }}" 
-                       class="block w-full bg-black text-white py-4 px-6 rounded-2xl font-bold text-lg hover:bg-gray-800 transition-colors duration-300 text-center">
+                    class="block w-full bg-black text-white py-4 px-6 rounded-2xl font-bold text-lg hover:bg-gray-800 transition-colors duration-300 text-center">
                         {% if plan.precio_mensual == 0 %}
                             Comenzar Trial Gratis
                         {% else %}
@@ -181,7 +182,7 @@
             </div>
             {% endfor %}
         </div>
-
+        
         <!-- Preguntas Frecuentes -->
         <div class="bg-white rounded-3xl shadow-lg p-8">
             <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Preguntas Frecuentes</h2>
@@ -195,8 +196,8 @@
                     <p class="text-gray-600">Podrás ver la información existente, pero no podrás crear nuevos pacientes hasta el siguiente día. Considera actualizar a un plan con mayor límite.</p>
                 </div>
                 <div>
-                    <h3 class="text-lg font-bold text-gray-800 mb-2">¿El trial incluye todas las funciones?</h3>
-                    <p class="text-gray-600">Sí, el trial de 30 días incluye acceso completo a todas las funciones del sistema sin restricciones.</p>
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">¿El plan trial incluye todas las funciones?</h3>
+                    <p class="text-gray-600">Sí, el trial de 7 días incluye acceso completo a todas las funciones del sistema para que puedas probarlo antes de suscribirte.</p>
                 </div>
             </div>
         </div>
@@ -204,7 +205,7 @@
         <!-- Enlace a gestión de suscripción -->
         {% if estadisticas and not estadisticas.es_trial %}
         <div class="text-center mt-8">
-            <a href="{{ url_for('planes.mi_suscripcion') }}" class="text-blue-600 hover:text-blue-800 font-medium">
+            <a href="{{ url_for('planes.elegir_plan') }}" class="text-blue-600 hover:text-blue-800 font-medium">
                 Gestionar mi suscripción →
             </a>
         </div>

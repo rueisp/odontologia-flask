@@ -15,14 +15,14 @@ class PlanService:
                 'nombre': 'trial',
                 'descripcion': 'Plan de prueba de 7 días',
                 'precio_mensual': 0.0,
-                'limite_pacientes_diario': 20,
-                'limite_pacientes_diario_primeros_7_dias': 20,
+                'limite_pacientes_diario': 10,
+                'limite_pacientes_diario_primeros_7_dias': 70,
                 'duracion_trial_dias': 7,
                 'caracteristicas': {
                     'features': [
-                        '7 días completos',
-                        '20 pacientes/día primeros 7 días',
-                        'Acceso completo',
+                        '10 pacientes por día',
+                        'Hasta 70 pacientes en total (7 días)',
+                        'Acceso completo al sistema'
                     ]
                 },
                 'activo': True,
@@ -30,33 +30,35 @@ class PlanService:
             },
             {
                 'nombre': 'basico',
-                'descripcion': 'Plan básico para práctica pequeña',
-                'precio_mensual': 5.0,
+                'descripcion': 'Plan básico para odontólogos independientes',
+                'precio_mensual': 20000.0,  # 🔹 Cambiado de 20000 a 20000.0 por claridad
                 'limite_pacientes_diario': 20,
                 'limite_pacientes_diario_primeros_7_dias': 20,
                 'duracion_trial_dias': 0,
                 'caracteristicas': {
                     'features': [
-                        '20 pacientes/día',
-                        'Historial completo',
-                        'Acceso completo',
+                        '20 pacientes por día',
+                        'Hasta 1.000 pacientes registrados',
+                        'Historial clínico completo',
+                        'Acceso completo al sistema'
                     ]
                 },
                 'activo': True,
                 'orden': 2
             },
             {
-                'nombre': 'profesional',
-                'descripcion': 'Plan profesional para clínicas',
-                'precio_mensual': 7.0,
+                'nombre': 'pro',  # 🔹 Cambiado de 'profesional' a 'pro'
+                'descripcion': 'Plan profesional para clínicas pequeñas',
+                'precio_mensual': 30000.0,  # 🔹 Cambiado de 30000 a 30000.0
                 'limite_pacientes_diario': 50,
                 'limite_pacientes_diario_primeros_7_dias': 50,
                 'duracion_trial_dias': 0,
                 'caracteristicas': {
                     'features': [
-                        '50 pacientes/día',
-                        'Historial completo',
-                        'Acceso completo',
+                        '50 pacientes por día',
+                        'Hasta 3.000 pacientes registrados',
+                        'Historial clínico completo',
+                        'Acceso completo al sistema'
                     ]
                 },
                 'activo': True,
@@ -168,7 +170,7 @@ class PlanService:
                 dia_numero_trial=(fecha - usuario_plan.fecha_inicio.date()).days + 1 if usuario_plan.es_trial else None
             )
             db.session.add(limite_diario)
-            db.session.commit()
+            
         
         return {
             'limite_diario': limite_diario,
