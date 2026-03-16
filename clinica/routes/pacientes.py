@@ -23,8 +23,7 @@ from .pacientes_services import (
     obtener_paciente_service,
     crear_paciente_service,
     editar_paciente_service,
-    borrar_paciente_service,
-    subir_dentigrama_service
+    borrar_paciente_service
 )
 
 # Importar servicios de evoluciones
@@ -278,50 +277,6 @@ def borrar_pago_paciente(pago_id):
     return redirect(url_for('pacientes.pagos_paciente', paciente_id=paciente.id))
 
 
-@pacientes_bp.route('/upload_dentigrama', methods=['POST'])
-def upload_dentigrama():
-    """
-    Sube un dentigrama a Cloudinary.
-    CONFIGURADO PARA SOBREESCRIBIR: Si hay patient_id, usa un nombre fijo
-    para que Cloudinary reemplace la imagen anterior automáticamente.
-    """
-    try:
-        data = request.get_json()
-        image_data = data.get('image_data')
-        patient_id = data.get('patient_id')
-
-        if not image_data:
-            return jsonify({'error': 'No hay datos de imagen'}), 400
-
-        # LÓGICA DE NOMBRE ÚNICO (Public ID)
-        public_id = None
-        if patient_id and str(patient_id).strip() != "":
-            # Al usar siempre el mismo nombre para el ID, Cloudinary borra la vieja
-            public_id = f"dentigrama_paciente_{patient_id}"
-
-        # Subida directa a Cloudinary con configuración de sobreescritura
-        upload_result = cloudinary.uploader.upload(
-            image_data,
-            public_id=public_id,  # Nombre forzado (si existe ID)
-            overwrite=True,       # ¡Importante! Sobreescribe si ya existe
-            invalidate=True,      # Limpia la caché de la CDN para ver cambios inmediatos
-            folder="dentigramas_pacientes" # Carpeta en Cloudinary
-        )
-
-        # Obtenemos la URL segura
-        new_url = upload_result['secure_url']
-        public_id_created = upload_result['public_id'] # <--- NUEVO
-        
-        return jsonify({
-            'success': True, 
-            'url': new_url, 
-            'public_id': public_id_created, # <--- NUEVO: Lo devolvemos al front
-            'message': 'Dentigrama procesado correctamente'
-        }), 200
-    
-    except Exception as e:
-        print(f"Error al subir dentigrama: {e}")
-        return jsonify({'error': str(e)}), 500
     
 @pacientes_bp.route('/obtener_paciente_ajax/<int:id>', methods=['GET'])
 @login_required

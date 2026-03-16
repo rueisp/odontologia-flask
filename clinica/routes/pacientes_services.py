@@ -36,31 +36,40 @@ def upload_base64_dentigrama(base64_string, patient_id, specific_public_id=None)
     if not base64_string: return None
     
     # --- CORRECCIÓN CRÍTICA: Si ya es una URL, NO SUBIR NADA ---
-    # Esto arregla el error de que la imagen se borre al editar
     if base64_string.startswith('http'): 
         return base64_string 
 
     if base64_string.startswith('data:image'):
         try:
-            # Lógica de nombre: Si hay ID de paciente, ÚSALO. Si no, usa el específico o temporal.
+            # SIEMPRE usar el mismo public_id basado en el ID del paciente
             if patient_id and str(patient_id) != "new_patient":
+                # Importante: NO incluir la carpeta aquí, Cloudinary la añadirá
                 public_id = f"dentigrama_paciente_{patient_id}"
             else:
                 public_id = specific_public_id or f"temp_dentigrama_{uuid.uuid4().hex}"
 
-            # Limpiamos el nombre para evitar carpetas duplicadas si el ID ya trae la carpeta
-            if "/" in public_id:
-                public_id = public_id.split("/")[-1]
+            # ANTES de subir, eliminar cualquier versión anterior con ESTE MISMO public_id
+            # para asegurar sobrescritura limpia
+            try:
+                cloudinary.uploader.destroy(f"dentigramas_pacientes/{public_id}", invalidate=True)
+            except:
+                pass  # Si no existe, ignorar
 
+            # Subir con overwrite=True y invalidate=True
             upload_result = cloudinary.uploader.upload(
                 base64_string,
                 folder="dentigramas_pacientes",
-                public_id=public_id,
-                overwrite=True,      # ¡Clave! Sobreescribe si existe
-                invalidate=True,     # Limpia la caché visual
+                public_id=public_id,  # Cloudinary combinará folder + public_id
+                overwrite=True,
+                invalidate=True,
                 resource_type="image"
             )
-            return upload_result.get('secure_url')
+            
+            if upload_result and upload_result.get('secure_url'):
+                return upload_result.get('secure_url')
+            else:
+                return None
+                
         except Exception as e:
             current_app.logger.error(f"DENTIGRAMA ERROR: {e}")
             return None
@@ -324,31 +333,6 @@ def borrar_paciente_service(paciente_id, usuario):
         return {'success': False, 'message': 'Ocurrió un error al mover el paciente a la papelera.'}
 
 
-def subir_dentigrama_service(image_data, patient_id):
-    """Sube un dentigrama a Cloudinary (Usa Helper Seguro)."""
-    if not image_data:
-        return {'success': False, 'message': 'No se proporcionaron datos de imagen'}
-
-    try:
-        url = upload_base64_dentigrama(image_data, patient_id)
-        
-        if url:
-            # Actualizar BD inmediatamente si hay paciente
-            if patient_id:
-                patient = Paciente.query.get(patient_id)
-                if patient:
-                     if patient.dentigrama_canvas and patient.dentigrama_canvas != url:
-                        delete_from_cloudinary(patient.dentigrama_canvas)
-                     patient.dentigrama_canvas = url
-                     db.session.commit()
-            
-            return {'success': True, 'url': url, 'message': 'Dentigrama subido exitosamente'}
-        else:
-            return {'success': False, 'message': 'Error al subir el dentigrama a Cloudinary.'}
-
-    except Exception as e:
-        return {'success': False, 'message': 'Ocurrió un error inesperado al subir el dentigrama.'}
-    
 
 def crear_paciente_service(form_data, files, usuario):
     """Crea un nuevo paciente"""
@@ -407,11 +391,22 @@ def crear_paciente_service(form_data, files, usuario):
         # ==============================================================================
         raw_dentigrama = form_data.get('dentigrama_url') or form_data.get('dentigrama_canvas')
         if raw_dentigrama:
+            # Eliminar explícitamente cualquier dentigrama previo de este paciente en Cloudinary
+            public_id_previo = f"dentigramas_pacientes/dentigrama_paciente_{nuevo_paciente.id}"
+            try:
+                resultado = cloudinary.uploader.destroy(public_id_previo, invalidate=True)
+                current_app.logger.info(f"Limpieza previa al crear: {public_id_previo} - Resultado: {resultado}")
+            except Exception as e:
+                current_app.logger.warning(f"No se pudo eliminar dentigrama previo: {e}")
+                pass
+            
             nueva_url = upload_base64_dentigrama(raw_dentigrama, nuevo_paciente.id)
             if nueva_url:
                 nuevo_paciente.dentigrama_canvas = nueva_url
                 db.session.commit()
-        
+            else:
+                current_app.logger.warning(f"No se pudo subir el dentigrama para el paciente {nuevo_paciente.id}")
+
         return {
             'success': True, 
             'message': 'Paciente creado correctamente',

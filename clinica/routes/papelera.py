@@ -154,18 +154,31 @@ def eliminar_permanentemente():
             print("=============================================")
             print(f"INICIANDO BORRADO PERMANENTE DEL PACIENTE ID: {objeto_a_eliminar.id}")
             print(f"URL del Dentigrama: {objeto_a_eliminar.dentigrama_canvas}")
+            print(f"URL de Imagen Perfil: {objeto_a_eliminar.imagen_perfil_url}")
             print("---------------------------------------------")
 
-            # Eliminar imágenes de Cloudinary
+            # Eliminar TODAS las imágenes de Cloudinary
+            # 1. Eliminar dentigrama
             if objeto_a_eliminar.dentigrama_canvas:
                 public_id = extract_public_id_from_url(objeto_a_eliminar.dentigrama_canvas)
                 if public_id:
                     try:
                         cloudinary.uploader.destroy(public_id)
-                        current_app.logger.info(f"Éxito al eliminar de Cloudinary: {public_id}")
+                        current_app.logger.info(f"Éxito al eliminar dentigrama de Cloudinary: {public_id}")
                     except Exception as e_cloud:
-                        current_app.logger.error(f"Fallo al eliminar de Cloudinary {public_id}: {e_cloud}")
+                        current_app.logger.error(f"Fallo al eliminar dentigrama {public_id}: {e_cloud}")
+            
+            # 2. Eliminar imagen de perfil (¡ESTO FALTA!)
+            if objeto_a_eliminar.imagen_perfil_url:
+                public_id_perfil = extract_public_id_from_url(objeto_a_eliminar.imagen_perfil_url)
+                if public_id_perfil:
+                    try:
+                        cloudinary.uploader.destroy(public_id_perfil)
+                        current_app.logger.info(f"Éxito al eliminar imagen de perfil de Cloudinary: {public_id_perfil}")
+                    except Exception as e_cloud:
+                        current_app.logger.error(f"Fallo al eliminar imagen de perfil {public_id_perfil}: {e_cloud}")
 
+                        
             # Eliminar TODAS las EVOLUCIONES asociadas al paciente
             Evolucion.query.filter_by(paciente_id=target_id).delete(synchronize_session=False)
             current_app.logger.info(f"Eliminadas evoluciones del paciente {target_id}.")

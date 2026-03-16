@@ -406,62 +406,26 @@ function setupGuardadoManual() {
 
             try {
                 const base64Img = await window.svgToPng(svgDentigrama);
-
                 const inputUrl = document.getElementById('dentigrama_url_input');
-                if(inputUrl) inputUrl.value = base64Img;
-
-                let patientId = document.getElementById('patientIdHiddenInput')?.value;
-                let idToSend = "";
-
-                if (patientId && patientId !== "None" && patientId.trim() !== "") {
-                    idToSend = patientId;
-                } else if (tempSessionId) {
-                    idToSend = tempSessionId;
-                }
-
-                if (!idToSend && (!patientId || patientId === "None")) {
-                    alert('Dentigrama preparado. Dale a "Registrar" para finalizar.');
-                    newBtn.disabled = false;
-                    newBtn.innerHTML = '💾 Guardar Cambios al Dentigrama';
-                    return;
-                }
-
-                const response = await fetch('/pacientes/upload_dentigrama', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ image_data: base64Img, patient_id: idToSend }),
-                });
-
-                const data = await response.json();
-
-                if (response.ok && (data.success || data.url)) {
-                    if(data.url) {
-                        inputUrl.value = data.url;
-
-                        // ▼▼▼ SOLUCIÓN DUPLICADOS: Guardar el Public ID ▼▼▼
-                        const publicIdInput = document.getElementById('dentigrama_public_id_input');
-                        if (publicIdInput && data.public_id) {
-                            publicIdInput.value = data.public_id;
-                        }
-
-                        // ▼▼▼ SOLUCIÓN EFECTO FANTASMA ▼▼▼
-                        // 1. Actualizamos el estado: ahora SÍ tiene fondo
-                        tieneFondo = true;
-                        // 2. Re-renderizamos el SVG. Al ser tieneFondo=true,
-                        // se dibujará SIN los textos ni números, evitando el dobleimpreso.
-                        renderizarDentigrama();
-                        // 3. Cargamos la nueva imagen como fondo visual
-                        cargarFondoVisual(data.url);
-                        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+                
+                if(inputUrl) {
+                    inputUrl.value = base64Img;
+                    // Guardamos también en una variable para saber que hay cambios pendientes
+                    sessionStorage.setItem('dentigrama_pendiente', 'true');
+                    
+                    // Actualizar visualmente si tiene fondo
+                    if (tieneFondo) {
+                        // Solo actualizamos la previsualización
+                        const timestamp = new Date().getTime();
+                        svgDentigrama.style.backgroundImage = `url('${base64Img}?t=${timestamp}')`;
                     }
-                    alert('Dentigrama actualizado correctamente.');
-                } else {
-                    throw new Error(data.error || 'Error desconocido');
+                    
+                    alert('Dentigrama listo para guardar. No olvides hacer clic en "Guardar" al final.');
                 }
 
             } catch (e) {
                 console.error(e);
-                alert('No se pudo guardar: ' + e.message);
+                alert('Error al procesar el dentigrama: ' + e.message);
             } finally {
                 newBtn.disabled = false;
                 newBtn.innerHTML = '💾 Guardar Cambios al Dentigrama';

@@ -42,13 +42,13 @@ git push origin version-simple
 
 \# 5. Construir imagen (INCREMENTA VERSIÓN: v1, v2, v3...)
 
-gcloud builds submit --tag gcr.io/odontologia-app-rps/odontologia-flask:v6
+gcloud builds submit --tag gcr.io/odontologia-app-rps/odontologia-flask:v11
 
 
 
 \# 6. Desplegar en Cloud Run
 
-gcloud run deploy clinica-test --image gcr.io/odontologia-app-rps/odontologia-flask:v6 --region us-central1 --allow-unauthenticated
+gcloud run deploy clinica-test --image gcr.io/odontologia-app-rps/odontologia-flask:v11 --region us-central1 --allow-unauthenticated
 
 ```
 
