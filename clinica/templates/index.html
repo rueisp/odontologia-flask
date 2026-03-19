@@ -103,6 +103,7 @@
                     <a href="{{ url_for('calendario.registrar_cita', paciente_id_param=None) }}" class="block p-3 rounded-2xl text-gray-600 hover:bg-black hover:text-white transition-all duration-200 flex items-center hover:shadow-md"><i data-lucide="calendar-plus" class="w-5 h-5 inline-block mr-3"></i> Cita</a>
                     <a href="{{ url_for('calendario.mostrar_calendario') }}" class="block p-3 rounded-2xl text-gray-600 hover:bg-black hover:text-white transition-all duration-200 flex items-center hover:shadow-md"><i data-lucide="calendar-days" class="w-5 h-5 inline-block mr-3"></i> Calendario</a>
                     <a href="{{ url_for('papelera.ver_papelera') }}" class="block p-3 rounded-2xl text-gray-600 hover:bg-black hover:text-white transition-all duration-200 flex items-center hover:shadow-md"><i data-lucide="trash-2" class="w-5 h-5 inline-block mr-3"></i> Papelera</a>
+                    <a href="{{ url_for('pagos.lista_pagos') }}" class="block p-3 rounded-2xl text-gray-600 hover:bg-black hover:text-white transition-all duration-200 flex items-center hover:shadow-md"><i data-lucide="credit-card" class="w-5 h-5 inline-block mr-3"></i> Pagos</a>
                 </div>
                 <hr class="my-6 border-gray-300">
                 <div class="space-y-2">
@@ -356,15 +357,58 @@
                         <button id="btnEditarPaciente" class="w-full px-4 py-3 bg-black text-white text-sm font-bold rounded-2xl hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 shadow-lg"><i data-lucide="edit-3" class="w-4 h-4"></i> Editar paciente</button>
                     </div>
                 </div> 
-            </div>
-        </div>
+            </div> <!-- Cierra right-panel -->
+        </div> <!-- Cierra dashboard container -->
+    </div> <!-- Cierra contenido real -->
 
-    </div> <!-- FIN CONTENIDO REAL -->
-</div> <!-- FIN WRAPPER FONDO -->
+    <!-- =================================================================== -->
+    <!-- ▼▼▼ BOTÓN FLOTANTE DE COBRO RÁPIDO ▼▼▼ -->
+    <!-- =================================================================== -->
+    <div class="fixed bottom-6 right-6 z-50">
+        <a href="{{ url_for('pagos.nuevo_pago', rapido=1) }}" 
+            class="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-9 py-6 rounded-full shadow-lg transition-all duration-300 hover:scale-105 group"
+            title="Cobro Rápido - Registrar pago sin paciente">
+            <i data-lucide="zap" class="w-5 h-5 group-hover:rotate-12 transition-transform duration-300"></i>
+            <span class="font-bold text-sm sm:text-base">Cobro Rápido</span>
+            <i data-lucide="dollar-sign" class="w-5 h-5 group-hover:scale-110 transition-transform duration-300"></i>
+        </a>
+    </div>
 
-<!-- =================================================================== -->
-<!-- ▼▼▼ 5. OVERLAY PARA MÓVIL ▼▼▼ -->
-<!-- =================================================================== -->
+    <style>
+        /* ==================================================== */
+        /* AJUSTES PARA EL BOTÓN DE COBRO RÁPIDO EN MÓVIL */
+        /* ==================================================== */
+        
+        /* Para tablets y móviles grandes */
+        @media (max-width: 768px) {
+            .fixed.bottom-6.right-6 {
+                bottom: 6rem !important;  /* Sube el botón */
+                right: 1rem !important;
+                z-index: 9999 !important;
+            }
+            
+            .fixed.bottom-6.right-6 a {
+                font-size: 0.9rem !important;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
+            }
+        }
+        
+        /* Para móviles pequeños */
+        @media (max-width: 480px) {
+            .fixed.bottom-6.right-6 {
+                bottom: 7rem !important;  /* Aún más arriba */
+            }
+        }
+        
+        /* Para pantallas muy pequeñas (como tu caso) */
+        @media (max-width: 380px) {
+            .fixed.bottom-6.right-6 {
+                bottom: 8rem !important;  /* Ajusta este valor hasta que quede bien */
+            }
+        }
+    </style>
+
+</div> <!-- FIN WRAPPER FONDO (este es el que ya tenías) -->
 
 
 {% endblock %}

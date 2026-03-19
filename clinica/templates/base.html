@@ -56,44 +56,46 @@
         {% block content %}{% endblock %}
     </main>
     
-    <!-- Barra inferior fija solo visible en móviles -->
-    <!-- Barra inferior fija solo visible en móviles -->
-    <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 shadow-md z-50 lg:hidden">
-        <div class="flex justify-around items-center py-2 text-sm">
-            
-            <!-- Enlaces de Navegación Principal -->
-            <a href="{{ url_for('main.index') }}" class="flex flex-col items-center text-gray-700 hover:text-blue-600 transition-colors">
-                <i data-lucide="home" class="w-5 h-5"></i>
-                <span>Inicio</span>
-            </a>
-            <a href="{{ url_for('pacientes.lista_pacientes') }}" class="flex flex-col items-center text-gray-700 hover:text-blue-600 transition-colors">
-                <i data-lucide="users" class="w-5 h-5"></i>
-                <span>Pacientes</span>
-            </a>
-            <a href="{{ url_for('calendario.mostrar_calendario') }}" class="flex flex-col items-center text-gray-700 hover:text-blue-600 transition-colors">
-                <i data-lucide="calendar-days" class="w-5 h-5"></i>
-                <span>Calendario</span>
-            </a>
+<!-- Barra inferior fija solo visible en móviles -->
+<div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 shadow-md z-50 lg:hidden">
+    <div class="flex justify-around items-center py-2 text-sm">
+        
+        <!-- Enlaces de Navegación Principal -->
+        <a href="{{ url_for('main.index') }}" class="flex flex-col items-center text-gray-700 hover:text-blue-600 transition-colors">
+            <i data-lucide="home" class="w-5 h-5"></i>
+            <span>Inicio</span>
+        </a>
+        
+        <a href="{{ url_for('pacientes.lista_pacientes') }}" class="flex flex-col items-center text-gray-700 hover:text-blue-600 transition-colors">
+            <i data-lucide="users" class="w-5 h-5"></i>
+            <span>Pacientes</span>
+        </a>
+        
+        <a href="{{ url_for('calendario.mostrar_calendario') }}" class="flex flex-col items-center text-gray-700 hover:text-blue-600 transition-colors">
+            <i data-lucide="calendar-days" class="w-5 h-5"></i>
+            <span>Calendario</span>
+        </a>
+        
+        <!-- ✅ ENLACE CORREGIDO: Panel de Pagos con el mismo estilo -->
+        <a href="{{ url_for('pagos.lista_pagos') }}" class="flex flex-col items-center text-gray-700 hover:text-blue-600 transition-colors">
+            <i data-lucide="credit-card" class="w-5 h-5"></i>
+            <span>Pagos</span>
+        </a>
 
-            <!-- ▼▼▼ INICIO DE LOS NUEVOS ENLACES ▼▼▼ -->
-            
-            <!-- Enlace a Mi Perfil -->
-            <a href="{{ url_for('main.perfil') }}" class="flex flex-col items-center text-gray-700 hover:text-blue-600 transition-colors">
-                <i data-lucide="user-cog" class="w-5 h-5"></i>
-                <span>Mi Perfil</span>
-            </a>
+        <!-- Enlace a Mi Perfil -->
+        <a href="{{ url_for('main.perfil') }}" class="flex flex-col items-center text-gray-700 hover:text-blue-600 transition-colors">
+            <i data-lucide="user-cog" class="w-5 h-5"></i>
+            <span>Mi Perfil</span>
+        </a>
 
-            <!-- Enlace para Cerrar Sesión -->
-            <a href="{{ url_for('main.logout') }}" class="flex flex-col items-center text-gray-700 hover:text-red-600 transition-colors">
-                <i data-lucide="log-out" class="w-5 h-5"></i>
-                <span>Salir</span>
-            </a>
-            
-            <!-- ▲▲▲ FIN DE LOS NUEVOS ENLACES ▲▲▲ -->
+        <!-- Enlace para Cerrar Sesión -->
+        <a href="{{ url_for('main.logout') }}" class="flex flex-col items-center text-gray-700 hover:text-red-600 transition-colors">
+            <i data-lucide="log-out" class="w-5 h-5"></i>
+            <span>Salir</span>
+        </a>
 
-        </div>
+    </div>
 </div>
-    
     <!-- Footer -->
     <!-- El footer podría necesitar un padding-bottom adicional en móviles si el pb-20 de main no es suficiente -->
     <!-- O simplemente dejar que la barra fija esté por encima del footer en móviles -->

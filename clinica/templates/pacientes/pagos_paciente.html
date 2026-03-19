@@ -260,7 +260,7 @@
     <!-- Formulario para nuevo pago -->
     <div class="form-pago">
         <h3>Registrar nuevo pago</h3>
-        <form action="{{ url_for('pacientes.agregar_pago_paciente', paciente_id=paciente.id) }}" method="post">
+        <form action="{{ url_for('pacientes.agregar_pago_paciente_unificado_nuevo', paciente_id=paciente.id) }}" method="post">
             <div class="form-grid">
                 <div class="form-group">
                     <label for="fecha">Fecha *</label>
@@ -284,6 +284,10 @@
                         <option value="Nequi">Nequi</option>
                         <option value="Daviplata">Daviplata</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label for="pagado_por">Pagado por</label>
+                    <input type="text" id="pagado_por" name="pagado_por" placeholder="Ej: El paciente, su madre...">
                 </div>
                 <div class="form-group" style="grid-column: span 2;">
                     <label for="observacion">Observación</label>

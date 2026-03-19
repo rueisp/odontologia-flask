@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+
+{% block title %}Cobro Rápido{% endblock %}
+
+{% block head_extra %}
+<style>
+    .form-container {
+        max-width: 600px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+    }
+    .form-card {
+        background: white;
+        border-radius: 2rem;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        padding: 2rem;
+    }
+    .form-title {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #1F2937;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .form-subtitle {
+        color: #6B7280;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #E5E7EB;
+    }
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    .form-group.full-width {
+        grid-column: span 2;
+    }
+    .form-group label {
+        display: block;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid #E5E7EB;
+        border-radius: 1rem;
+        font-size: 1rem;
+        transition: all 0.3s;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #10B981;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    }
+    /* Estilos para sugerencias (igual que en index) */
+    .sugerencias-container {
+        position: absolute;
+        z-index: 50;
+        width: 100%;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        margin-top: 0.25rem;
+        max-height: 15rem;
+        overflow-y: auto;
+        display: none;
+    }
+    .sugerencia-item {
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    .sugerencia-item:hover {
+        background-color: #f9fafb;
+    }
+    .sugerencia-item .nombre {
+        font-weight: 500;
+        color: #111827;
+    }
+    .sugerencia-item .detalle {
+        font-size: 0.75rem;
+        color: #6b7280;
+        margin-top: 0.125rem;
+    }
+    .btn-submit {
+        background: #10B981;
+        color: white;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: 9999px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        width: 100%;
+    }
+    .btn-submit:hover {
+        background: #059669;
+        transform: scale(1.02);
+    }
+    .btn-cancel {
+        background: white;
+        color: #4B5563;
+        border: 2px solid #E5E7EB;
+        padding: 1rem 2rem;
+        border-radius: 9999px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+    .btn-cancel:hover {
+        background: #F9FAFB;
+        border-color: #D1D5DB;
+    }
+    @media (max-width: 640px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+        .form-group.full-width {
+            grid-column: span 1;
+        }
+        .form-card {
+            padding: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-card">
+        <div class="form-title">
+            <i data-lucide="zap" class="w-8 h-8 text-green-600"></i>
+            Cobro Rápido
+        </div>
+        <div class="form-subtitle">
+            Registra un pago sin necesidad de crear un paciente en el sistema
+        </div>
+
+        <form method="POST" action="{{ url_for('pagos.nuevo_pago') }}" id="formPagoRapido">
+            <div class="form-grid">
+                <!-- Campo de búsqueda de paciente (CON AUTOCOMPLETADO) -->
+                <div class="form-group full-width">
+                    <label for="paciente_nombre">Nombre del paciente *</label>
+                    <div class="relative">
+                        <input type="text" 
+                               id="paciente_nombre" 
+                               name="paciente_nombre" 
+                               placeholder="Buscar paciente existente o escribir nombre nuevo..." 
+                               class="w-full border border-gray-200 rounded-2xl px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                               autocomplete="off"
+                               value="{{ request.form.get('paciente_nombre', '') }}">
+                        
+                        <!-- ID oculto del paciente seleccionado -->
+                        <input type="hidden" id="paciente_id" name="paciente_id" value="">
+                        
+                        <!-- Contenedor de sugerencias -->
+                        <div id="sugerencias" class="sugerencias-container"></div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Escribe al menos 2 caracteres para buscar pacientes existentes</p>
+                </div>
+
+                <!-- Descripción -->
+                <div class="form-group full-width">
+                    <label for="descripcion">Descripción *</label>
+                    <input type="text" id="descripcion" name="descripcion" 
+                           placeholder="Ej: Consulta, Limpieza dental, Radiografía..." required
+                           value="{{ request.form.get('descripcion', '') }}">
+                </div>
+
+                <!-- Monto y Método -->
+                <div class="form-group">
+                    <label for="monto">Monto (COP) *</label>
+                    <input type="number" id="monto" name="monto" min="0" step="1000" 
+                           placeholder="50000" required
+                           value="{{ request.form.get('monto', '') }}">
+                </div>
+
+                <div class="form-group">
+                    <label for="metodo_pago">Método de pago *</label>
+                    <select id="metodo_pago" name="metodo_pago" required>
+                        <option value="">Seleccione...</option>
+                        <option value="Efectivo">Efectivo</option>
+                        <option value="Tarjeta">Tarjeta</option>
+                        <option value="Transferencia">Transferencia</option>
+                        <option value="Nequi">Nequi</option>
+                        <option value="Daviplata">Daviplata</option>
+                    </select>
+                </div>
+
+                <!-- Fecha y Pagado por -->
+                <div class="form-group">
+                    <label for="fecha">Fecha *</label>
+                    <input type="date" id="fecha" name="fecha" value="{{ today }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="pagado_por">Pagado por</label>
+                    <input type="text" id="pagado_por" name="pagado_por" 
+                           placeholder="Ej: El paciente, su madre..."
+                           value="{{ request.form.get('pagado_por', '') }}">
+                </div>
+
+                <!-- Observación -->
+                <div class="form-group full-width">
+                    <label for="observacion">Observación</label>
+                    <textarea id="observacion" name="observacion" rows="3" 
+                              placeholder="Notas adicionales...">{{ request.form.get('observacion', '') }}</textarea>
+                </div>
+            </div>
+
+            <!-- Botones -->
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <a href="{{ url_for('main.index') }}" class="btn-cancel" style="flex: 1;">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                    Cancelar
+                </a>
+                <button type="submit" class="btn-submit" style="flex: 2;">
+                    <i data-lucide="save" class="w-5 h-5"></i>
+                    Registrar Pago Rápido
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Script de autocompletado (copiado de index.js pero simplificado) -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const inputPaciente = document.getElementById('paciente_nombre');
+    const inputPacienteId = document.getElementById('paciente_id');
+    const sugerenciasDiv = document.getElementById('sugerencias');
+    let timeoutId;
+
+    if (!inputPaciente) return;
+
+    // Función para buscar pacientes
+    function buscarPacientes(query) {
+        fetch(`/pacientes/buscar_sugerencias_ajax?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.length > 0) {
+                    sugerenciasDiv.innerHTML = data.map(p => `
+                        <div class="sugerencia-item" data-id="${p.id}" data-nombre="${p.nombre_completo || p.nombre}">
+                            <div class="nombre">${p.nombre_completo || p.nombre}</div>
+                            <div class="detalle">${p.documento || 'Sin documento'} · ${p.telefono || 'Sin teléfono'}</div>
+                        </div>
+                    `).join('');
+                    
+                    // Agregar evento click a cada sugerencia
+                    sugerenciasDiv.querySelectorAll('.sugerencia-item').forEach(item => {
+                        item.addEventListener('click', function() {
+                            inputPaciente.value = this.dataset.nombre;
+                            inputPacienteId.value = this.dataset.id;
+                            sugerenciasDiv.style.display = 'none';
+                            
+                            // Feedback visual
+                            inputPaciente.style.borderColor = '#10b981';
+                            setTimeout(() => {
+                                inputPaciente.style.borderColor = '';
+                            }, 500);
+                        });
+                    });
+                    
+                    sugerenciasDiv.style.display = 'block';
+                } else {
+                    sugerenciasDiv.innerHTML = '<div class="sugerencia-item" style="color: #6b7280;">No se encontraron pacientes. Se creará como cobro rápido.</div>';
+                    sugerenciasDiv.style.display = 'block';
+                    inputPacienteId.value = '';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                sugerenciasDiv.innerHTML = '<div class="sugerencia-item" style="color: #ef4444;">Error al buscar pacientes</div>';
+                sugerenciasDiv.style.display = 'block';
+            });
+    }
+
+    // Evento input
+    inputPaciente.addEventListener('input', function() {
+        clearTimeout(timeoutId);
+        const query = this.value.trim();
+        
+        // Limpiar ID oculto
+        inputPacienteId.value = '';
+        
+        if (query.length < 2) {
+            sugerenciasDiv.style.display = 'none';
+            return;
+        }
+
+        // Mostrar loading
+        sugerenciasDiv.innerHTML = '<div class="sugerencia-item" style="color: #6b7280;">Buscando...</div>';
+        sugerenciasDiv.style.display = 'block';
+
+        timeoutId = setTimeout(() => {
+            buscarPacientes(query);
+        }, 300);
+    });
+
+    // Cerrar sugerencias al hacer clic fuera
+    document.addEventListener('click', function(e) {
+        if (!inputPaciente.contains(e.target) && !sugerenciasDiv.contains(e.target)) {
+            sugerenciasDiv.style.display = 'none';
+        }
+    });
+
+    // Prevenir submit si hay sugerencias visibles
+    inputPaciente.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && sugerenciasDiv.style.display === 'block') {
+            e.preventDefault();
+        }
+    });
+
+    // Inicializar Lucide icons
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+});
+</script>
+{% endblock %}

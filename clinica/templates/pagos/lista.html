@@ -1,0 +1,434 @@
+{% extends "base.html" %}
+
+{% block title %}Panel de Pagos{% endblock %}
+
+{% block head_extra %}
+<style>
+    .pagos-global-container {
+        max-width: 1400px;
+        margin: 2rem auto;
+        padding: 0 1.5rem;
+    }
+    
+    /* Tarjetas de estadísticas - TODAS EN ESCALA DE GRISES */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 1.5rem;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        transition: transform 0.3s;
+        border: 1px solid #f0f0f0;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+    
+    /* Todas las tarjetas con el mismo estilo en blanco */
+    .stat-card.total { background: white; color: #1f2937; }
+    .stat-card.efectivo { background: white; color: #1f2937; }
+    .stat-card.tarjeta { background: white; color: #1f2937; }
+    .stat-card.transferencia { background: white; color: #1f2937; }
+    .stat-card.nequi { background: white; color: #1f2937; }
+    .stat-card.daviplata { background: white; color: #1f2937; }
+    
+    .stat-title {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+    }
+    
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: #1f2937;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stat-label {
+        font-size: 0.8rem;
+        color: #9ca3af;
+    }
+    
+    /* Filtros - manteniendo la escala de grises */
+    .filters-section {
+        background: white;
+        border-radius: 1.5rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        border: 1px solid #f0f0f0;
+    }
+    
+    .filters-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        align-items: end;
+    }
+    
+    .filter-group label {
+        display: block;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #6b7280;
+        margin-bottom: 0.3rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .filter-group input,
+    .filter-group select {
+        width: 100%;
+        padding: 0.6rem 1rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        font-size: 0.9rem;
+        background: white;
+    }
+    
+    .filter-group input:focus,
+    .filter-group select:focus {
+        outline: none;
+        border-color: #9ca3af;
+        box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.1);
+    }
+    
+    .btn-filter {
+        background: #1f2937;
+        color: white;
+        padding: 0.6rem 1.5rem;
+        border: none;
+        border-radius: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        height: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+    
+    .btn-filter:hover {
+        background: #111827;
+    }
+    
+    .btn-clear {
+        background: #f3f4f6;
+        color: #4b5563;
+        padding: 0.6rem 1.5rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        transition: all 0.3s;
+        height: 42px;
+    }
+    
+    .btn-clear:hover {
+        background: #e5e7eb;
+    }
+    
+    /* Tabla */
+    .table-container {
+        background: white;
+        border-radius: 1.5rem;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        overflow-x: auto;
+        border: 1px solid #f0f0f0;
+    }
+    
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 1000px;
+    }
+    
+    th {
+        text-align: left;
+        padding: 1rem;
+        background: #f9fafb;
+        font-weight: 600;
+        color: #374151;
+        border-bottom: 2px solid #e5e7eb;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    td {
+        padding: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+        color: #4b5563;
+    }
+    
+    tr:hover td {
+        background: #f9fafb;
+    }
+    
+    /* Badges en escala de grises */
+    .badge-rapido {
+        background: #f3f4f6;
+        color: #1f2937;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        border: 1px solid #e5e7eb;
+    }
+    
+    .badge-paciente {
+        background: #e5e7eb;
+        color: #1f2937;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        border: 1px solid #d1d5db;
+    }
+    
+    .codigo-badge {
+        font-family: monospace;
+        background: #f3f4f6;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.5rem;
+        font-size: 0.8rem;
+        border: 1px solid #e5e7eb;
+    }
+    
+    .monto-cell {
+        font-weight: 700;
+        color: #1f2937;
+    }
+    
+    .btn-accion {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 9999px;
+        background: white;
+        border: 1px solid #e5e7eb;
+        color: #6b7280;
+        margin: 0 2px;
+        transition: all 0.2s;
+    }
+    
+    .btn-accion:hover {
+        background: #1f2937;
+        border-color: #1f2937;
+        color: white;
+    }
+    
+    @media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+        
+        .filters-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .btn-filter, .btn-clear {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pagos-global-container">
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1 style="font-size: 2rem; font-weight: 800; color: #1f2937;">
+            <i data-lucide="credit-card" style="width: 32px; height: 32px; display: inline-block; margin-right: 10px;"></i>
+            Panel de Pagos
+        </h1>
+        <a href="{{ url_for('main.index') }}" class="btn-clear" style="padding: 0.6rem 1.5rem;">
+            <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i> Volver
+        </a>
+    </div>
+    
+    <!-- Estadísticas - TODAS EN BLANCO Y NEGRO -->
+    <div class="stats-grid">
+        <div class="stat-card total">
+            <div class="stat-title">Total General</div>
+            <div class="stat-value">${{ "{:,.0f}".format(total_general) }}</div>
+            <div class="stat-label">{{ total_pagos }} pagos ({{ pagos_pacientes }} pacientes · {{ pagos_rapidos }} rápidos)</div>
+        </div>
+        
+        <div class="stat-card efectivo">
+            <div class="stat-title">Efectivo</div>
+            <div class="stat-value">${{ "{:,.0f}".format(total_efectivo) }}</div>
+        </div>
+        
+        <div class="stat-card tarjeta">
+            <div class="stat-title">Tarjeta</div>
+            <div class="stat-value">${{ "{:,.0f}".format(total_tarjeta) }}</div>
+        </div>
+        
+        <div class="stat-card transferencia">
+            <div class="stat-title">Transferencia</div>
+            <div class="stat-value">${{ "{:,.0f}".format(total_transferencia) }}</div>
+        </div>
+        
+        <div class="stat-card nequi">
+            <div class="stat-title">Nequi</div>
+            <div class="stat-value">${{ "{:,.0f}".format(total_nequi) }}</div>
+        </div>
+        
+        <div class="stat-card daviplata">
+            <div class="stat-title">Daviplata</div>
+            <div class="stat-value">${{ "{:,.0f}".format(total_daviplata) }}</div>
+        </div>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="filters-section">
+        <form method="GET" action="{{ url_for('pagos.lista_pagos') }}">
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label>Período</label>
+                    <select name="fecha">
+                        <option value="" {% if filtros.fecha == '' %}selected{% endif %}>Todos</option>
+                        <option value="hoy" {% if filtros.fecha == 'hoy' %}selected{% endif %}>Hoy</option>
+                        <option value="semana" {% if filtros.fecha == 'semana' %}selected{% endif %}>Esta semana</option>
+                        <option value="mes" {% if filtros.fecha == 'mes' %}selected{% endif %}>Este mes</option>
+                        <option value="personalizado" {% if filtros.fecha == 'personalizado' %}selected{% endif %}>Personalizado</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>Desde</label>
+                    <input type="date" name="desde" value="{{ filtros.desde }}">
+                </div>
+                
+                <div class="filter-group">
+                    <label>Hasta</label>
+                    <input type="date" name="hasta" value="{{ filtros.hasta }}">
+                </div>
+                
+                <div class="filter-group">
+                    <label>Método</label>
+                    <select name="metodo">
+                        <option value="" {% if filtros.metodo == '' %}selected{% endif %}>Todos</option>
+                        <option value="Efectivo" {% if filtros.metodo == 'Efectivo' %}selected{% endif %}>Efectivo</option>
+                        <option value="Tarjeta" {% if filtros.metodo == 'Tarjeta' %}selected{% endif %}>Tarjeta</option>
+                        <option value="Transferencia" {% if filtros.metodo == 'Transferencia' %}selected{% endif %}>Transferencia</option>
+                        <option value="Nequi" {% if filtros.metodo == 'Nequi' %}selected{% endif %}>Nequi</option>
+                        <option value="Daviplata" {% if filtros.metodo == 'Daviplata' %}selected{% endif %}>Daviplata</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>Buscar</label>
+                    <input type="text" name="busqueda" placeholder="Paciente, descripción, código..." value="{{ filtros.busqueda }}">
+                </div>
+                
+                <div style="display: flex; gap: 0.5rem;">
+                    <button type="submit" class="btn-filter">
+                        <i data-lucide="filter" style="width: 16px; height: 16px;"></i> Filtrar
+                    </button>
+                    <a href="{{ url_for('pagos.lista_pagos') }}" class="btn-clear">
+                        <i data-lucide="x" style="width: 16px; height: 16px;"></i> Limpiar
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Tabla de pagos -->
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Fecha/Hora</th>
+                    <th>Tipo</th>
+                    <th>Paciente</th>
+                    <th>Descripción</th>
+                    <th>Monto</th>
+                    <th>Método</th>
+                    <th>Pagado por</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pago in pagos %}
+                <tr>
+                    <td>
+                        <span class="codigo-badge">{{ pago.codigo }}</span>
+                    </td>
+                    <td>
+                        {{ pago.fecha.strftime('%d/%m/%Y') }}<br>
+                        <span style="font-size: 0.75rem; color: #9ca3af;">{{ pago.hora.strftime('%H:%M') }}</span>
+                    </td>
+                    <td>
+                        {% if pago.es_rapido %}
+                            <span class="badge-rapido">Rápido</span>
+                        {% else %}
+                            <span class="badge-paciente">Paciente</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <strong style="color: #1f2937;">{{ pago.paciente_nombre }}</strong>
+                        {% if pago.paciente_id %}
+                            <br><span style="font-size: 0.7rem; color: #9ca3af;">ID: {{ pago.paciente_id }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="color: #4b5563;">{{ pago.descripcion }}</td>
+                    <td class="monto-cell">${{ "{:,.0f}".format(pago.monto) }}</td>
+                    <td style="color: #4b5563;">{{ pago.metodo_pago }}</td>
+                    <td style="color: #6b7280;">{{ pago.pagado_por or '—' }}</td>
+                    <td>
+                        <a href="{{ url_for('pagos.ver_pago', pago_id=pago.id) }}" class="btn-accion" title="Ver detalle">
+                            <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
+                        </a>
+                        {% if pago.paciente_id %}
+                        <a href="{{ url_for('pacientes.mostrar_paciente', id=pago.paciente_id) }}" class="btn-accion" title="Ver paciente">
+                            <i data-lucide="user" style="width: 16px; height: 16px;"></i>
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9" style="text-align: center; padding: 3rem; color: #9ca3af;">
+                        <i data-lucide="credit-card" style="width: 48px; height: 48px; margin-bottom: 1rem; color: #d1d5db;"></i>
+                        <p>No hay pagos para mostrar</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    });
+</script>
+{% endblock %}

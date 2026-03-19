@@ -1,0 +1,267 @@
+<!-- templates/pagos/ver_pago.html -->
+{% extends "base.html" %}
+
+{% block title %}Detalle del Pago{% endblock %}
+
+{% block head_extra %}
+<style>
+    .recibo-container {
+        max-width: 600px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+    }
+    
+    .recibo-card {
+        background: white;
+        border-radius: 2rem;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        padding: 2rem;
+        border: 1px solid #f0f0f0;
+    }
+    
+    .recibo-header {
+        text-align: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 2px solid #f0f0f0;
+    }
+    
+    .recibo-header h1 {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: #1f2937;
+        margin-bottom: 0.5rem;
+    }
+    
+    .recibo-header .clinica-nombre {
+        color: #6b7280;
+        font-size: 0.9rem;
+        letter-spacing: 1px;
+    }
+    
+    .codigo-badge {
+        background: #f3f4f6;
+        padding: 0.5rem 1rem;
+        border-radius: 9999px;
+        font-family: monospace;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #1f2937;
+        display: inline-block;
+        margin-bottom: 1.5rem;
+        border: 1px solid #e5e7eb;
+    }
+    
+    .datos-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .campo {
+        border-bottom: 1px dashed #e5e7eb;
+        padding-bottom: 0.5rem;
+    }
+    
+    .campo.full-width {
+        grid-column: span 2;
+    }
+    
+    .campo .label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #9ca3af;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    
+    .campo .valor {
+        font-size: 1.1rem;
+        color: #1f2937;
+        font-weight: 500;
+    }
+    
+    .campo .valor.monto {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: #059669;
+    }
+    
+    .acciones {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 2px solid #f0f0f0;
+        justify-content: flex-end;
+    }
+    
+    .btn-whatsapp {
+        background: #25D366;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 9999px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s;
+    }
+    
+    .btn-whatsapp:hover {
+        background: #128C7E;
+        transform: scale(1.02);
+    }
+    
+    .btn-volver {
+        background: #f3f4f6;
+        color: #4b5563;
+        padding: 0.75rem 1.5rem;
+        border-radius: 9999px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s;
+        border: 1px solid #e5e7eb;
+    }
+    
+    .btn-volver:hover {
+        background: #e5e7eb;
+    }
+    
+    .footer {
+        text-align: center;
+        margin-top: 2rem;
+        color: #9ca3af;
+        font-size: 0.8rem;
+    }
+    
+    @media (max-width: 640px) {
+        .datos-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        
+        .campo.full-width {
+            grid-column: span 1;
+        }
+        
+        .acciones {
+            flex-direction: column;
+        }
+        
+        .btn-whatsapp, .btn-volver {
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="recibo-container">
+    <div class="recibo-card">
+        
+        <div class="recibo-header">
+            <h1>🧾 RECIBO DE PAGO</h1>
+            <div class="clinica-nombre">CLÍNICA DENTAL</div>
+        </div>
+        
+        <div style="text-align: center;">
+            <span class="codigo-badge">{{ pago.codigo }}</span>
+        </div>
+        
+        <div class="datos-grid">
+            <!-- Fila 1: Paciente y Fecha -->
+            <div class="campo">
+                <div class="label">Paciente</div>
+                <div class="valor">{{ pago.paciente_nombre }}</div>
+            </div>
+            
+            <div class="campo">
+                <div class="label">Fecha</div>
+                <div class="valor">{{ pago.fecha.strftime('%d/%m/%Y') }} · {{ pago.hora.strftime('%H:%M') }}</div>
+            </div>
+            
+            <!-- Fila 2: Descripción -->
+            <div class="campo full-width">
+                <div class="label">Descripción</div>
+                <div class="valor">{{ pago.descripcion }}</div>
+            </div>
+            
+            <!-- Fila 3: Monto y Método -->
+            <div class="campo">
+                <div class="label">Monto</div>
+                <div class="valor monto">${{ "{:,.0f}".format(pago.monto) }}</div>
+            </div>
+            
+            <div class="campo">
+                <div class="label">Método de pago</div>
+                <div class="valor">{{ pago.metodo_pago }}</div>
+            </div>
+            
+            <!-- Fila 4: Pagado por (si existe) -->
+            {% if pago.pagado_por %}
+            <div class="campo">
+                <div class="label">Pagado por</div>
+                <div class="valor">{{ pago.pagado_por }}</div>
+            </div>
+            {% endif %}
+            
+            <!-- Fila 5: Observación (si existe) -->
+            {% if pago.observacion %}
+            <div class="campo full-width">
+                <div class="label">Observación</div>
+                <div class="valor">{{ pago.observacion }}</div>
+            </div>
+            {% endif %}
+            
+            <!-- Fila 6: Registrado por -->
+            <div class="campo full-width" style="border-bottom: none; margin-top: 1rem;">
+                <div class="label">Registrado por</div>
+                <div class="valor" style="font-size: 0.9rem; color: #6b7280;">
+                    {{ current_user.nombre_completo or current_user.username }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Acciones -->
+        <div class="acciones">
+            {% if pago.paciente_id %}
+                {% set paciente = pago.paciente %}
+                {% if paciente and paciente.telefono %}
+                <a href="https://wa.me/57{{ paciente.telefono }}?text={{ mensaje_whatsapp|urlencode }}" 
+                   target="_blank"
+                   class="btn-whatsapp">
+                    <i data-lucide="message-circle" class="w-4 h-4"></i>
+                    Enviar recibo por WhatsApp
+                </a>
+                {% endif %}
+            {% endif %}
+            
+            <a href="{{ url_for('pagos.lista_pagos') }}" class="btn-volver">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                Volver
+            </a>
+        </div>
+        
+        <div class="footer">
+            © 2026 Rueis Pitre Solano · Recibo generado digitalmente
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    });
+</script>
+{% endblock %}

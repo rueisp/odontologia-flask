@@ -1,5 +1,5 @@
 import os
-from flask import Flask
+from flask import Flask, request
 from .extensions import db, migrate, login_manager 
 import cloudinary
 from dotenv import load_dotenv
@@ -30,6 +30,7 @@ from .routes.calendario import calendario_bp
 from .routes.export import export_bp
 from .routes.papelera import papelera_bp
 from .routes.planes import planes_bp
+from clinica.routes.pagos import pagos_bp
 
 def create_app():
     """Application Factory Function"""
@@ -139,21 +140,21 @@ def create_app():
     app.register_blueprint(export_bp, url_prefix='/export')
     app.register_blueprint(papelera_bp, url_prefix='/papelera')
     app.register_blueprint(planes_bp)  # <-- AHORA SÍ DEBERÍA FUNCIONAR
+    app.register_blueprint(pagos_bp)
 
     @app.route('/awake')
     def awake():
-        return "Render App Awake", 200
-    
-        # --- MOSTRAR TODAS LAS RUTAS REGISTRADAS ---
+        print(f"🔴 AWAKE RECIBIDO - IP: {request.remote_addr}")
+        return "OK", 200
+
+    # --- MOSTRAR TODAS LAS RUTAS REGISTRADAS ---
     print("="*60)
     print("TODAS LAS RUTAS REGISTRADAS:")
     for rule in app.url_map.iter_rules():
-        print(f"{rule.endpoint}: {rule.rule}")
+        print(f"{rule.endpoint}: {rule.rule}")  # <-- CAMBIADO: value por rule
     print("="*60)
     # -----------------------------------------
-    
-    return app
-        
+
     return app
 
 app = create_app()

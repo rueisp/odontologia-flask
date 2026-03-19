@@ -353,4 +353,62 @@ class PagoPaciente(db.Model):
     paciente = db.relationship('Paciente', backref=db.backref('pagos_paciente', lazy='dynamic', cascade='all, delete-orphan'))
 
     def __repr__(self):
-        return f'<PagoPaciente {self.fecha} - ${self.monto}>'    
+        return f'<PagoPaciente {self.fecha} - ${self.monto}>'   
+
+# models.py - AGREGAR ESTA NUEVA TABLA (NO eliminar PagoPaciente aún)
+
+class PagoUnificado(db.Model):
+    """SISTEMA UNIFICADO DE PAGOS - Nueva tabla central"""
+    __tablename__ = 'pagos_unificados'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # ============================================================
+    # CAMPOS OBLIGATORIOS SIEMPRE
+    # ============================================================
+    fecha = db.Column(db.Date, nullable=False, default=date.today)
+    hora = db.Column(db.Time, nullable=False, default=datetime.now().time())
+    descripcion = db.Column(db.String(255), nullable=False)  # Breve descripción
+    monto = db.Column(db.Integer, nullable=False)  # En centavos/pesos
+    metodo_pago = db.Column(db.String(50), nullable=False)  # Efectivo, Tarjeta, Transferencia
+    
+    # ============================================================
+    # INFORMACIÓN DEL PACIENTE (Siempre guardamos el nombre)
+    # ============================================================
+    paciente_nombre = db.Column(db.String(200), nullable=False)  # ¡SIEMPRE!
+    paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=True)  # Opcional
+    
+    # ============================================================
+    # CAMPOS ADICIONALES
+    # ============================================================
+    pagado_por = db.Column(db.String(150), nullable=True)  # Quién realizó el pago
+    observacion = db.Column(db.Text, nullable=True)
+    
+    # ============================================================
+    # CONTROL DEL SISTEMA
+    # ============================================================
+    codigo = db.Column(db.String(20), unique=True, nullable=False)  # Código único para recibo
+    es_rapido = db.Column(db.Boolean, default=False, nullable=False)  # True = desde home, False = desde paciente
+    
+    # ============================================================
+    # AUDITORÍA
+    # ============================================================
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)  # Quién registró
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+    
+    # ============================================================
+    # RELACIONES
+    # ============================================================
+    paciente = db.relationship('Paciente', backref=db.backref('pagos_unificados', lazy='dynamic'))
+    usuario = db.relationship('Usuario', backref=db.backref('pagos_registrados', lazy='dynamic'))
+    
+    def __repr__(self):
+        return f'<Pago {self.codigo} - {self.paciente_nombre} - ${self.monto}>'
+    
+    def generar_codigo(self):
+        """Genera un código único para el recibo"""
+        import random
+        import string
+        fecha_str = self.fecha.strftime('%Y%m%d')
+        random_str = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        return f"R-{fecha_str}-{random_str}"     

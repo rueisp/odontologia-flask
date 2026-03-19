@@ -153,8 +153,8 @@ def borrar_paciente(id):
 @pacientes_bp.route('/<int:paciente_id>/pagos', methods=['GET'])
 @login_required
 def pagos_paciente(paciente_id):
-    """Muestra el historial de pagos de un paciente"""
-    from clinica.models import PagoPaciente, Paciente
+    """Muestra el historial de pagos de un paciente (sistema unificado)"""
+    from clinica.models import PagoUnificado, Paciente
     from datetime import date
     
     paciente = Paciente.query.filter_by(id=paciente_id, is_deleted=False).first_or_404()
@@ -164,7 +164,10 @@ def pagos_paciente(paciente_id):
         flash('No tienes permiso para ver este paciente.', 'danger')
         return redirect(url_for('pacientes.lista_pacientes'))
     
-    pagos = PagoPaciente.query.filter_by(paciente_id=paciente_id).order_by(PagoPaciente.fecha.desc()).all()
+    # Obtener pagos del nuevo sistema (ordenados por fecha descendente)
+    pagos = PagoUnificado.query.filter_by(paciente_id=paciente_id).order_by(PagoUnificado.fecha.desc(), PagoUnificado.hora.desc()).all()
+    
+    # Calcular total
     total_pagos = sum(p.monto for p in pagos)
     today = date.today().isoformat()
     
@@ -175,12 +178,15 @@ def pagos_paciente(paciente_id):
                          today=today)
 
 
-@pacientes_bp.route('/<int:paciente_id>/pagos/agregar', methods=['POST'])
+# En routes/pacientes.py - NUEVA RUTA (reemplaza a agregar_pago_paciente)
+@pacientes_bp.route('/<int:paciente_id>/pagos/nuevo', methods=['POST'])
 @login_required
-def agregar_pago_paciente(paciente_id):
-    """Agrega un nuevo pago a un paciente"""
-    from clinica.models import PagoPaciente, Paciente
-    from clinica.extensions import db
+def agregar_pago_paciente_unificado_nuevo(paciente_id):
+    """Agrega un nuevo pago usando el sistema unificado"""
+    from clinica.models import PagoUnificado, Paciente
+    import random
+    import string
+    from datetime import datetime
     
     paciente = Paciente.query.filter_by(id=paciente_id, is_deleted=False).first_or_404()
     
@@ -190,25 +196,35 @@ def agregar_pago_paciente(paciente_id):
         return redirect(url_for('pacientes.lista_pacientes'))
     
     try:
-        nuevo_pago = PagoPaciente(
+        # Generar código único
+        fecha_str = date.today().strftime('%Y%m%d')
+        random_str = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        codigo = f"P-{fecha_str}-{random_str}"
+        
+        nuevo_pago = PagoUnificado(
             paciente_id=paciente_id,
-            fecha=request.form.get('fecha'),
+            paciente_nombre=f"{paciente.primer_nombre} {paciente.primer_apellido}",
+            fecha=datetime.strptime(request.form.get('fecha'), '%Y-%m-%d').date(),
+            hora=datetime.now().time(),
             descripcion=request.form.get('descripcion'),
             monto=int(request.form.get('monto', 0)),
-            metodo_pago=request.form.get('metodo_pago'),
-            observacion=request.form.get('observacion')
+            metodo_pago=request.form.get('metodo_pago') or 'Efectivo',
+            observacion=request.form.get('observacion'),
+            pagado_por=request.form.get('pagado_por'),  # Nuevo campo
+            codigo=codigo,
+            es_rapido=False,  # Viene de ficha de paciente
+            usuario_id=current_user.id
         )
         
         db.session.add(nuevo_pago)
         db.session.commit()
         
-        flash('Pago registrado correctamente.', 'success')
+        flash('Pago registrado correctamente en el nuevo sistema.', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'Error al registrar el pago: {str(e)}', 'danger')
     
     return redirect(url_for('pacientes.pagos_paciente', paciente_id=paciente_id))
-
 
 # ============================================================
 # RUTAS PARA EDITAR Y ELIMINAR PAGOS DE PACIENTES
@@ -352,3 +368,5 @@ def obtener_paciente_ajax(id):
     except Exception as e:
         print(f"Error en obtener_paciente_ajax: {e}")
         return jsonify({'error': str(e)}), 500
+    
+
