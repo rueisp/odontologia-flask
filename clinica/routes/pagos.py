@@ -1,10 +1,12 @@
-# routes/pagos.py
-from flask import Blueprint, render_template, request, flash, redirect, url_for
+# routes/pagos.py - PARTE SUPERIOR DEL ARCHIVO
+from flask import Blueprint, render_template, request, flash, redirect, session, url_for, make_response
 from flask_login import login_required, current_user
 from datetime import date, datetime
 from clinica.models import db, PagoUnificado
 import random
 import string
+import pdfkit  # <--- CAMBIA ESTO: ahora usamos pdfkit
+
 
 pagos_bp = Blueprint('pagos', __name__, url_prefix='/pagos')
 
@@ -34,6 +36,9 @@ def nuevo_pago():
             observacion = request.form.get('observacion')
             pagado_por = request.form.get('pagado_por')
             
+            # NUEVO: Guardar teléfono si se proporcionó
+            telefono = request.form.get('telefono', '').strip()
+            
             # Obtener datos del paciente
             paciente_id = request.form.get('paciente_id', type=int)
             paciente_nombre = request.form.get('paciente_nombre')
@@ -44,14 +49,16 @@ def nuevo_pago():
                 if paciente:
                     paciente_nombre = f"{paciente.primer_nombre} {paciente.primer_apellido}"
                     es_rapido = False
-                    flash(f'✅ Pago vinculado al paciente {paciente_nombre}', 'success')
+                    # Usar el teléfono del paciente si no se proporcionó uno nuevo
+                    if not telefono and paciente.telefono:
+                        telefono = paciente.telefono
                 else:
                     paciente_id = None
                     es_rapido = True
             else:
                 es_rapido = True
             
-            # Crear el pago
+            # Crear el pago (guardamos el teléfono en observación o en un campo nuevo)
             nuevo_pago = PagoUnificado(
                 paciente_id=paciente_id,
                 paciente_nombre=paciente_nombre,
@@ -70,6 +77,10 @@ def nuevo_pago():
             db.session.add(nuevo_pago)
             db.session.commit()
             
+            # Guardar el teléfono en la sesión para usarlo en el recibo
+            if telefono:
+                session[f'telefono_pago_{nuevo_pago.id}'] = telefono
+            
             return redirect(url_for('pagos.ver_pago', pago_id=nuevo_pago.id))
             
         except Exception as e:
@@ -81,7 +92,6 @@ def nuevo_pago():
     today = date.today().isoformat()
     return render_template('pagos/rapido.html', today=today)
 
-
 # ============================================================
 # RUTA PARA VER DETALLE DEL PAGO
 # ============================================================
@@ -89,9 +99,10 @@ def nuevo_pago():
 @pagos_bp.route('/<int:pago_id>')
 @login_required
 def ver_pago(pago_id):
-    """Muestra el detalle de un pago y prepara el enlace de WhatsApp"""
+    """Muestra el detalle de un pago y prepara enlace del PDF"""
     from clinica.models import PagoUnificado, Paciente
     import urllib.parse
+    from flask import session
     
     pago = PagoUnificado.query.get_or_404(pago_id)
     
@@ -105,42 +116,49 @@ def ver_pago(pago_id):
     whatsapp_link = None
     tiene_telefono = False
     
-    # Si el pago tiene paciente_id, buscamos su teléfono
+    # 1. Si es un pago de paciente registrado, buscar su teléfono
     if pago.paciente_id:
         paciente = Paciente.query.get(pago.paciente_id)
         if paciente and paciente.telefono:
             telefono = paciente.telefono
             tiene_telefono = True
-            
-            # Crear el mensaje
-            mensaje = f"""*🧾 RECIBO DE PAGO - CLÍNICA DENTAL*
-
-*Código:* {pago.codigo}
-*Paciente:* {pago.paciente_nombre}
-*Fecha:* {pago.fecha.strftime('%d/%m/%Y')} {pago.hora.strftime('%H:%M')}
-*Descripción:* {pago.descripcion}
-*Monto:* ${'{:,.0f}'.format(pago.monto)}
-*Método:* {pago.metodo_pago}"""
-
-            if pago.pagado_por:
-                mensaje += f"\n*Pagado por:* {pago.pagado_por}"
-            if pago.observacion:
-                mensaje += f"\n*Observación:* {pago.observacion}"
-            
-            # Codificar el mensaje para la URL
-            mensaje_codificado = urllib.parse.quote(mensaje)
-            
-            # Crear el enlace de WhatsApp
-            # Limpiar el teléfono: eliminar espacios, guiones, etc.
-            telefono_limpio = ''.join(filter(str.isdigit, telefono))
-            whatsapp_link = f"https://wa.me/57{telefono_limpio}?text={mensaje_codificado}"
     
+    # 2. Si es cobro rápido, buscar teléfono en la sesión
+    else:
+        telefono_session = session.get(f'telefono_pago_{pago.id}')
+        if telefono_session:
+            telefono = telefono_session
+            tiene_telefono = True
+    
+    # Si tenemos teléfono, crear el enlace de WhatsApp con el PDF
+    # En ver_pago, reemplaza la creación del mensaje con esto:
+    if tiene_telefono and telefono:
+        # Generar enlace al PDF
+        pdf_url = url_for('pagos.generar_pdf', pago_id=pago.id, _external=True)
+        
+        # Crear mensaje - El enlace DEBE ir solo en una línea
+        mensaje = f"""🧾 *RECIBO DE PAGO - CLÍNICA DENTAL*
+
+    *Código:* {pago.codigo}
+    *Paciente:* {pago.paciente_nombre}
+    *Fecha:* {pago.fecha.strftime('%d/%m/%Y')} {pago.hora.strftime('%H:%M')}
+    *Monto:* ${pago.monto:,.0f}
+    *Método:* {pago.metodo_pago}
+
+    📎 *Para descargar tu recibo, haz clic en este enlace:*
+    {pdf_url}"""
+        
+        # Codificar el mensaje
+        mensaje_codificado = urllib.parse.quote(mensaje)
+        
+        # Limpiar teléfono
+        telefono_limpio = ''.join(filter(str.isdigit, telefono))
+        whatsapp_link = f"https://wa.me/57{telefono_limpio}?text={mensaje_codificado}"
+        
     return render_template('pagos/ver_pago.html',
                          pago=pago,
                          whatsapp_link=whatsapp_link,
                          tiene_telefono=tiene_telefono)
-
-
 # ============================================================
 # RUTA PARA LISTAR TODOS LOS PAGOS (opcional)
 # ============================================================
@@ -229,3 +247,61 @@ def lista_pagos():
             'busqueda': busqueda
         }
     )
+
+import pdfkit
+from flask import make_response
+
+# ============================================================
+# RUTA PARA GENERAR PDF (NUEVA VERSIÓN CON PDFKIT)
+# ============================================================
+@pagos_bp.route('/<int:pago_id>/pdf')
+@login_required
+def generar_pdf(pago_id):
+    """Genera PDF del recibo usando pdfkit"""
+    from clinica.models import PagoUnificado
+    from datetime import datetime
+    
+    pago = PagoUnificado.query.get_or_404(pago_id)
+    
+    # Verificar permisos
+    if pago.usuario_id != current_user.id and not current_user.is_admin:
+        flash('No tienes permiso', 'danger')
+        return redirect(url_for('main.index'))
+    
+    # Renderizar template
+    html = render_template('pagos/recibo_pdf.html', 
+                         pago=pago,
+                         now=datetime.now,
+                         current_user=current_user)
+    
+    try:
+        # Configurar opciones para PDF
+        options = {
+            'page-size': 'A4',
+            'margin-top': '0.75in',
+            'margin-right': '0.75in',
+            'margin-bottom': '0.75in',
+            'margin-left': '0.75in',
+            'encoding': "UTF-8",
+            'no-outline': None
+        }
+        
+        # Ruta de wkhtmltopdf (ajusta según donde lo instalaste)
+        # Normalmente se instala en C:/Program Files/wkhtmltopdf/bin/wkhtmltopdf.exe
+        path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+        config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
+        
+        # Generar PDF
+        pdf = pdfkit.from_string(html, False, options=options, configuration=config)
+        
+        # Crear respuesta
+        response = make_response(pdf)
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = f'attachment; filename=recibo_{pago.codigo}.pdf'
+        
+        return response
+        
+    except Exception as e:
+        print(f"Error al generar PDF: {e}")
+        flash('Error al generar el PDF. Verifica que wkhtmltopdf esté instalado.', 'danger')
+        return redirect(url_for('pagos.ver_pago', pago_id=pago.id))

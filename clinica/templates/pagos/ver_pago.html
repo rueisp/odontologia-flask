@@ -228,19 +228,23 @@
                 </div>
             </div>
         </div>
+
+        <!-- Agrega esto temporalmente al final de ver_pago.html -->
+        <div style="display: none;">
+            tiene_telefono: {{ tiene_telefono }}
+            whatsapp_link: {{ whatsapp_link }}
+        </div>
+
         
         <!-- Acciones -->
         <div class="acciones">
-            {% if pago.paciente_id %}
-                {% set paciente = pago.paciente %}
-                {% if paciente and paciente.telefono %}
-                <a href="https://wa.me/57{{ paciente.telefono }}?text={{ mensaje_whatsapp|urlencode }}" 
-                   target="_blank"
-                   class="btn-whatsapp">
-                    <i data-lucide="message-circle" class="w-4 h-4"></i>
-                    Enviar recibo por WhatsApp
-                </a>
-                {% endif %}
+            {% if tiene_telefono and whatsapp_link %}
+            <a href="{{ whatsapp_link }}" 
+            target="_blank"
+            class="btn-whatsapp">
+                <i data-lucide="message-circle" class="w-4 h-4"></i>
+                Enviar recibo por WhatsApp
+            </a>
             {% endif %}
             
             <a href="{{ url_for('pagos.lista_pagos') }}" class="btn-volver">

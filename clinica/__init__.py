@@ -142,18 +142,7 @@ def create_app():
     app.register_blueprint(planes_bp)  # <-- AHORA SÍ DEBERÍA FUNCIONAR
     app.register_blueprint(pagos_bp)
 
-    @app.route('/awake')
-    def awake():
-        print(f"🔴 AWAKE RECIBIDO - IP: {request.remote_addr}")
-        return "OK", 200
 
-    # --- MOSTRAR TODAS LAS RUTAS REGISTRADAS ---
-    print("="*60)
-    print("TODAS LAS RUTAS REGISTRADAS:")
-    for rule in app.url_map.iter_rules():
-        print(f"{rule.endpoint}: {rule.rule}")  # <-- CAMBIADO: value por rule
-    print("="*60)
-    # -----------------------------------------
 
     return app
 

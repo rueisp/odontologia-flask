@@ -203,6 +203,17 @@
         font-weight: 600;
         border: 1px solid #d1d5db;
     }
+
+    /* Badge para Paciente en verde */
+    .badge-paciente-verde {
+        background: #d1fae5;  /* Verde muy claro */
+        color: #065f46;       /* Verde oscuro para texto */
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        border: 1px solid #a7f3d0;
+    }
     
     .codigo-badge {
         font-family: monospace;
@@ -218,26 +229,87 @@
         color: #1f2937;
     }
     
+    /* ==================================================== */
+    /* NUEVOS ESTILOS PARA BOTONES DE ACCIÓN */
+    /* ==================================================== */
+    
+    /* Contenedor de acciones */
+    td:last-child div {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    /* Botones base */
     .btn-accion {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 32px;
-        height: 32px;
-        border-radius: 9999px;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
         background: white;
         border: 1px solid #e5e7eb;
-        color: #6b7280;
-        margin: 0 2px;
-        transition: all 0.2s;
+        color: #4b5563;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     }
     
     .btn-accion:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        z-index: 1;
+    }
+    
+    .btn-accion i {
+        width: 18px;
+        height: 18px;
+    }
+    
+    /* Botón Editar */
+    .btn-accion[title="Editar pago"]:hover {
+        background: #f3f4f6;
+        border-color: #9ca3af;
+        color: #1f2937;
+    }
+    
+    /* Botón Eliminar */
+    .btn-accion[title="Eliminar pago"] {
+        background: #fef2f2;
+        border-color: #fecaca;
+    }
+    
+    .btn-accion[title="Eliminar pago"] i {
+        color: #dc2626;
+    }
+    
+    .btn-accion[title="Eliminar pago"]:hover {
+        background: #dc2626;
+        border-color: #b91c1c;
+    }
+    
+    .btn-accion[title="Eliminar pago"]:hover i {
+        color: white;
+    }
+    
+    /* Botón Ver */
+    .btn-accion[title="Ver detalle"]:hover {
         background: #1f2937;
         border-color: #1f2937;
         color: white;
     }
     
+    /* Botón Ver Paciente */
+    .btn-accion[title="Ver paciente"]:hover {
+        background: #1f2937;
+        border-color: #1f2937;
+        color: white;
+    }
+    
+    /* Responsive para móvil */
     @media (max-width: 768px) {
         .stats-grid {
             grid-template-columns: 1fr 1fr;
@@ -249,6 +321,34 @@
         
         .btn-filter, .btn-clear {
             width: 100%;
+        }
+        
+        /* Ajustes para botones en móvil */
+        td:last-child div {
+            gap: 0.25rem;
+        }
+        
+        .btn-accion {
+            width: 32px;
+            height: 32px;
+        }
+        
+        .btn-accion i {
+            width: 16px;
+            height: 16px;
+        }
+    }
+    
+    /* Para pantallas muy pequeñas */
+    @media (max-width: 480px) {
+        .btn-accion {
+            width: 28px;
+            height: 28px;
+        }
+        
+        .btn-accion i {
+            width: 14px;
+            height: 14px;
         }
     }
 </style>
@@ -385,7 +485,7 @@
                         {% if pago.es_rapido %}
                             <span class="badge-rapido">Rápido</span>
                         {% else %}
-                            <span class="badge-paciente">Paciente</span>
+                            <span class="badge-paciente-verde">Paciente</span>
                         {% endif %}
                     </td>
                     <td>
@@ -399,14 +499,42 @@
                     <td style="color: #4b5563;">{{ pago.metodo_pago }}</td>
                     <td style="color: #6b7280;">{{ pago.pagado_por or '—' }}</td>
                     <td>
-                        <a href="{{ url_for('pagos.ver_pago', pago_id=pago.id) }}" class="btn-accion" title="Ver detalle">
-                            <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
-                        </a>
-                        {% if pago.paciente_id %}
-                        <a href="{{ url_for('pacientes.mostrar_paciente', id=pago.paciente_id) }}" class="btn-accion" title="Ver paciente">
-                            <i data-lucide="user" style="width: 16px; height: 16px;"></i>
-                        </a>
-                        {% endif %}
+                        <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                            <!-- Ver detalle -->
+                            <a href="{{ url_for('pagos.ver_pago', pago_id=pago.id) }}" class="btn-accion" title="Ver detalle">
+                                <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
+                            </a>
+                            
+                            <!-- EDITAR: Siempre visible -->
+                            <a href="{{ url_for('pacientes.editar_pago_paciente', pago_id=pago.id) }}" 
+                            class="btn-accion" 
+                            title="Editar pago"
+                            style="background: #f3f4f6;">
+                                <i data-lucide="edit-3" style="width: 16px; height: 16px;"></i>
+                            </a>
+                            
+                            <!-- ELIMINAR: Siempre visible con confirmación -->
+                            <form action="{{ url_for('pacientes.borrar_pago_paciente', pago_id=pago.id) }}" 
+                                method="post" 
+                                style="display: inline;"
+                                onsubmit="return confirm('¿Estás seguro de eliminar este pago?\nCódigo: {{ pago.codigo }}\nPaciente: {{ pago.paciente_nombre }}\nMonto: ${{ "{:,.0f}".format(pago.monto) }}\n\nEsta acción no se puede deshacer.');">
+                                <button type="submit" 
+                                        class="btn-accion" 
+                                        title="Eliminar pago"
+                                        style="background: #fee2e2; border-color: #fecaca;">
+                                    <i data-lucide="trash-2" style="width: 16px; height: 16px; color: #dc2626;"></i>
+                                </button>
+                            </form>
+                            
+                            <!-- Ver paciente (solo si tiene) -->
+                            {% if pago.paciente_id %}
+                            <a href="{{ url_for('pacientes.mostrar_paciente', id=pago.paciente_id) }}" 
+                            class="btn-accion" 
+                            title="Ver paciente">
+                                <i data-lucide="user" style="width: 16px; height: 16px;"></i>
+                            </a>
+                            {% endif %}
+                        </div>
                     </td>
                 </tr>
                 {% else %}

@@ -19,7 +19,7 @@ def index():
     now_in_local_tz = datetime.now(local_timezone)
     fecha_actual_formateada = now_in_local_tz.strftime('%A, %d de %B de %Y')
     
-    # 2. CITAS DE HOY - OPTIMIZADAS (sin RIPS)
+    # 2. CITAS DE HOY
     hoy_date = now_in_local_tz.date()
     citas_hoy = Cita.query.options(
         load_only(
@@ -30,7 +30,8 @@ def index():
             Cita.doctor, 
             Cita.estado,
             Cita.paciente_nombres_str,
-            Cita.paciente_apellidos_str
+            Cita.paciente_apellidos_str,
+            Cita.paciente_telefono_str
         )
     ).filter(
         Cita.fecha == hoy_date,
@@ -42,23 +43,26 @@ def index():
     citas_procesadas = []
     paciente_ids = list(set([c.paciente_id for c in citas_hoy if c.paciente_id]))
     
-    # Cargar nombres de pacientes en una sola consulta
+    # Cargar datos de pacientes
     pacientes_dict = {}
     if paciente_ids:
         pacientes = Paciente.query.options(
-            load_only(Paciente.id, Paciente.nombres, Paciente.apellidos)
+            load_only(Paciente.id, Paciente.nombres, Paciente.apellidos, Paciente.telefono)
         ).filter(Paciente.id.in_(paciente_ids)).all()
         for p in pacientes:
             pacientes_dict[p.id] = p
     
     for cita in citas_hoy:
+        # Obtener nombre completo y teléfono
         if cita.paciente_id and cita.paciente_id in pacientes_dict:
             paciente = pacientes_dict[cita.paciente_id]
             nombre_completo = f"{paciente.nombres} {paciente.apellidos}".strip()
+            telefono = paciente.telefono or ""
         else:
             nombre_completo = f"{cita.paciente_nombres_str or ''} {cita.paciente_apellidos_str or ''}".strip()
             if not nombre_completo:
                 nombre_completo = "Paciente sin registrar"
+            telefono = cita.paciente_telefono_str or ""
         
         citas_procesadas.append({
             'id': cita.id,
@@ -66,10 +70,11 @@ def index():
             'hora_formateada': cita.hora.strftime('%I:%M %p'),
             'motivo': cita.motivo or 'Consulta',
             'doctor': cita.doctor,
-            'estado': cita.estado
+            'estado': cita.estado,
+            'telefono': telefono
         })
     
-    # 3. CONTADOR SEMANAL (CORREGIDO Y OPTIMIZADO)
+    # 3. CONTADOR SEMANAL
     try:
         inicio_semana = hoy_date - timedelta(days=hoy_date.weekday())
         fin_semana = inicio_semana + timedelta(days=6)
@@ -84,7 +89,7 @@ def index():
         current_app.logger.error(f"Error calculando citas semanales: {e}")
         total_citas_semana = 0
     
-    # 4. PRÓXIMA CITA (opcional, para el panel)
+    # 4. PRÓXIMA CITA
     proxima_cita = Cita.query.options(
         load_only(Cita.id, Cita.fecha, Cita.hora, Cita.paciente_id, Cita.paciente_nombres_str, Cita.paciente_apellidos_str)
     ).filter(
@@ -107,14 +112,12 @@ def index():
             'paciente_nombre': paciente_nombre
         }
     
-    # 5. Estadísticas de plan y límites (si es necesario)
+    # 5. Estadísticas de plan y límites
     from clinica.services.plan_service import PlanService
     estadisticas_plan = PlanService.obtener_estadisticas_usuario(current_user.id)
 
-    # Calcular citas de hoy para estadisticas
     citas_hoy_count = len(citas_procesadas)
 
-    # Crear diccionario estadisticas con el formato que espera el template
     estadisticas = {
         'citas_hoy': citas_hoy_count
     }
@@ -122,13 +125,13 @@ def index():
     return render_template(
         "index.html",
         citas_del_dia=citas_procesadas,
-        estadisticas=estadisticas,  # <-- Esta variable reemplaza a citas_hoy_count
+        estadisticas=estadisticas,
         proxima_cita=proxima_cita_info,
         fecha_actual_formateada=fecha_actual_formateada,
         estadisticas_plan=estadisticas_plan,
         total_citas_semana=total_citas_semana,
-        # Eliminamos facturas_recientes completamente
     )
+
 
 @main_bp.route('/login', methods=['GET', 'POST'])
 def login():

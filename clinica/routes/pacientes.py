@@ -233,34 +233,46 @@ def agregar_pago_paciente_unificado_nuevo(paciente_id):
 @pacientes_bp.route('/pago/<int:pago_id>/editar', methods=['GET', 'POST'])
 @login_required
 def editar_pago_paciente(pago_id):
-    """Edita un pago existente"""
-    from clinica.models import PagoPaciente, Paciente
+    """Edita un pago existente (sistema unificado)"""
+    from clinica.models import PagoUnificado, Paciente
+    from datetime import date
     
-    pago = PagoPaciente.query.get_or_404(pago_id)
-    paciente = Paciente.query.get_or_404(pago.paciente_id)
+    pago = PagoUnificado.query.get_or_404(pago_id)
+    
+    # Obtener paciente si existe
+    paciente = None
+    if pago.paciente_id:
+        paciente = Paciente.query.get(pago.paciente_id)
     
     # Verificar permisos
-    if not current_user.is_admin and paciente.odontologo_id != current_user.id:
+    if pago.usuario_id != current_user.id and not current_user.is_admin:
         flash('No tienes permiso para modificar este pago.', 'danger')
         return redirect(url_for('pacientes.lista_pacientes'))
     
     if request.method == 'POST':
         try:
-            pago.fecha = request.form.get('fecha')
+            pago.fecha = datetime.strptime(request.form.get('fecha'), '%Y-%m-%d').date()
             pago.descripcion = request.form.get('descripcion')
             pago.monto = int(request.form.get('monto', 0))
             pago.metodo_pago = request.form.get('metodo_pago')
             pago.observacion = request.form.get('observacion')
+            pago.pagado_por = request.form.get('pagado_por')
             
             db.session.commit()
             flash('Pago actualizado correctamente.', 'success')
-            return redirect(url_for('pacientes.pagos_paciente', paciente_id=paciente.id))
+            
+            # Redirigir según el tipo de pago
+            if pago.paciente_id:
+                return redirect(url_for('pacientes.pagos_paciente', paciente_id=pago.paciente_id))
+            else:
+                return redirect(url_for('pagos.lista_pagos'))
+                
         except Exception as e:
             db.session.rollback()
             flash(f'Error al actualizar el pago: {str(e)}', 'danger')
-            return redirect(url_for('pacientes.pagos_paciente', paciente_id=paciente.id))
+            return redirect(request.url)
     
-    # GET: mostrar formulario con datos cargados
+    # GET: mostrar formulario
     today = date.today().isoformat()
     return render_template('pacientes/editar_pago_paciente.html',
                          pago=pago,
@@ -271,14 +283,17 @@ def editar_pago_paciente(pago_id):
 @pacientes_bp.route('/pago/<int:pago_id>/borrar', methods=['POST'])
 @login_required
 def borrar_pago_paciente(pago_id):
-    """Elimina un pago"""
-    from clinica.models import PagoPaciente, Paciente
+    """Elimina un pago del sistema unificado"""
+    from clinica.models import PagoUnificado, Paciente
     
-    pago = PagoPaciente.query.get_or_404(pago_id)
-    paciente = Paciente.query.get_or_404(pago.paciente_id)
+    pago = PagoUnificado.query.get_or_404(pago_id)
+    
+    # Guardar datos para redirección
+    paciente_id = pago.paciente_id
+    es_rapido = pago.es_rapido
     
     # Verificar permisos
-    if not current_user.is_admin and paciente.odontologo_id != current_user.id:
+    if pago.usuario_id != current_user.id and not current_user.is_admin:
         flash('No tienes permiso para eliminar este pago.', 'danger')
         return redirect(url_for('pacientes.lista_pacientes'))
     
@@ -290,9 +305,13 @@ def borrar_pago_paciente(pago_id):
         db.session.rollback()
         flash(f'Error al eliminar el pago: {str(e)}', 'danger')
     
-    return redirect(url_for('pacientes.pagos_paciente', paciente_id=paciente.id))
-
-
+    # Redirigir según el tipo de pago
+    if paciente_id and not es_rapido:
+        return redirect(url_for('pacientes.pagos_paciente', paciente_id=paciente_id))
+    else:
+        return redirect(url_for('pagos.lista_pagos'))
+    
+    
     
 @pacientes_bp.route('/obtener_paciente_ajax/<int:id>', methods=['GET'])
 @login_required

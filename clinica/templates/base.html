@@ -27,9 +27,7 @@
     <!-- ¡AQUÍ VA EL NUEVO ARCHIVO CSS para el avatar! -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/avatar_upload.css') }}">
 
-        <!-- Script de Wompi agregado AQUÍ -->
-    <!-- 📌 COMENTAR O ELIMINAR ESTA LÍNEA -->
-    <!-- <script src="https://checkout.wompi.co/widget.js"></script> -->
+
 
     {% block head_extra %}{% endblock %} <!-- Para CSS o scripts específicos de una página -->
 
@@ -109,7 +107,10 @@
     <!-- Lucide Icons JS -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
-        lucide.createIcons(); // Asegúrate que esto se llama DESPUÉS de que los elementos con data-lucide estén en el DOM
+        // Esperar a que todo el DOM esté cargado
+        document.addEventListener('DOMContentLoaded', function() {
+            lucide.createIcons();
+        });
     </script>
 
     {% block scripts %}{% endblock %} <!-- Para JS específico de una página -->

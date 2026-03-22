@@ -187,6 +187,8 @@ def get_index_panel_data(today_date: date, current_time: time):
     datos_panel['citas_del_dia'] = citas_hoy_procesadas
     
     return datos_panel
+
+
 # --- VERSIÓN MEJORADA DE extract_public_id_from_url (se mantiene igual) ---
 def extract_public_id_from_url(url):
     """

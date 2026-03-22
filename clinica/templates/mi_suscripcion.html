@@ -129,29 +129,6 @@
             </div>
             {% endif %}
 
-            <!-- Botones de Acción -->
-            <div class="flex flex-col gap-4 mt-4">
-            <!-- Opción 1: Wompi (Automático) - DESACTIVADO TEMPORALMENTE -->
-            <!--
-            <div class="border border-gray-200 rounded-xl p-4">
-                ...
-                <a href="#" onclick="iniciarPagoWompi(); return false;" ...>
-                    Pagar con Wompi
-                </a>
-                ...
-            </div>
-            -->
-                
-                <!-- Botón normal con un pequeño retraso -->
-                 <!--
-                <a href="#" onclick="iniciarPagoWompi(); return false;" 
-                class="w-full bg-black text-white py-3 px-4 rounded-xl font-semibold hover:bg-gray-800 transition text-center block">
-                    Pagar con Wompi
-                </a>
-                
-                <p class="text-xs text-gray-500 mt-2 text-center">Activación automática en tiempo real</p>
-            </div>
-            -->
 
                 <!-- Opción 2: Transferencia Manual -->
                 <div class="border border-gray-200 rounded-xl p-4">
@@ -258,46 +235,4 @@
     </div>
 </div>
 
-
-<script>
-/*    
-window.iniciarPagoWompi = function() {
-    if (typeof window.WidgetCheckout === 'undefined') {
-        alert("Error: Wompi no cargó. Recarga la página.");
-        return;
-    }
-    
-    try {
-        const checkout = new window.WidgetCheckout({
-            publicKey: "{{ wompi_public_key }}",
-            currency: "COP",
-            amountInCents: {{ (plan_seleccionado.precio * 100)|int }},
-            reference: "suscripcion_{{ current_user.id }}_{{ plan_seleccionado.id }}",
-            redirectUrl: "{{ url_for('planes.pago_exitoso', _external=True) }}",
-            signature: {
-                integrity: "{{ firma_wompi }}"
-            }
-        });
-        
-        checkout.open(function(error, response) {
-            if (error) {
-                console.error('Error:', error);
-                alert('Error en el pago: ' + (error.message || 'Desconocido'));
-                return;
-            }
-            console.log('Respuesta:', response);
-            if (response && response.status === 'APPROVED') {
-                window.location.href = "{{ url_for('planes.pago_exitoso') }}";
-            }
-        });
-        
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Error al iniciar Wompi: ' + error.message);
-    }
-};
-*/
-
-// Tus otras funciones (confirmarDocumento, cerrarModal, etc.) permanecen igual
-</script>
 {% endblock %}

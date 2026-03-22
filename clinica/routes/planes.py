@@ -98,42 +98,13 @@ def instrucciones_pago(solicitud_id):
 def mi_suscripcion():
     from datetime import datetime
     from clinica.models import Pago
-    import hashlib
-    import os
-    
-    print("=== DEBUG MI SUSCRIPCION ===")
-    
+        
     estadisticas = PlanService.obtener_estadisticas_usuario(current_user.id)
     plan_seleccionado = session.get('plan_seleccionado')
     
     if not plan_seleccionado:
         flash('Por favor, selecciona un plan primero.', 'warning')
         return redirect(url_for('planes.mostrar_planes'))
-    
-    # 🔹 GENERAR FIRMA - VERSIÓN CORREGIDA 🔹
-    #monto_centavos = int(plan_seleccionado['precio'] * 100)
-    #referencia = f"suscripcion_{current_user.id}_{plan_seleccionado['id']}"
-    #integrity_key = os.getenv("WOMPI_INTEGRITY_KEY")
-    
-    # ¡IMPORTANTE! La cadena debe ser EXACTAMENTE: monto + referencia + llave_integridad
-    # SIN espacios, SIN saltos de línea
-    #cadena_firma = f"{referencia}{monto_centavos}COP{integrity_key}"
-    
-    # Generar SHA-256 en hexadecimal
-    #firma_integridad = hashlib.sha256(cadena_firma.encode('utf-8')).hexdigest()
-    
-    # 🔹 DEPURACIÓN - IMPRIMIR TODO 🔹
-    #print("="*60)
-    print("🔍 VERIFICACIÓN DE FIRMA WOMPI")
-    #print(f"💰 Monto en centavos: {monto_centavos}")
-    #print(f"📝 Referencia: '{referencia}'")
-    #print(f"🔑 Integrity Key: '{integrity_key}'")
-    #print(f"📏 Longitud integrity key: {len(integrity_key)}")
-    #print(f"🔗 Cadena concatenada: '{cadena_firma}'")
-    #print(f"📏 Longitud cadena: {len(cadena_firma)}")
-    #print(f"🔐 Firma generada (SHA-256): {firma_integridad}")
-    #print(f"🔐 Longitud firma: {len(firma_integridad)} (debe ser 64)")
-    #print("="*60)
     
     pagos = Pago.query.join(UsuarioPlan).filter(
         UsuarioPlan.usuario_id == current_user.id
@@ -144,9 +115,7 @@ def mi_suscripcion():
         estadisticas=estadisticas,
         pagos=pagos,
         now=datetime.utcnow(),
-        #wompi_public_key=os.getenv("WOMPI_PUBLIC_KEY"),
-        plan_seleccionado=plan_seleccionado,
-        #firma_wompi=firma_integridad
+        plan_seleccionado=plan_seleccionado
     )
 
 @planes_bp.route('/cancelar-suscripcion', methods=['POST'])
@@ -175,27 +144,6 @@ def cancelar_suscripcion():
     return redirect(url_for('planes.mi_suscripcion'))
 
 
-
-#@planes_bp.route('/generar-firma-wompi', methods=['POST'])
-#@login_required
-#def generar_firma_wompi():
-    """Genera la firma de integridad para Wompi"""
-    try:
-        data = request.get_json()
-        referencia = data.get('referencia')
-        monto = data.get('monto')  # Debe ser el monto en centavos (ej: 2000000 para $20.000)
-        
-        # 1. Concatenar: monto + referencia + integrity_key
-        cadena = f"{monto}{referencia}{os.getenv('WOMPI_INTEGRITY_KEY')}"
-        
-        # 2. Generar SHA-256
-        firma = hashlib.sha256(cadena.encode('utf-8')).hexdigest()
-        
-        return jsonify({'firma': firma})
-        
-    except Exception as e:
-        print(f"Error generando firma: {e}")
-        return jsonify({'error': str(e)}), 500
 
 
 @planes_bp.route("/pago-exitoso")

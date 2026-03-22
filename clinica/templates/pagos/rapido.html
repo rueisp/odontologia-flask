@@ -225,6 +225,16 @@
                            value="{{ request.form.get('pagado_por', '') }}">
                 </div>
 
+                <!-- En el form-grid, después del campo pagado_por o donde prefieras -->
+                <div class="form-group">
+                    <label for="telefono">Teléfono (para WhatsApp)</label>
+                    <input type="tel" id="telefono" name="telefono" 
+                        placeholder="Ej: 3001234567"
+                        value="{{ request.form.get('telefono', '') }}"
+                        class="w-full border border-gray-200 rounded-2xl px-5 py-3 text-sm">
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Opcional - Para enviar recibo por WhatsApp</p>
+
                 <!-- Observación -->
                 <div class="form-group full-width">
                     <label for="observacion">Observación</label>

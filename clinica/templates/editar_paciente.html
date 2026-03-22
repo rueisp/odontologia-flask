@@ -61,17 +61,29 @@
                 // --- CÁLCULO DE EDAD ---
                 const fechaNacimientoInput = document.getElementById('fecha_nacimiento');
                 const edadInput = document.getElementById('edad');
+                
                 if (fechaNacimientoInput && edadInput) { 
                     const calcularEdad = () => {
-                        if (!fechaNacimientoInput.value) { edadInput.value = ''; return; }
+                        if (!fechaNacimientoInput.value) { 
+                            edadInput.value = ''; 
+                            return; 
+                        }
                         const fechaNacimiento = new Date(fechaNacimientoInput.value);
                         const hoy = new Date();
                         let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
                         const mes = hoy.getMonth() - fechaNacimiento.getMonth();
-                        if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNacimiento.getDate())) edad--;
+                        if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNacimiento.getDate())) {
+                            edad--;
+                        }
                         edadInput.value = edad >= 0 ? edad : '';
                     };
+                    
+                    // 🔥 CALCULAR EDAD AL CARGAR LA PÁGINA
+                    calcularEdad();
+                    
+                    // 🔥 CALCULAR EDAD CUANDO CAMBIA LA FECHA
                     fechaNacimientoInput.addEventListener('change', calcularEdad);
+                    fechaNacimientoInput.addEventListener('blur', calcularEdad); // Por si acaso
                 }
 
                 // --- DENTIGRAMA ---
@@ -85,6 +97,6 @@
             } catch (e) {
                 console.error("Error en el script:", e);
             }
-        }); 
+        });
     </script>
 {% endblock %}
