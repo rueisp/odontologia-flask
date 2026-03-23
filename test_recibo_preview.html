@@ -10,21 +10,23 @@
         .recibo{max-width:100%;padding:24px 20px;background:#fff;box-sizing:border-box}
         .borde{height:2px;background:#e5e7eb;margin-bottom:18px}
         .header{text-align:center;padding-bottom:18px;border-bottom:1px solid #e5e7eb;margin-bottom:20px}
-        h1{font-size:28px;font-weight:bold;color:#1f2937;text-transform:uppercase}
-        .clinica{font-size:14px;color:#6b7280;text-transform:uppercase;margin-top:6px}
-        .codigo{background:#f9fafb;padding:12px 16px;margin:18px 0;font-family:monospace;font-size:13px;border-left:3px solid #9ca3af;word-break:break-all}
-        table{width:100%;margin:18px 0;border-collapse:collapse}
-        tr{border-bottom:1px solid #f0f0f0}
-        td{padding:12px 0;vertical-align:top}
-        .label{width:35%;color:#6b7280;font-size:14px}
-        .valor{width:65%;color:#1f2937;font-size:14px}
-        .monto{background:#f9fafb;padding:14px 16px;margin:18px 0;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb}
+        h1{font-size:36px;font-weight:bold;color:#1f2937;text-transform:uppercase}
+        .clinica{font-size:28px;color:#6b7280;text-transform:uppercase;margin-top:6px;margin-bottom:40px}
+        .codigo{background:#f9fafb;padding:12px 16px;margin:18px 0 40px 0;font-family:monospace;font-size:36px;border-left:3px solid #9ca3af;word-break:break-all}
+        .info-grid{width:100%;margin:18px 0}
+        .info-item{margin-bottom:24px}
+        .label{color:#9ca3af;font-size:36px;margin-bottom:8px}
+        .valor{color:#1f2937;font-size:40px;font-weight:500}
+        .monto{background:#f9fafb;padding:14px 16px;margin:18px 0}
         .monto-row{display:flex;justify-content:space-between;align-items:center}
         .monto-label{font-size:14px;color:#6b7280}
-        .monto-valor{font-size:28px;font-weight:bold;color:#059669}
+        .monto-valor{font-size:40px;font-weight:bold;color:#059669}
+        .total-pagado{display:flex;justify-content:space-between;align-items:center;margin:18px 0;padding:14px 0}
+        .total-label{color:#9ca3af;font-size:36px}
+        .total-valor{color:#1f2937;font-size:48px;font-weight:bold}
         .validez{text-align:center;padding:12px;margin:18px 0;background:#f0fdf4;border:1px solid #bbf7d0;font-size:13px;font-weight:bold;color:#15803d}
-        .observacion{background:#fffbeb;padding:12px 16px;margin:18px 0;border-left:4px solid #f59e0b;font-size:13px}
-        .obs-label{font-weight:bold;color:#b45309;margin-bottom:6px}
+        .observacion{background:#fffbeb;padding:12px 16px;margin:18px 0;border-left:4px solid #f59e0b;font-size:36px}
+        .obs-label{font-weight:bold;color:#b45309;margin-bottom:6px;font-size:36px}
         .footer{margin-top:20px;padding-top:18px;border-top:1px solid #e5e7eb;font-size:10px;color:#9ca3af;text-align:center}
         .footer p{margin:5px 0}
         .ref{font-family:monospace;font-size:9px;color:#6b7280;margin:12px 0;line-height:1.5}
@@ -43,21 +45,41 @@
     <strong>Nro. de comprobante:</strong> {{ pago.codigo }}
 </div>
 
-<table>
-     <tr><td class="label">Pago realizado por:</td><td class="valor"><strong>{{ pago.paciente_nombre }}</strong></td></tr>
-     <tr><td class="label">Fecha y hora:</td><td class="valor">{{ pago.fecha.strftime('%d/%m/%Y') }} - {{ pago.hora.strftime('%I:%M %p') }}</td></tr>
-     <tr><td class="label">Descripción:</td><td class="valor">{{ pago.descripcion }}</td></tr>
-     <tr><td class="label">Método de pago:</td><td class="valor">{{ pago.metodo_pago }}</td></tr>
-     {% if pago.pagado_por %}
-     <tr><td class="label">Pagado por:</td><td class="valor">{{ pago.pagado_por }}</td></tr>
-     {% endif %}
-</table>
+<div class="info-grid">
+    <div class="info-item">
+        <div class="label">Pago realizado por:</div>
+        <div class="valor"><strong>{{ pago.paciente_nombre }}</strong></div>
+    </div>
+    <div class="info-item">
+        <div class="label">Fecha y hora:</div>
+        <div class="valor"><strong>{{ pago.fecha.strftime('%d/%m/%Y') }} - {{ pago.hora.strftime('%I:%M %p') }}</strong></div>
+    </div>
+    <div class="info-item">
+        <div class="label">Descripción:</div>
+        <div class="valor"><strong>{{ pago.descripcion }}</strong></div>
+    </div>
+    <div class="info-item">
+        <div class="label">Método de pago:</div>
+        <div class="valor"><strong>{{ pago.metodo_pago }}</strong></div>
+    </div>
+    {% if pago.pagado_por %}
+    <div class="info-item">
+        <div class="label">Pagado por:</div>
+        <div class="valor"><strong>{{ pago.pagado_por }}</strong></div>
+    </div>
+    {% endif %}
+</div>
 
 <div class="monto">
     <div class="monto-row">
-        <span class="monto-label">Valor pagado:</span>
+        <span class="monto-label">Valor pagado:&nbsp;&nbsp;</span>
         <span class="monto-valor">${{ "{:,.0f}".format(pago.monto) }}</span>
     </div>
+</div>
+
+<div class="total-pagado">
+    <span class="total-label">Total pagado:</span>
+    <span class="total-valor">${{ "{:,.0f}".format(pago.monto) }}</span>
 </div>
 
 <div class="observacion">
@@ -70,10 +92,9 @@
 </div>
 
 <div class="footer">
-    <p>Generado el {{ now().strftime('%d/%m/%Y %H:%M') }} por {{ current_user.nombre_completo or current_user.username }}</p>
     <div class="ref">
         <p>CLÍNICA DENTAL</p>
-        <p>Contacto: (323)3316976 · info@clinicadental.com</p>
+        <p>Contacto: (323)3316976</p>
         <p>www.odontologiaduoplus.com</p>
     </div>
     <p>© 2026 Rueis Pitre Solano · Documento generado digitalmente</p>
