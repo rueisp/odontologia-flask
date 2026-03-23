@@ -211,16 +211,16 @@
 
                     <!-- Información Clínica Simple (cada una ocupa ambas columnas) -->
                     <div class="data-item full-width">
-                        <span class="label">Alergias</span>
-                        <span class="value text-area">{{ paciente.alergias or 'No especificado' }}</span>
-                    </div>
-                    <div class="data-item full-width">
                         <span class="label">Motivo de Consulta</span> 
                         <span class="value text-area">{{ paciente.motivo_consulta or 'No especificado' }}</span>
                     </div>
                     <div class="data-item full-width">
                         <span class="label">Enfermedad Actual</span> 
                         <span class="value text-area">{{ paciente.enfermedad_actual or 'No especificado' }}</span>
+                    </div>
+                    <div class="data-item full-width">
+                        <span class="label">Alergias</span>
+                        <span class="value text-area">{{ paciente.alergias or 'No especificado' }}</span>
                     </div>
                     <div class="data-item full-width">
                         <span class="label">Observaciones Generales</span>

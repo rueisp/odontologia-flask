@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="p-10">
+    <h1 class="text-3xl font-bold mb-6">Prueba de Tailwind CSS</h1>
+    
+    <!-- Prueba de Flexbox - Deberían aparecer en horizontal -->
+    <div class="flex flex-wrap gap-4 mb-10">
+        <div class="flex-1 bg-blue-500 text-white p-6 rounded-2xl">
+            Tarjeta 1 - Azul
+        </div>
+        <div class="flex-1 bg-green-500 text-white p-6 rounded-2xl">
+            Tarjeta 2 - Verde
+        </div>
+        <div class="flex-1 bg-red-500 text-white p-6 rounded-2xl">
+            Tarjeta 3 - Roja
+        </div>
+    </div>
+    
+    <!-- Prueba de Grid - Deberían aparecer en 3 columnas -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-purple-500 text-white p-6 rounded-2xl">
+            Grid 1 - Púrpura
+        </div>
+        <div class="bg-purple-500 text-white p-6 rounded-2xl">
+            Grid 2 - Púrpura
+        </div>
+        <div class="bg-purple-500 text-white p-6 rounded-2xl">
+            Grid 3 - Púrpura
+        </div>
+    </div>
+</div>
+{% endblock %}

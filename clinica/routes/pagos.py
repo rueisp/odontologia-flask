@@ -5,8 +5,8 @@ from datetime import date, datetime
 from clinica.models import db, PagoUnificado
 import random
 import string
-import pdfkit  # <--- CAMBIA ESTO: ahora usamos pdfkit
-
+from io import BytesIO
+from xhtml2pdf import pisa
 
 pagos_bp = Blueprint('pagos', __name__, url_prefix='/pagos')
 
@@ -58,7 +58,7 @@ def nuevo_pago():
             else:
                 es_rapido = True
             
-            # Crear el pago (guardamos el teléfono en observación o en un campo nuevo)
+            # Crear el pago
             nuevo_pago = PagoUnificado(
                 paciente_id=paciente_id,
                 paciente_nombre=paciente_nombre,
@@ -113,7 +113,8 @@ def ver_pago(pago_id):
     
     # Variables para WhatsApp
     telefono = None
-    whatsapp_link = None
+    whatsapp_link_pdf = None
+    whatsapp_link_print = None
     tiene_telefono = False
     
     # 1. Si es un pago de paciente registrado, buscar su teléfono
@@ -130,178 +131,242 @@ def ver_pago(pago_id):
             telefono = telefono_session
             tiene_telefono = True
     
-    # Si tenemos teléfono, crear el enlace de WhatsApp con el PDF
-    # En ver_pago, reemplaza la creación del mensaje con esto:
+    # Si tenemos teléfono, crear enlaces de WhatsApp
     if tiene_telefono and telefono:
-        # Generar enlace al PDF
-        pdf_url = url_for('pagos.generar_pdf', pago_id=pago.id, _external=True)
+        # Enlace para PDF con token
+        pdf_url = url_for('pagos.generar_pdf', pago_id=pago.id, _external=True) + f"?token={pago.codigo}"
         
-        # Crear mensaje - El enlace DEBE ir solo en una línea
-        mensaje = f"""🧾 *RECIBO DE PAGO - CLÍNICA DENTAL*
+        # Enlace para captura con token
+        print_url = url_for('pagos.print_recibo', pago_id=pago.id, _external=True) + f"?token={pago.codigo}"
+        
+        # Mensaje para PDF
+        mensaje_pdf = f"""🧾 *RECIBO DE PAGO - CLÍNICA DENTAL*
 
-    *Código:* {pago.codigo}
-    *Paciente:* {pago.paciente_nombre}
-    *Fecha:* {pago.fecha.strftime('%d/%m/%Y')} {pago.hora.strftime('%H:%M')}
-    *Monto:* ${pago.monto:,.0f}
-    *Método:* {pago.metodo_pago}
+*Código:* {pago.codigo}
+*Paciente:* {pago.paciente_nombre}
+*Fecha:* {pago.fecha.strftime('%d/%m/%Y')} {pago.hora.strftime('%H:%M')}
+*Monto:* ${pago.monto:,.0f}
+*Método:* {pago.metodo_pago}
 
-    📎 *Para descargar tu recibo, haz clic en este enlace:*
-    {pdf_url}"""
+📎 *Descarga tu recibo aquí:* {pdf_url}
+
+¡Gracias por tu pago!"""
         
-        # Codificar el mensaje
-        mensaje_codificado = urllib.parse.quote(mensaje)
+        # Mensaje para captura
+        mensaje_print = f"""🧾 *RECIBO DE PAGO - CLÍNICA DENTAL*
+
+*Código:* {pago.codigo}
+*Paciente:* {pago.paciente_nombre}
+*Fecha:* {pago.fecha.strftime('%d/%m/%Y')} {pago.hora.strftime('%H:%M')}
+*Monto:* ${pago.monto:,.0f}
+*Método:* {pago.metodo_pago}
+
+📸 *Ver tu recibo aquí:* {print_url}
+
+¡Gracias por tu pago!"""
         
-        # Limpiar teléfono
+        mensaje_pdf_codificado = urllib.parse.quote(mensaje_pdf)
+        mensaje_print_codificado = urllib.parse.quote(mensaje_print)
+        
         telefono_limpio = ''.join(filter(str.isdigit, telefono))
-        whatsapp_link = f"https://wa.me/57{telefono_limpio}?text={mensaje_codificado}"
+        whatsapp_link_pdf = f"https://wa.me/57{telefono_limpio}?text={mensaje_pdf_codificado}"
+        whatsapp_link_print = f"https://wa.me/57{telefono_limpio}?text={mensaje_print_codificado}"
         
     return render_template('pagos/ver_pago.html',
                          pago=pago,
-                         whatsapp_link=whatsapp_link,
+                         whatsapp_link_pdf=whatsapp_link_pdf,
+                         whatsapp_link_print=whatsapp_link_print,
                          tiene_telefono=tiene_telefono)
-# ============================================================
-# RUTA PARA LISTAR TODOS LOS PAGOS (opcional)
-# ============================================================
-# routes/pagos.py
 
-@ pagos_bp.route('/')
+# ============================================================
+# RUTA PARA LISTAR TODOS LOS PAGOS
+# ============================================================
+from flask import request, render_template
+from flask_login import login_required, current_user
+from clinica.models import PagoUnificado
+from clinica import db
+from sqlalchemy import or_, and_, func
+from datetime import datetime, timedelta
+
+# ============================================================
+# RUTA PARA LISTAR TODOS LOS PAGOS (CON PAGINACIÓN)
+# ============================================================
+# ============================================================
+# RUTA PARA LISTAR TODOS LOS PAGOS (CON PAGINACIÓN)
+# ============================================================
+@pagos_bp.route('/')
 @login_required
 def lista_pagos():
-    """Lista todos los pagos del usuario con filtros"""
+    """Lista todos los pagos con filtros y paginación"""
+    from sqlalchemy import or_, func
     from datetime import datetime, timedelta
     
-    # Obtener parámetros de filtro
-    filtro_fecha = request.args.get('fecha', '')  # hoy, semana, mes, personalizado
-    fecha_desde = request.args.get('desde', '')
-    fecha_hasta = request.args.get('hasta', '')
-    metodo = request.args.get('metodo', '')
-    busqueda = request.args.get('busqueda', '')
+    # Obtener parámetros de paginación
+    page = request.args.get('page', 1, type=int)
+    per_page = 7  # Número de pagos por página
     
-    # Base query
+    # DEBUG: Imprimir en consola
+    print(f"=== DEBUG PAGINACIÓN ===")
+    print(f"Página actual: {page}")
+    print(f"Pagos por página: {per_page}")
+    
+    # Obtener filtros
+    filtros = {
+        'fecha': request.args.get('fecha', ''),
+        'desde': request.args.get('desde', ''),
+        'hasta': request.args.get('hasta', ''),
+        'metodo': request.args.get('metodo', ''),
+        'busqueda': request.args.get('busqueda', '')
+    }
+    
+    # Query base
     query = PagoUnificado.query.filter_by(usuario_id=current_user.id)
     
-    # Aplicar filtros de fecha
-    hoy = date.today()
-    
-    if filtro_fecha == 'hoy':
-        query = query.filter(PagoUnificado.fecha == hoy)
-    elif filtro_fecha == 'semana':
-        inicio_semana = hoy - timedelta(days=hoy.weekday())
+    # Aplicar filtros
+    if filtros['fecha'] == 'hoy':
+        query = query.filter(func.date(PagoUnificado.fecha) == datetime.now().date())
+    elif filtros['fecha'] == 'semana':
+        inicio_semana = datetime.now().date() - timedelta(days=datetime.now().weekday())
         query = query.filter(PagoUnificado.fecha >= inicio_semana)
-    elif filtro_fecha == 'mes':
-        inicio_mes = date(hoy.year, hoy.month, 1)
-        query = query.filter(PagoUnificado.fecha >= inicio_mes)
-    elif fecha_desde and fecha_hasta:
+    elif filtros['fecha'] == 'mes':
         query = query.filter(
-            PagoUnificado.fecha >= datetime.strptime(fecha_desde, '%Y-%m-%d').date(),
-            PagoUnificado.fecha <= datetime.strptime(fecha_hasta, '%Y-%m-%d').date()
+            PagoUnificado.fecha >= datetime.now().replace(day=1).date()
         )
+    elif filtros['fecha'] == 'personalizado' and filtros['desde'] and filtros['hasta']:
+        try:
+            desde = datetime.strptime(filtros['desde'], '%Y-%m-%d').date()
+            hasta = datetime.strptime(filtros['hasta'], '%Y-%m-%d').date()
+            query = query.filter(
+                PagoUnificado.fecha >= desde,
+                PagoUnificado.fecha <= hasta
+            )
+        except ValueError:
+            pass
     
-    # Filtrar por método de pago
-    if metodo:
-        query = query.filter(PagoUnificado.metodo_pago == metodo)
+    if filtros['metodo']:
+        query = query.filter(PagoUnificado.metodo_pago == filtros['metodo'])
     
-    # Búsqueda por nombre de paciente o descripción
-    if busqueda:
+    if filtros['busqueda']:
+        busqueda = f"%{filtros['busqueda']}%"
         query = query.filter(
-            db.or_(
-                PagoUnificado.paciente_nombre.ilike(f'%{busqueda}%'),
-                PagoUnificado.descripcion.ilike(f'%{busqueda}%'),
-                PagoUnificado.codigo.ilike(f'%{busqueda}%')
+            or_(
+                PagoUnificado.codigo.ilike(busqueda),
+                PagoUnificado.paciente_nombre.ilike(busqueda),
+                PagoUnificado.descripcion.ilike(busqueda)
             )
         )
     
     # Ordenar por fecha descendente
-    pagos = query.order_by(PagoUnificado.fecha.desc(), PagoUnificado.hora.desc()).all()
+    query = query.order_by(PagoUnificado.fecha.desc(), PagoUnificado.hora.desc())
     
-    # Calcular totales
-    total_general = sum(p.monto for p in pagos)
-    total_efectivo = sum(p.monto for p in pagos if p.metodo_pago == 'Efectivo')
-    total_tarjeta = sum(p.monto for p in pagos if p.metodo_pago == 'Tarjeta')
-    total_transferencia = sum(p.monto for p in pagos if p.metodo_pago == 'Transferencia')
-    total_nequi = sum(p.monto for p in pagos if p.metodo_pago == 'Nequi')
-    total_daviplata = sum(p.monto for p in pagos if p.metodo_pago == 'Daviplata')
+    # Paginación
+    paginacion = query.paginate(page=page, per_page=per_page, error_out=False)
+    pagos = paginacion.items
     
-    # Estadísticas
-    total_pagos = len(pagos)
-    pagos_rapidos = sum(1 for p in pagos if p.es_rapido)
-    pagos_pacientes = total_pagos - pagos_rapidos
+    # DEBUG: Imprimir información
+    print(f"Total de pagos: {paginacion.total}")
+    print(f"Total de páginas: {paginacion.pages}")
+    print(f"Pagos en esta página: {len(pagos)}")
+    print(f"=======================")
+    
+    # Estadísticas generales (sin paginación)
+    total_general_all = db.session.query(func.sum(PagoUnificado.monto)).filter_by(usuario_id=current_user.id).scalar() or 0
+    total_efectivo = db.session.query(func.sum(PagoUnificado.monto)).filter_by(usuario_id=current_user.id, metodo_pago='Efectivo').scalar() or 0
+    total_tarjeta = db.session.query(func.sum(PagoUnificado.monto)).filter_by(usuario_id=current_user.id, metodo_pago='Tarjeta').scalar() or 0
+    total_transferencia = db.session.query(func.sum(PagoUnificado.monto)).filter_by(usuario_id=current_user.id, metodo_pago='Transferencia').scalar() or 0
+    total_nequi = db.session.query(func.sum(PagoUnificado.monto)).filter_by(usuario_id=current_user.id, metodo_pago='Nequi').scalar() or 0
+    total_daviplata = db.session.query(func.sum(PagoUnificado.monto)).filter_by(usuario_id=current_user.id, metodo_pago='Daviplata').scalar() or 0
+    
+    total_pagos = PagoUnificado.query.filter_by(usuario_id=current_user.id).count()
+    pagos_pacientes = PagoUnificado.query.filter_by(usuario_id=current_user.id, es_rapido=False).count()
+    pagos_rapidos = PagoUnificado.query.filter_by(usuario_id=current_user.id, es_rapido=True).count()
     
     return render_template(
         'pagos/lista.html',
         pagos=pagos,
-        total_general=total_general,
+        paginacion=paginacion,
+        total_general=total_general_all,
         total_efectivo=total_efectivo,
         total_tarjeta=total_tarjeta,
         total_transferencia=total_transferencia,
         total_nequi=total_nequi,
         total_daviplata=total_daviplata,
         total_pagos=total_pagos,
-        pagos_rapidos=pagos_rapidos,
         pagos_pacientes=pagos_pacientes,
-        filtros={
-            'fecha': filtro_fecha,
-            'desde': fecha_desde,
-            'hasta': fecha_hasta,
-            'metodo': metodo,
-            'busqueda': busqueda
-        }
+        pagos_rapidos=pagos_rapidos,
+        filtros=filtros
     )
 
-import pdfkit
-from flask import make_response
-
 # ============================================================
-# RUTA PARA GENERAR PDF (NUEVA VERSIÓN CON PDFKIT)
+# RUTA PARA GENERAR PDF CON XHTML2PDF (PÚBLICA CON TOKEN)
 # ============================================================
 @pagos_bp.route('/<int:pago_id>/pdf')
-@login_required
 def generar_pdf(pago_id):
-    """Genera PDF del recibo usando pdfkit"""
     from clinica.models import PagoUnificado
     from datetime import datetime
     
     pago = PagoUnificado.query.get_or_404(pago_id)
     
-    # Verificar permisos
-    if pago.usuario_id != current_user.id and not current_user.is_admin:
-        flash('No tienes permiso', 'danger')
+    # Verificar por token en lugar de login
+    token = request.args.get('token')
+    if token != pago.codigo:
+        flash('Acceso no autorizado', 'danger')
         return redirect(url_for('main.index'))
     
-    # Renderizar template
-    html = render_template('pagos/recibo_pdf.html', 
+    html = render_template('pagos/recibo_pdf_xhtml.html', 
                          pago=pago,
                          now=datetime.now,
-                         current_user=current_user)
+                         current_user=None)
     
     try:
-        # Configurar opciones para PDF
-        options = {
-            'page-size': 'A4',
-            'margin-top': '0.75in',
-            'margin-right': '0.75in',
-            'margin-bottom': '0.75in',
-            'margin-left': '0.75in',
-            'encoding': "UTF-8",
-            'no-outline': None
-        }
+        pdf_buffer = BytesIO()
+        pisa_status = pisa.CreatePDF(
+            BytesIO(html.encode('utf-8')), 
+            dest=pdf_buffer,
+            encoding='utf-8'
+        )
         
-        # Ruta de wkhtmltopdf (ajusta según donde lo instalaste)
-        # Normalmente se instala en C:/Program Files/wkhtmltopdf/bin/wkhtmltopdf.exe
-        path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
-        config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
+        if pisa_status.err:
+            return "Error al generar PDF", 500
         
-        # Generar PDF
-        pdf = pdfkit.from_string(html, False, options=options, configuration=config)
+        pdf = pdf_buffer.getvalue()
         
-        # Crear respuesta
         response = make_response(pdf)
         response.headers['Content-Type'] = 'application/pdf'
-        response.headers['Content-Disposition'] = f'attachment; filename=recibo_{pago.codigo}.pdf'
+        response.headers['Content-Disposition'] = f'inline; filename=recibo_{pago.codigo}.pdf'
         
         return response
         
     except Exception as e:
-        print(f"Error al generar PDF: {e}")
-        flash('Error al generar el PDF. Verifica que wkhtmltopdf esté instalado.', 'danger')
-        return redirect(url_for('pagos.ver_pago', pago_id=pago.id))
+        return f"Error: {str(e)}", 500
+
+# ============================================================
+# RUTA PARA VISTA LIMPIA DE CAPTURA (PÚBLICA CON TOKEN)
+# ============================================================
+@pagos_bp.route('/<int:pago_id>/print')
+def print_recibo(pago_id):
+    """Vista limpia del recibo para captura de pantalla"""
+    from clinica.models import PagoUnificado
+    from datetime import datetime
+    
+    pago = PagoUnificado.query.get_or_404(pago_id)
+    
+    # DEBUG: Imprimir valores para diagnóstico
+    token = request.args.get('token')
+    print(f"=== DEBUG PRINT ===")
+    print(f"Pago ID: {pago_id}")
+    print(f"Código pago: '{pago.codigo}'")
+    print(f"Token recibido: '{token}'")
+    print(f"Token == Código: {token == pago.codigo}")
+    print(f"Token length: {len(token) if token else 0}")
+    print(f"Código length: {len(pago.codigo)}")
+    print(f"==================")
+    
+    if token != pago.codigo:
+        return f"Acceso no autorizado. Token recibido: '{token}', Esperado: '{pago.codigo}'", 401
+    
+    return render_template('pagos/recibo_print.html',
+                         pago=pago,
+                         now=datetime.now,
+                         current_user=None,
+                         whatsapp_link=None)

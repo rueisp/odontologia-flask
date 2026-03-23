@@ -184,24 +184,26 @@
     }
     
     /* Badges en escala de grises */
+    /* Badge para Rápido - Verde */
     .badge-rapido {
-        background: #f3f4f6;
-        color: #1f2937;
+        background: #dcfce7;
+        color: #166534;
         padding: 0.25rem 0.75rem;
         border-radius: 9999px;
         font-size: 0.7rem;
         font-weight: 600;
-        border: 1px solid #e5e7eb;
+        border: 1px solid #bbf7d0;
     }
     
+    /* Badge para Paciente - Morado */
     .badge-paciente {
-        background: #e5e7eb;
-        color: #1f2937;
+        background: #ede9fe;
+        color: #5b21b6;
         padding: 0.25rem 0.75rem;
         border-radius: 9999px;
         font-size: 0.7rem;
         font-weight: 600;
-        border: 1px solid #d1d5db;
+        border: 1px solid #c4b5fd;
     }
 
     /* Badge para Paciente en verde */
@@ -485,7 +487,7 @@
                         {% if pago.es_rapido %}
                             <span class="badge-rapido">Rápido</span>
                         {% else %}
-                            <span class="badge-paciente-verde">Paciente</span>
+                            <span class="badge-paciente">Paciente</span>
                         {% endif %}
                     </td>
                     <td>
@@ -548,6 +550,57 @@
             </tbody>
         </table>
     </div>
+
+
+    <!-- PAGINACIÓN -->
+    {% if paginacion and paginacion.pages > 1 %}
+    <div style="display: flex; justify-content: center; align-items: center; gap: 0.5rem; margin-top: 2rem; flex-wrap: wrap;">
+        {% if paginacion.has_prev %}
+        <a href="{{ url_for('pagos.lista_pagos', page=paginacion.prev_num, fecha=filtros.fecha, desde=filtros.desde, hasta=filtros.hasta, metodo=filtros.metodo, busqueda=filtros.busqueda) }}" 
+        class="btn-clear" style="padding: 0.5rem 1rem;">
+            <i data-lucide="chevron-left" style="width: 16px; height: 16px;"></i> Anterior
+        </a>
+        {% else %}
+        <span class="btn-clear" style="padding: 0.5rem 1rem; opacity: 0.5; cursor: not-allowed;">
+            <i data-lucide="chevron-left" style="width: 16px; height: 16px;"></i> Anterior
+        </span>
+        {% endif %}
+        
+        {% for page_num in paginacion.iter_pages(left_edge=2, left_current=2, right_current=3, right_edge=2) %}
+            {% if page_num %}
+                {% if page_num == paginacion.page %}
+                <span style="background: #1f2937; color: white; padding: 0.5rem 0.9rem; border-radius: 0.75rem; font-weight: 600;">
+                    {{ page_num }}
+                </span>
+                {% else %}
+                <a href="{{ url_for('pagos.lista_pagos', page=page_num, fecha=filtros.fecha, desde=filtros.desde, hasta=filtros.hasta, metodo=filtros.metodo, busqueda=filtros.busqueda) }}" 
+                style="background: white; color: #4b5563; padding: 0.5rem 0.9rem; border-radius: 0.75rem; text-decoration: none; border: 1px solid #e5e7eb;">
+                    {{ page_num }}
+                </a>
+                {% endif %}
+            {% else %}
+                <span style="color: #9ca3af; padding: 0.5rem 0.5rem;">...</span>
+            {% endif %}
+        {% endfor %}
+        
+        {% if paginacion.has_next %}
+        <a href="{{ url_for('pagos.lista_pagos', page=paginacion.next_num, fecha=filtros.fecha, desde=filtros.desde, hasta=filtros.hasta, metodo=filtros.metodo, busqueda=filtros.busqueda) }}" 
+        class="btn-clear" style="padding: 0.5rem 1rem;">
+            Siguiente <i data-lucide="chevron-right" style="width: 16px; height: 16px;"></i>
+        </a>
+        {% else %}
+        <span class="btn-clear" style="padding: 0.5rem 1rem; opacity: 0.5; cursor: not-allowed;">
+            Siguiente <i data-lucide="chevron-right" style="width: 16px; height: 16px;"></i>
+        </span>
+        {% endif %}
+    </div>
+
+    <div style="text-align: center; margin-top: 1rem; font-size: 0.8rem; color: #9ca3af;">
+        Mostrando {{ paginacion.items|length }} de {{ paginacion.total }} pagos
+        (Página {{ paginacion.page }} de {{ paginacion.pages }})
+    </div>
+    {% endif %}
+
 </div>
 {% endblock %}
 

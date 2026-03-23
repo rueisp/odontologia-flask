@@ -1,7 +1,22 @@
-# Usamos una imagen ligera de Python 3.11
-FROM python:3.11-slim
+FROM ubuntu:22.04
 
-# Establecemos la carpeta de trabajo dentro del servidor
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Instalar Python 3.10, pip y wkhtmltopdf
+RUN apt-get update && apt-get install -y \
+    python3.10 \
+    python3-pip \
+    wkhtmltopdf \
+    xvfb \
+    libxrender1 \
+    libxext6 \
+    libx11-6 \
+    libfontconfig1 \
+    libfreetype6 \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /usr/bin/python3.10 /usr/bin/python \
+    && ln -sf /usr/bin/pip3 /usr/bin/pip
+
 WORKDIR /app
 
 # Copiamos primero los requerimientos para instalar librerías

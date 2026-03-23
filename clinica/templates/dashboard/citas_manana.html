@@ -1,0 +1,71 @@
+<!-- Sección: Citas para Mañana -->
+{% if citas_manana is defined and citas_manana is not none %}
+<div class="bg-white rounded-3xl shadow-md p-6">
+    <div class="flex justify-between items-center mb-5 flex-wrap gap-3">
+        <h3 class="text-lg font-bold text-gray-800 flex items-center">
+            <i data-lucide="calendar" class="w-5 h-5 mr-2"></i>Citas para Mañana
+            {% if fecha_manana_formateada %}
+            <span class="text-sm font-normal text-gray-500 ml-2">({{ fecha_manana_formateada }})</span>
+            {% endif %}
+        </h3>
+        <button onclick="enviarRecordatoriosManana()" 
+            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-md">
+            <i data-lucide="send" class="w-4 h-4"></i>
+            Enviar recordatorios
+        </button>
+    </div>
+    
+    <div id="lista-citas-manana" class="space-y-3">
+        {% if citas_manana %}
+            {% set total_manana = citas_manana|length %}
+            {% set limite_visible = limite_citas_visibles %}
+            
+            {% for cita_info in citas_manana %}
+                <div class="cita-card-manana bg-gray-50 rounded-2xl p-4 hover:shadow-md transition-all duration-200 border border-gray-100" 
+                    data-cita-id="{{ cita_info.id }}"
+                    {% if loop.index > limite_visible %}style="display: none;"{% endif %}>
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                        <div class="flex-grow">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <p class="font-bold text-gray-800 text-base">{{ cita_info.paciente_nombre_completo }}</p>
+                                <span class="text-xs px-2 py-1 rounded-full font-semibold {% if cita_info.estado == 'completada' %} bg-green-100 text-green-700 {% elif cita_info.estado == 'cancelada' %} bg-red-100 text-red-700 {% elif cita_info.estado == 'confirmada' %} bg-sky-100 text-sky-700 {% else %} bg-yellow-100 text-yellow-700 {% endif %}">{{ cita_info.estado | capitalize if cita_info.estado else 'Pendiente' }}</span>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-1">Motivo: {{ cita_info.motivo }}</p>
+                            <p class="text-xs text-gray-400 mt-0.5">Dr(a): {{ cita_info.doctor if cita_info.doctor else 'N/A' }}</p>
+                        </div>
+                        <div class="text-left md:text-right flex-shrink-0 w-full md:w-auto">
+                            <span class="text-lg font-bold text-black">{{ cita_info.hora_formateada }}</span>
+                            <div class="flex gap-2 mt-2 flex-wrap">
+                                <a href="{{ url_for('calendario.editar_cita', cita_id=cita_info.id, next=request.full_path) }}" class="text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline">Ver detalles</a>
+                                {% if cita_info.telefono %}
+                                    {% set mensaje = "👋 Hola " ~ cita_info.paciente_nombre_completo ~ " ¿cómo estás? ✨ Te escribo para recordarte tu cita Odontológica agendada para MAÑANA 🦷 a las " ~ cita_info.hora_formateada ~ ". Por favor confirma si puedes asistir. 🙏" %}
+                                    <a href="https://wa.me/57{{ cita_info.telefono }}?text={{ mensaje | urlencode }}" 
+                                    target="_blank"
+                                    class="btn-whatsapp-manana text-xs bg-green-500 text-white hover:bg-green-600 py-1 px-3 rounded-lg transition inline-flex items-center gap-1">
+                                        <i data-lucide="message-circle" class="w-3 h-3"></i>
+                                        WhatsApp
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+            
+            {% if total_manana > limite_visible %}
+            <div class="text-center pt-3">
+                <button onclick="toggleVerMas('manana')" id="btn-ver-mas-manana" class="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center justify-center gap-1 mx-auto transition-colors">
+                    <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                    Ver más ({{ total_manana - limite_visible }} ocultas)
+                </button>
+            </div>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-8 text-gray-400">
+                <i data-lucide="sun" class="w-12 h-12 text-gray-300 mx-auto mb-3"></i>
+                <p class="font-medium">No hay citas programadas para mañana.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

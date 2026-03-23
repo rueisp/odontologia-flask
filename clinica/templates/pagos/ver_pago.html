@@ -229,22 +229,35 @@
             </div>
         </div>
 
-        <!-- Agrega esto temporalmente al final de ver_pago.html -->
+        <!-- Debug (opcional) -->
         <div style="display: none;">
-            tiene_telefono: {{ tiene_telefono }}
-            whatsapp_link: {{ whatsapp_link }}
+            tiene_telefono: {{ tiene_telefono }}<br>
+            whatsapp_link_pdf: {{ whatsapp_link_pdf }}<br>
+            whatsapp_link_print: {{ whatsapp_link_print }}
         </div>
 
         
         <!-- Acciones -->
         <div class="acciones">
-            {% if tiene_telefono and whatsapp_link %}
-            <a href="{{ whatsapp_link }}" 
-            target="_blank"
-            class="btn-whatsapp">
-                <i data-lucide="message-circle" class="w-4 h-4"></i>
-                Enviar recibo por WhatsApp
-            </a>
+            {% if tiene_telefono %}
+                <!-- Botón 1: Enviar PDF por WhatsApp -->
+                {% if whatsapp_link_pdf %}
+                <a href="{{ whatsapp_link_pdf }}" 
+                target="_blank"
+                class="btn-whatsapp">
+                    <i data-lucide="file-text" class="w-4 h-4"></i>
+                    📄 Enviar PDF por WhatsApp
+                </a>
+                {% endif %}
+                
+                <!-- Botón 2: Ver recibo para captura -->
+                <a href="{{ url_for('pagos.print_recibo', pago_id=pago.id) }}?token={{ pago.codigo }}"  
+                target="_blank"
+                class="btn-volver" 
+                style="background: #059669; color: white; border: none;">
+                    <i data-lucide="smartphone" class="w-4 h-4"></i>
+                    📸 Ver recibo para captura
+                </a>
             {% endif %}
             
             <a href="{{ url_for('pagos.lista_pagos') }}" class="btn-volver">

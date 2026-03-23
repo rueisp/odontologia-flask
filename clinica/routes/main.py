@@ -21,6 +21,7 @@ def index():
     
     # 2. CITAS DE HOY
     hoy_date = now_in_local_tz.date()
+    LIMITE_CITAS_VISIBLES = 5  # Cambia este valor según prefieras
     citas_hoy = Cita.query.options(
         load_only(
             Cita.id, 
@@ -65,6 +66,64 @@ def index():
             telefono = cita.paciente_telefono_str or ""
         
         citas_procesadas.append({
+            'id': cita.id,
+            'paciente_nombre_completo': nombre_completo,
+            'hora_formateada': cita.hora.strftime('%I:%M %p'),
+            'motivo': cita.motivo or 'Consulta',
+            'doctor': cita.doctor,
+            'estado': cita.estado,
+            'telefono': telefono
+        })
+    
+    # =====================================================
+    # NUEVO: 2.5 CITAS DE MAÑANA
+    # =====================================================
+    manana_date = hoy_date + timedelta(days=1)
+    fecha_manana_formateada = manana_date.strftime('%A, %d de %B de %Y')
+    
+    citas_manana = Cita.query.options(
+        load_only(
+            Cita.id, 
+            Cita.paciente_id, 
+            Cita.hora, 
+            Cita.motivo, 
+            Cita.doctor, 
+            Cita.estado,
+            Cita.paciente_nombres_str,
+            Cita.paciente_apellidos_str,
+            Cita.paciente_telefono_str
+        )
+    ).filter(
+        Cita.fecha == manana_date,
+        Cita.is_deleted == False,
+        Cita.odontologo_id == current_user.id
+    ).order_by(Cita.hora).all()
+    
+    # Procesar citas de mañana
+    citas_manana_procesadas = []
+    paciente_ids_manana = list(set([c.paciente_id for c in citas_manana if c.paciente_id]))
+    
+    # Cargar datos de pacientes para mañana (reutilizar pacientes_dict o cargar nuevos)
+    if paciente_ids_manana:
+        pacientes_manana = Paciente.query.options(
+            load_only(Paciente.id, Paciente.nombres, Paciente.apellidos, Paciente.telefono)
+        ).filter(Paciente.id.in_(paciente_ids_manana)).all()
+        for p in pacientes_manana:
+            if p.id not in pacientes_dict:
+                pacientes_dict[p.id] = p
+    
+    for cita in citas_manana:
+        if cita.paciente_id and cita.paciente_id in pacientes_dict:
+            paciente = pacientes_dict[cita.paciente_id]
+            nombre_completo = f"{paciente.nombres} {paciente.apellidos}".strip()
+            telefono = paciente.telefono or ""
+        else:
+            nombre_completo = f"{cita.paciente_nombres_str or ''} {cita.paciente_apellidos_str or ''}".strip()
+            if not nombre_completo:
+                nombre_completo = "Paciente sin registrar"
+            telefono = cita.paciente_telefono_str or ""
+        
+        citas_manana_procesadas.append({
             'id': cita.id,
             'paciente_nombre_completo': nombre_completo,
             'hora_formateada': cita.hora.strftime('%I:%M %p'),
@@ -125,11 +184,14 @@ def index():
     return render_template(
         "index.html",
         citas_del_dia=citas_procesadas,
+        citas_manana=citas_manana_procesadas,  # NUEVO
+        fecha_manana_formateada=fecha_manana_formateada,  # NUEVO
         estadisticas=estadisticas,
         proxima_cita=proxima_cita_info,
         fecha_actual_formateada=fecha_actual_formateada,
         estadisticas_plan=estadisticas_plan,
         total_citas_semana=total_citas_semana,
+        limite_citas_visibles=LIMITE_CITAS_VISIBLES,
     )
 
 
@@ -256,3 +318,13 @@ def perfil():
 
     return render_template('perfil.html', usuario=usuario_a_editar)
 
+@main_bp.route('/test')
+@login_required
+def test():
+    return render_template('test.html')
+
+
+@main_bp.route('/test-simple')
+@login_required
+def test_simple():
+    return render_template('test_simple.html')

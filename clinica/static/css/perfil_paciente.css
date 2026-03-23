@@ -355,31 +355,7 @@ body {
 }
 /* ... (resto de tus estilos) ... */
 
-/* 1. Resetear los estilos por defecto del contenedor principal del acordeón de Bootstrap */
-.accordion {
-    --bs-accordion-border-width: 0 !important; 
-    --bs-accordion-border-radius: 0 !important; 
-    --bs-accordion-inner-border-radius: 0 !important;
-    background-color: transparent !important; 
-    padding: 0 !important;
-    margin: 0 !important;
-    /* QUITAMOS display:flex y gap para que margin-bottom de los items sea el único que actúe. */
-    /* border: 2px solid blue !important; /* Para ver el contorno del contenedor principal */
-}
 
-/* 2. Estilos para cada ITEM INDIVIDUAL del acordeón (que ahora es también una tarjeta) */
-.accordion-item.card-custom.mb-3 { 
-    border: 3px dashed red !important; /* ¡CRÍTICO! Un borde discontinuo para cada tarjeta */
-    border-radius: 20px !important; 
-    /* <-- ¡AJUSTE CLAVE AQUÍ: Box-shadow muy pronunciado y margin-bottom aún más grande! --> */
-    box-shadow: 0 0 0 rgba(0, 0, 0, 0) !important; /* Quitar box-shadow para ver solo el borde */
-    /* box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2) !important; /* Sombra MUY visible para depurar */
-    margin-bottom: 50px !important; /* Aumentar drásticamente el espacio entre tarjetas */
-    overflow: hidden !important; 
-    background-color: #ffffff !important; 
-    width: 100%;
-    /* outline: 5px solid limegreen !important; /* Otro contorno para depurar */
-}
 /* Quitar el margin-bottom del ÚLTIMO accordion-item */
 .accordion-item.card-custom.mb-3:last-of-type {
     margin-bottom: 0 !important;

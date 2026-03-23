@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Recibo {{ pago.codigo }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        *{margin:0;padding:0}
+        body{font-family:Helvetica,Arial,sans-serif;background:#eef2f7;padding:0;margin:0}
+        .recibo{max-width:100%;padding:24px 20px;background:#fff;box-sizing:border-box}
+        .borde{height:2px;background:#e5e7eb;margin-bottom:18px}
+        .header{text-align:center;padding-bottom:18px;border-bottom:1px solid #e5e7eb;margin-bottom:20px}
+        h1{font-size:28px;font-weight:bold;color:#1f2937;text-transform:uppercase}
+        .clinica{font-size:14px;color:#6b7280;text-transform:uppercase;margin-top:6px}
+        .codigo{background:#f9fafb;padding:12px 16px;margin:18px 0;font-family:monospace;font-size:13px;border-left:3px solid #9ca3af;word-break:break-all}
+        table{width:100%;margin:18px 0;border-collapse:collapse}
+        tr{border-bottom:1px solid #f0f0f0}
+        td{padding:12px 0;vertical-align:top}
+        .label{width:35%;color:#6b7280;font-size:14px}
+        .valor{width:65%;color:#1f2937;font-size:14px}
+        .monto{background:#f9fafb;padding:14px 16px;margin:18px 0;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb}
+        .monto-row{display:flex;justify-content:space-between;align-items:center}
+        .monto-label{font-size:14px;color:#6b7280}
+        .monto-valor{font-size:28px;font-weight:bold;color:#059669}
+        .validez{text-align:center;padding:12px;margin:18px 0;background:#f0fdf4;border:1px solid #bbf7d0;font-size:13px;font-weight:bold;color:#15803d}
+        .observacion{background:#fffbeb;padding:12px 16px;margin:18px 0;border-left:4px solid #f59e0b;font-size:13px}
+        .obs-label{font-weight:bold;color:#b45309;margin-bottom:6px}
+        .footer{margin-top:20px;padding-top:18px;border-top:1px solid #e5e7eb;font-size:10px;color:#9ca3af;text-align:center}
+        .footer p{margin:5px 0}
+        .ref{font-family:monospace;font-size:9px;color:#6b7280;margin:12px 0;line-height:1.5}
+        .ref p{margin:2px 0}
+    </style>
+</head>
+<body>
+<div class="recibo">
+<div class="borde"></div>
+<div class="header">
+    <h1>✦ RECIBO DE PAGO ✦</h1>
+    <div class="clinica">CLÍNICA DENTAL</div>
+</div>
+
+<div class="codigo">
+    <strong>Nro. de comprobante:</strong> {{ pago.codigo }}
+</div>
+
+<table>
+     <tr><td class="label">Pago realizado por:</td><td class="valor"><strong>{{ pago.paciente_nombre }}</strong></td></tr>
+     <tr><td class="label">Fecha y hora:</td><td class="valor">{{ pago.fecha.strftime('%d/%m/%Y') }} - {{ pago.hora.strftime('%I:%M %p') }}</td></tr>
+     <tr><td class="label">Descripción:</td><td class="valor">{{ pago.descripcion }}</td></tr>
+     <tr><td class="label">Método de pago:</td><td class="valor">{{ pago.metodo_pago }}</td></tr>
+     {% if pago.pagado_por %}
+     <tr><td class="label">Pagado por:</td><td class="valor">{{ pago.pagado_por }}</td></tr>
+     {% endif %}
+</table>
+
+<div class="monto">
+    <div class="monto-row">
+        <span class="monto-label">Valor pagado:&nbsp;&nbsp;</span>
+        <span class="monto-valor">${{ "{:,.0f}".format(pago.monto) }}</span>
+    </div>
+</div>
+
+<div class="observacion">
+    <div class="obs-label">OBSERVACIÓN</div>
+    <div>{% if pago.observacion %}{{ pago.observacion }}{% else %}— Sin observaciones —{% endif %}</div>
+</div>
+
+<div class="validez">
+    ✓ Válido como comprobante de pago 
+</div>
+
+<div class="footer">
+    <p>Generado el {{ now().strftime('%d/%m/%Y %H:%M') }} por {{ current_user.nombre_completo or current_user.username }}</p>
+    <div class="ref">
+        <p>Contacto: (323)3316976 · odontologiaduoplus@gmail.com</p>
+    </div>
+</div>
+</div>
+</body>
+</html>

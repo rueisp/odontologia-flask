@@ -235,12 +235,55 @@ function actualizarPanelDerechoConPaciente(datos) {
             });
     }
 
+// static/js/index.js - Versión limpia sin panel derecho ni buscador
+
+document.addEventListener('DOMContentLoaded', () => {
     // ==================================================================
     // SECCIÓN: CITAS DE HOY (PANEL CENTRAL) - MANEJO DE ESTADOS Y FILTROS
     // ==================================================================
     const listaCitasContainer = document.getElementById('lista-citas-hoy');
     const noAppointmentsMessageCitasHoy = document.querySelector(".no-appointments-message");
 
+    // Función para actualizar contadores si existen
+    function actualizarContadoresPestañasCitasHoy() {
+        const setTextContent = (id, count) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = count;
+        };
+        setTextContent('count-todas', document.querySelectorAll('.appointment-card[data-estado]').length);
+        setTextContent('count-pendientes', document.querySelectorAll('.appointment-card[data-estado="pendiente"]').length);
+        setTextContent('count-completadas', document.querySelectorAll('.appointment-card[data-estado="completada"]').length);
+        setTextContent('count-canceladas', document.querySelectorAll('.appointment-card[data-estado="cancelada"]').length);
+    }
+
+    function filtrarTarjetasCita(statusToShow) {
+        const todasLasTarjetasCitas = document.querySelectorAll(".appointment-card");
+        let visibleCount = 0;
+        todasLasTarjetasCitas.forEach(card => {
+            const cardStatus = card.dataset.estado;
+            if (statusToShow === 'todas' || cardStatus === statusToShow) {
+                card.style.display = '';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+        
+        if (noAppointmentsMessageCitasHoy) {
+            if (visibleCount === 0) {
+                noAppointmentsMessageCitasHoy.style.display = '';
+                const textoMensajeP = noAppointmentsMessageCitasHoy.querySelector('p');
+                if (textoMensajeP) {
+                    let texto = `No hay citas ${statusToShow === 'todas' ? 'programadas' : statusToShow} para hoy.`;
+                    textoMensajeP.textContent = texto;
+                }
+            } else {
+                noAppointmentsMessageCitasHoy.style.display = 'none';
+            }
+        }
+    }
+
+    // Manejo de cambio de estado de citas
     if (listaCitasContainer) {
         listaCitasContainer.addEventListener('click', function (event) {
             const botonCambiarEstado = event.target.closest('.btn-cambiar-estado');
@@ -255,9 +298,8 @@ function actualizarPanelDerechoConPaciente(datos) {
 
                 if (estadoActual === nuevoEstado) return;
 
-                // Crear un AbortController para timeout
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos timeout
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
 
                 fetch(`/calendario/cita/actualizar_estado/${citaId}`, {
                     method: 'POST',
@@ -282,9 +324,10 @@ function actualizarPanelDerechoConPaciente(datos) {
                             const estadoSpan = tarjetaCita.querySelector('.cita-estado-badge');
                             if (estadoSpan) {
                                 estadoSpan.textContent = data.nuevo_estado.charAt(0).toUpperCase() + data.nuevo_estado.slice(1);
-                                estadoSpan.className = 'cita-estado-badge text-xs px-2 py-0.5 rounded-full mt-1 inline-block';
+                                estadoSpan.className = 'cita-estado-badge text-xs px-2 py-1 rounded-full mt-2 inline-block font-semibold';
                                 if (data.nuevo_estado === 'completada') estadoSpan.classList.add('bg-green-100', 'text-green-700');
                                 else if (data.nuevo_estado === 'cancelada') estadoSpan.classList.add('bg-red-100', 'text-red-700');
+                                else if (data.nuevo_estado === 'confirmada') estadoSpan.classList.add('bg-sky-100', 'text-sky-700');
                                 else estadoSpan.classList.add('bg-yellow-100', 'text-yellow-700');
                             }
 
@@ -307,10 +350,19 @@ function actualizarPanelDerechoConPaciente(datos) {
                             const filtroActivo = document.querySelector('.tab-appointment-filter[data-active="true"]');
                             if (filtroActivo && filtroActivo.dataset.status !== 'todas' && filtroActivo.dataset.status !== data.nuevo_estado) {
                                 tarjetaCita.style.display = 'none';
-                                // Recalcular contadores después de ocultar
                                 const todasLasTarjetas = document.querySelectorAll(".appointment-card");
                                 const visibles = Array.from(todasLasTarjetas).filter(card => card.style.display !== 'none').length;
-                                verificarMensajeNoCitas(filtroActivo.dataset.status, visibles, todasLasTarjetas.length);
+                                if (noAppointmentsMessageCitasHoy) {
+                                    if (visibles === 0) {
+                                        noAppointmentsMessageCitasHoy.style.display = '';
+                                        const textoMensajeP = noAppointmentsMessageCitasHoy.querySelector('p');
+                                        if (textoMensajeP) {
+                                            textoMensajeP.textContent = `No hay citas ${filtroActivo.dataset.status} para hoy.`;
+                                        }
+                                    } else {
+                                        noAppointmentsMessageCitasHoy.style.display = 'none';
+                                    }
+                                }
                             }
                         } else { 
                             alert("Error al actualizar: " + (data.message || 'Error desconocido')); 
@@ -329,63 +381,7 @@ function actualizarPanelDerechoConPaciente(datos) {
         });
     }
 
-    function actualizarContadoresPestañasCitasHoy() {
-        const setTextContent = (id, count) => {
-            const el = document.getElementById(id);
-            if (el) el.textContent = count;
-        };
-        setTextContent('count-todas', document.querySelectorAll('.appointment-card[data-estado]').length);
-        setTextContent('count-pendientes', document.querySelectorAll('.appointment-card[data-estado="pendiente"]').length);
-        setTextContent('count-completadas', document.querySelectorAll('.appointment-card[data-estado="completada"]').length);
-        setTextContent('count-canceladas', document.querySelectorAll('.appointment-card[data-estado="cancelada"]').length);
-    }
-
-    const tabsCitasHoy = document.querySelectorAll(".tab-appointment-filter");
-
-    tabsCitasHoy.forEach(tab => {
-        tab.addEventListener("click", () => {
-            tabsCitasHoy.forEach(t => t.dataset.active = "false");
-            tab.dataset.active = "true";
-            const statusToShow = tab.dataset.status;
-            filtrarTarjetasCita(statusToShow);
-        });
-    });
-
-    function filtrarTarjetasCita(statusToShow) {
-        const todasLasTarjetasCitas = document.querySelectorAll(".appointment-card");
-        let visibleCount = 0;
-        todasLasTarjetasCitas.forEach(card => {
-            const cardStatus = card.dataset.estado;
-            if (statusToShow === 'todas' || cardStatus === statusToShow) {
-                card.style.display = '';
-                visibleCount++;
-            } else {
-                card.style.display = 'none';
-            }
-        });
-        verificarMensajeNoCitas(statusToShow, visibleCount, todasLasTarjetasCitas.length);
-    }
-
-    function verificarMensajeNoCitas(statusMostrando, conteoVisible, conteoTotal) {
-        if (!noAppointmentsMessageCitasHoy) return;
-
-        if (conteoVisible === 0) {
-            noAppointmentsMessageCitasHoy.style.display = '';
-            const textoMensajeP = noAppointmentsMessageCitasHoy.querySelector('p');
-            if (textoMensajeP) {
-                let texto = `No hay citas ${statusMostrando === 'todas' ? 'programadas' : statusMostrando} para hoy.`;
-                if (statusMostrando !== 'todas' && conteoTotal > 0) {
-                    texto = `No hay citas que coincidan con el filtro '${statusMostrando}'.`;
-                } else if (statusMostrando === 'todas' && conteoTotal === 0) {
-                    texto = 'No hay citas programadas para hoy.';
-                }
-                textoMensajeP.textContent = texto;
-            }
-        } else {
-            noAppointmentsMessageCitasHoy.style.display = 'none';
-        }
-    }
-
+    // Inicializar contadores y filtros si existen tarjetas
     const todasLasTarjetasIniciales = document.querySelectorAll(".appointment-card");
     if (listaCitasContainer && todasLasTarjetasIniciales.length > 0) {
         actualizarContadoresPestañasCitasHoy();
@@ -394,10 +390,20 @@ function actualizarPanelDerechoConPaciente(datos) {
             tabTodas.dataset.active = "true";
             filtrarTarjetasCita("todas");
         }
+        
+        // Agregar event listeners a las pestañas
+        const tabsCitasHoy = document.querySelectorAll(".tab-appointment-filter");
+        tabsCitasHoy.forEach(tab => {
+            tab.addEventListener("click", () => {
+                tabsCitasHoy.forEach(t => t.dataset.active = "false");
+                tab.dataset.active = "true";
+                const statusToShow = tab.dataset.status;
+                filtrarTarjetasCita(statusToShow);
+            });
+        });
     } else if (noAppointmentsMessageCitasHoy) {
         noAppointmentsMessageCitasHoy.style.display = '';
         const textoMensajeP = noAppointmentsMessageCitasHoy.querySelector('p');
         if (textoMensajeP) textoMensajeP.textContent = 'No hay citas programadas para hoy.';
-        actualizarContadoresPestañasCitasHoy();
     }
 });

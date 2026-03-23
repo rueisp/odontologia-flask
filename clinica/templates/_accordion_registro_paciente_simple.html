@@ -132,22 +132,22 @@
     <div id="collapseClinicaSimple" class="accordion-collapse collapse" aria-labelledby="headingClinicaSimple"
         data-bs-parent="#accordionRegistroPaciente">
         <div class="accordion-body">
-            <div class="row">
-                <div class="col-12 mb-3">
-                    <label for="alergias" class="form-label">Alergias</label>
-                    <textarea class="form-control" id="alergias" name="alergias" rows="3">{{ paciente.alergias if paciente.alergias and paciente.alergias != 'No especificado' else '' }}</textarea>
-                </div>
+            <div class="row">       
                 <div class="col-12 mb-3">
                     <label for="motivo_consulta" class="form-label">Motivo de Consulta</label>
-                    <textarea class="form-control" id="motivo_consulta" name="motivo_consulta" rows="3">{{ paciente.motivo_consulta if paciente.motivo_consulta and paciente.motivo_consulta != 'No especificado' else '' }}</textarea>
+                    <textarea class="form-control" id="motivo_consulta" name="motivo_consulta" rows="2">{{ paciente.motivo_consulta if paciente.motivo_consulta and paciente.motivo_consulta != 'No especificado' else '' }}</textarea>
                 </div>
                 <div class="col-12 mb-3">
                     <label for="enfermedad_actual" class="form-label">Enfermedad Actual</label>
-                    <textarea class="form-control" id="enfermedad_actual" name="enfermedad_actual" rows="3">{{ paciente.enfermedad_actual if paciente.enfermedad_actual and paciente.enfermedad_actual != 'No especificado' else '' }}</textarea>
+                    <textarea class="form-control" id="enfermedad_actual" name="enfermedad_actual" rows="2">{{ paciente.enfermedad_actual if paciente.enfermedad_actual and paciente.enfermedad_actual != 'No especificado' else '' }}</textarea>
+                </div>
+                <div class="col-12 mb-3">
+                    <label for="alergias" class="form-label">Alergias</label>
+                    <textarea class="form-control" id="alergias" name="alergias" rows="2">{{ paciente.alergias if paciente.alergias and paciente.alergias != 'No especificado' else '' }}</textarea>
                 </div>
                 <div class="col-12 mb-3">
                     <label for="observaciones" class="form-label">Observaciones Generales</label>
-                    <textarea class="form-control" id="observaciones" name="observaciones" rows="3">{{ paciente.observaciones if paciente.observaciones and paciente.observaciones != 'No especificado' else '' }}</textarea>
+                    <textarea class="form-control" id="observaciones" name="observaciones" rows="2">{{ paciente.observaciones if paciente.observaciones and paciente.observaciones != 'No especificado' else '' }}</textarea>
                 </div>
             </div>
         </div>

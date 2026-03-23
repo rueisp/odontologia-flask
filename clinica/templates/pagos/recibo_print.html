@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Recibo {{ pago.codigo }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .recibo-card {
+            max-width: 450px;
+            width: 100%;
+            margin: 0 auto;
+            background: white;
+            border-radius: 28px;
+            overflow: hidden;
+            box-shadow: 0 8px 28px rgba(0,0,0,0.12);
+        }
+        
+        .recibo-content {
+            padding: 28px 24px 20px 24px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .header h1 {
+            font-size: 26px;
+            font-weight: 800;
+            color: #1a1a2e;
+            letter-spacing: -0.3px;
+            margin-bottom: 8px;
+        }
+        
+        .clinica {
+            font-size: 13px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .codigo {
+            background: #f8f9fa;
+            padding: 12px 16px;
+            border-radius: 16px;
+            text-align: center;
+            margin-bottom: 24px;
+            font-family: monospace;
+            font-size: 14px;
+            font-weight: 600;
+            color: #2c3e66;
+            border: 1px solid #e9ecef;
+        }
+        
+        .campo {
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .campo:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #999;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        
+        .valor {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a2e;
+            word-break: break-word;
+        }
+        
+        .total {
+            background: #f0fdf4;
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            margin: 24px 0;
+            border: 1px solid #d1fae5;
+        }
+        
+        .total-label {
+            font-size: 13px;
+            color: #15803d;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        
+        .total-valor {
+            font-size: 36px;
+            font-weight: 800;
+            color: #059669;
+        }
+        
+        .observacion {
+            background: #fffbeb;
+            border-radius: 16px;
+            padding: 16px;
+            margin: 20px 0;
+            border-left: 4px solid #fbbf24;
+            font-size: 14px;
+            color: #92400e;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid #eef2f6;
+            font-size: 10px;
+            color: #aaa;
+        }
+        
+        .footer p {
+            margin: 4px 0;
+        }
+        
+        /* Botón flotante - invisible por defecto */
+        .whatsapp-fab {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #25D366;
+            width: 56px;
+            height: 56px;
+            border-radius: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: all 0.2s;
+            z-index: 1000;
+            opacity: 0;
+            transform: scale(0);
+            transition: all 0.2s ease;
+        }
+        
+        .whatsapp-fab.show {
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        .whatsapp-fab:active {
+            transform: scale(0.92);
+        }
+        
+        .whatsapp-fab a {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            text-decoration: none;
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        
+        /* Instrucción sutil */
+        .tap-instruction {
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 11px;
+            color: #999;
+            background: rgba(255,255,255,0.9);
+            padding: 6px 12px;
+            width: fit-content;
+            margin: 0 auto;
+            border-radius: 20px;
+            pointer-events: none;
+            z-index: 999;
+            opacity: 0.6;
+        }
+        
+        .tap-instruction.hide {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="recibo-card">
+        <div class="recibo-content">
+            <div class="header">
+                <h1>RECIBO DE PAGO</h1>
+                <div class="clinica">CLÍNICA DENTAL</div>
+            </div>
+            
+            <div class="codigo">
+                {{ pago.codigo }}
+            </div>
+            
+            <div class="campo">
+                <div class="label">PACIENTE</div>
+                <div class="valor">{{ pago.paciente_nombre }}</div>
+            </div>
+            
+            <div class="campo">
+                <div class="label">FECHA</div>
+                <div class="valor">{{ pago.fecha.strftime('%d/%m/%Y') }} · {{ pago.hora.strftime('%I:%M %p') }}</div>
+            </div>
+            
+            <div class="campo">
+                <div class="label">DESCRIPCIÓN</div>
+                <div class="valor">{{ pago.descripcion }}</div>
+            </div>
+            
+            <div class="campo">
+                <div class="label">MÉTODO DE PAGO</div>
+                <div class="valor">{{ pago.metodo_pago }}</div>
+            </div>
+            
+            {% if pago.pagado_por %}
+            <div class="campo">
+                <div class="label">PAGADO POR</div>
+                <div class="valor">{{ pago.pagado_por }}</div>
+            </div>
+            {% endif %}
+            
+            <div class="total">
+                <div class="total-label">TOTAL PAGADO</div>
+                <div class="total-valor">${{ "{:,.0f}".format(pago.monto) }}</div>
+            </div>
+            
+            {% if pago.observacion %}
+            <div class="observacion">
+                📝 {{ pago.observacion }}
+            </div>
+            {% endif %}
+            
+            <div class="footer">
+                <p>Generado el {{ now().strftime('%d/%m/%Y %H:%M') }}</p>
+                <p>{{ current_user.nombre_completo or current_user.username }}</p>
+                <p style="font-size: 9px; margin-top: 8px;">© Rueis Pitre Solano</p>
+            </div>
+        </div>
+    </div>
+    
+    {% if whatsapp_link %}
+    <!-- Botón flotante que aparece SOLO después de hacer tap -->
+    <div class="tap-instruction" id="tapInstruction">
+        👆 Toca aquí para enviar por WhatsApp
+    </div>
+    <div class="whatsapp-fab" id="whatsappFab">
+        <a href="{{ whatsapp_link }}" target="_blank">💬</a>
+    </div>
+    {% endif %}
+    
+    <script>
+        // El botón aparece solo cuando se toca la pantalla
+        var fab = document.getElementById('whatsappFab');
+        var instruction = document.getElementById('tapInstruction');
+        var touched = false;
+        
+        function showFab() {
+            if (!touched) {
+                touched = true;
+                fab.classList.add('show');
+                if (instruction) {
+                    instruction.classList.add('hide');
+                }
+                // Ocultar el botón después de 5 segundos si no se usa
+                setTimeout(function() {
+                    if (fab && !fab.matches(':hover')) {
+                        fab.classList.remove('show');
+                        touched = false;
+                        if (instruction) {
+                            instruction.classList.remove('hide');
+                        }
+                    }
+                }, 5000);
+            }
+        }
+        
+        // Detectar cualquier toque en la pantalla
+        document.body.addEventListener('touchstart', showFab);
+        document.body.addEventListener('click', showFab);
+        
+        // Si el usuario ya sabe, puede tocar el área de instrucción
+        if (instruction) {
+            instruction.addEventListener('click', function(e) {
+                e.stopPropagation();
+                showFab();
+            });
+        }
+    </script>
+</body>
+</html>
