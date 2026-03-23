@@ -11,19 +11,19 @@
         .borde{height:2px;background:#e5e7eb;margin-bottom:18px}
         .header{text-align:center;padding-bottom:18px;border-bottom:1px solid #e5e7eb;margin-bottom:20px}
         h1{font-size:36px;font-weight:bold;color:#1f2937;text-transform:uppercase}
-        .clinica{font-size:28px;color:#6b7280;text-transform:uppercase;margin-top:6px;margin-bottom:40px}
-        .codigo{background:#f9fafb;padding:12px 16px;margin:18px 0 40px 0;font-family:monospace;font-size:36px;border-left:3px solid #9ca3af;word-break:break-all}
+        .clinica{font-size:28px;color:#6b7280;text-transform:uppercase;margin-top:6px;margin-bottom:20px}
+        .codigo{background:#f9fafb;padding:12px 16px;margin:0 0 30px 0;font-family:monospace;font-size:24px;border-left:3px solid #9ca3af;word-break:break-all;text-align:center}
         .info-grid{width:100%;margin:18px 0}
         .info-item{margin-bottom:24px}
-        .label{color:#9ca3af;font-size:28px;margin-bottom:8px;text-transform:uppercase}
+        .label{color:#9ca3af;font-size:28px;margin-bottom:8px}
         .valor{color:#1f2937;font-size:32px;font-weight:500}
         .monto{background:#f9fafb;padding:14px 16px;margin:18px 0}
         .monto-row{display:flex;justify-content:space-between;align-items:center}
-        .monto-label{font-size:28px;color:#9ca3af;text-transform:uppercase}
+        .monto-label{font-size:28px;color:#9ca3af}
         .monto-valor{font-size:40px;font-weight:bold;color:#059669}
         .validez{text-align:center;padding:12px;margin:18px 0;background:#f0fdf4;border:1px solid #bbf7d0;font-size:24px;font-weight:bold;color:#15803d}
         .observacion{background:#fffbeb;padding:12px 16px;margin:18px 0;border-left:4px solid #f59e0b;font-size:28px}
-        .obs-label{font-weight:bold;color:#b45309;margin-bottom:6px;font-size:28px;text-transform:uppercase}
+        .obs-label{font-weight:bold;color:#b45309;margin-bottom:6px;font-size:28px}
         .footer{margin-top:20px;padding-top:18px;border-top:1px solid #e5e7eb;font-size:10px;color:#9ca3af;text-align:center}
         .footer p{margin:5px 0}
         .ref{font-family:monospace;font-size:9px;color:#6b7280;margin:12px 0;line-height:1.5}
@@ -69,13 +69,13 @@
 
 <div class="monto">
     <div class="monto-row">
-        <span class="monto-label">Valor pagado:&nbsp;&nbsp;&nbsp;</span>
+        <span class="monto-label">Valor pagado:&nbsp;&nbsp;</span>
         <span class="monto-valor">${{ "{:,.0f}".format(pago.monto) }}</span>
     </div>
 </div>
 
 <div class="observacion">
-    <div class="obs-label">OBSERVACIÓN</div>
+    <div class="obs-label">Observación</div>
     <div>{% if pago.observacion %}{{ pago.observacion }}{% else %}— Sin observaciones —{% endif %}</div>
 </div>
 
