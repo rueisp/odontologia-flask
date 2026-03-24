@@ -12,19 +12,20 @@
         .header{text-align:center;padding-bottom:18px;border-bottom:1px solid #e5e7eb;margin-bottom:20px}
         h1{font-size:36px;font-weight:bold;color:#1f2937;text-transform:uppercase;margin-bottom:8px}
         .clinica{font-size:28px;color:#6b7280;text-transform:uppercase;margin-top:0;margin-bottom:20px}
-        .codigo{background:#f9fafb;padding:12px 16px;margin:0 0 30px 0;font-family:monospace;font-size:24px;border-left:3px solid #9ca3af;word-break:break-all;text-align:center}
+        .codigo-fecha{display:flex;justify-content:space-between;align-items:center;margin:0 0 30px 0;padding:0}
+        .codigo{background:#f9fafb;padding:12px 16px;font-family:monospace;font-size:24px;border-left:3px solid #9ca3af;word-break:break-all;text-align:center;flex:1;margin-right:20px}
+        .fecha-sin-etiqueta{font-size:24px;color:#1f2937;font-weight:normal;text-align:right}
         .info-grid{width:100%;margin:18px 0}
         .info-item{margin-bottom:24px}
         .label{color:#9ca3af;font-size:28px;margin-bottom:8px}
-        .valor{color:#1f2937;font-size:32px;font-weight:500}
-        .monto{margin:18px 0;padding:0}
-        .monto-row{display:flex;justify-content:space-between;align-items:center}
-        .monto-label{font-size:28px;color:#9ca3af}
-        .monto-valor{font-size:40px;font-weight:bold;color:#059669}
-        .validez{text-align:center;margin:18px 0;padding:0;font-size:24px;font-weight:bold;color:#15803d}
+        .valor{color:#1f2937;font-size:36px;font-weight:500}
+        .monto{text-align:center;margin:24px 0;padding:0}
+        .monto-label{font-size:28px;color:#9ca3af;margin-bottom:8px;display:block}
+        .monto-valor{font-size:40px;font-weight:bold;color:#059669;display:block}
+        .validez{text-align:center;margin:18px 0 4px 0;padding:0;font-size:24px;font-weight:bold;color:#15803d}
         .observacion{margin:18px 0;padding:0;border-left:0}
-        .obs-label{font-weight:bold;color:#9ca3af;margin-bottom:6px;font-size:28px}
-        .footer{margin-top:20px;padding-top:18px;border-top:1px solid #e5e7eb;font-size:10px;color:#9ca3af;text-align:center}
+        .obs-label{color:#9ca3af;margin-bottom:6px;font-size:28px}
+        .footer{margin-top:4px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:10px;color:#9ca3af;text-align:center}
         .footer p{margin:5px 0}
         .ref{font-family:monospace;font-size:9px;color:#6b7280;margin:12px 0;line-height:1.5}
         .ref p{margin:2px 0}
@@ -38,18 +39,19 @@
     <div class="clinica">CLÍNICA DENTAL</div>
 </div>
 
-<div class="codigo">
-    {{ pago.codigo }}
+<div class="codigo-fecha">
+    <div class="codigo">
+        {{ pago.codigo }}
+    </div>
+    <div class="fecha-sin-etiqueta">
+        {{ pago.fecha.strftime('%d/%m/%Y') }} - {{ pago.hora.strftime('%I:%M %p') }}
+    </div>
 </div>
 
 <div class="info-grid">
     <div class="info-item">
         <div class="label">Pago realizado por:</div>
         <div class="valor"><strong>{{ pago.paciente_nombre }}</strong></div>
-    </div>
-    <div class="info-item">
-        <div class="label">Fecha y hora:</div>
-        <div class="valor"><strong>{{ pago.fecha.strftime('%d/%m/%Y') }} - {{ pago.hora.strftime('%I:%M %p') }}</strong></div>
     </div>
     <div class="info-item">
         <div class="label">Descripción:</div>
@@ -59,19 +61,11 @@
         <div class="label">Método de pago:</div>
         <div class="valor"><strong>{{ pago.metodo_pago }}</strong></div>
     </div>
-    {% if pago.pagado_por %}
-    <div class="info-item">
-        <div class="label">Pagado por:</div>
-        <div class="valor"><strong>{{ pago.pagado_por }}</strong></div>
-    </div>
-    {% endif %}
 </div>
 
 <div class="monto">
-    <div class="monto-row">
-        <span class="monto-label">Valor pagado:&nbsp;&nbsp;</span>
-        <span class="monto-valor">${{ "{:,.0f}".format(pago.monto) }}</span>
-    </div>
+    <div class="monto-label">Valor pagado:</div>
+    <div class="monto-valor">${{ "{:,.0f}".format(pago.monto) }}</div>
 </div>
 
 <div class="observacion">
