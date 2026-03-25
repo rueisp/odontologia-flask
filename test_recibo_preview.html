@@ -25,7 +25,7 @@
         .validez{text-align:center;margin:18px 0 4px 0;padding:0;font-size:24px;font-weight:bold;color:#15803d}
         .observacion{margin:18px 0;padding:0;border-left:0}
         .obs-label{color:#9ca3af;margin-bottom:6px;font-size:28px}
-        .footer{margin-top:4px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:10px;color:#9ca3af;text-align:center}
+        .footer{margin-top:4px;padding-top:15px;font-size:10px;color:#9ca3af;text-align:center}
         .footer p{margin:5px 0}
         .ref{font-family:monospace;font-size:9px;color:#6b7280;margin:12px 0;line-height:1.5}
         .ref p{margin:2px 0}
@@ -50,7 +50,7 @@
 
 <div class="info-grid">
     <div class="info-item">
-        <div class="label">Pago realizado por:</div>
+        <div class="label">Pagado por:</div>
         <div class="valor"><strong>{{ pago.paciente_nombre }}</strong></div>
     </div>
     <div class="info-item">
@@ -70,7 +70,7 @@
 
 <div class="observacion">
     <div class="obs-label">Observación</div>
-    <div class="valor">{% if pago.observacion %}{{ pago.observacion }}{% else %}— Sin observaciones —{% endif %}</div>
+    <div class="valor">{% if pago.observacion %}{{ pago.observacion }}{% endif %}</div>
 </div>
 
 <div class="validez">
@@ -79,7 +79,7 @@
 
 <div class="footer">
     <div class="ref">
-        <p>Contacto: (323)3316976</p>
+        <p>Contacto: (323) 3316976</p>
     </div>
 </div>
 </div>

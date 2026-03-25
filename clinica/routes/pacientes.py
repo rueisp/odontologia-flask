@@ -16,6 +16,7 @@ import cloudinary.uploader  # <--- AGREGA ESTO
 from clinica.decorators.limites import verificar_limite_pacientes
 from sqlalchemy.orm import load_only
 from clinica.campos_activos import load_only_paciente_activo
+import pytz
 # Importar servicios
 # Importar servicios de pacientes
 from .pacientes_services import (
@@ -201,18 +202,21 @@ def agregar_pago_paciente_unificado_nuevo(paciente_id):
         random_str = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
         codigo = f"P-{fecha_str}-{random_str}"
         
+        # Definir zona horaria de Colombia
+        colombia_tz = pytz.timezone('America/Bogota')
+        
         nuevo_pago = PagoUnificado(
             paciente_id=paciente_id,
             paciente_nombre=f"{paciente.primer_nombre} {paciente.primer_apellido}",
             fecha=datetime.strptime(request.form.get('fecha'), '%Y-%m-%d').date(),
-            hora=datetime.now().time(),
+            hora=datetime.now(colombia_tz).time(),
             descripcion=request.form.get('descripcion'),
             monto=int(request.form.get('monto', 0)),
             metodo_pago=request.form.get('metodo_pago') or 'Efectivo',
             observacion=request.form.get('observacion'),
-            pagado_por=request.form.get('pagado_por'),  # Nuevo campo
+            pagado_por=request.form.get('pagado_por'),
             codigo=codigo,
-            es_rapido=False,  # Viene de ficha de paciente
+            es_rapido=False,
             usuario_id=current_user.id
         )
         

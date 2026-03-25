@@ -382,14 +382,9 @@
             <div class="stat-value">${{ "{:,.0f}".format(total_efectivo) }}</div>
         </div>
         
-        <div class="stat-card tarjeta">
-            <div class="stat-title">Tarjeta</div>
-            <div class="stat-value">${{ "{:,.0f}".format(total_tarjeta) }}</div>
-        </div>
-        
-        <div class="stat-card transferencia">
-            <div class="stat-title">Transferencia</div>
-            <div class="stat-value">${{ "{:,.0f}".format(total_transferencia) }}</div>
+        <div class="stat-card bancolombia">
+            <div class="stat-title">Bancolombia</div>
+            <div class="stat-value">${{ "{:,.0f}".format(total_bancolombia) }}</div>
         </div>
         
         <div class="stat-card nequi">
@@ -397,9 +392,14 @@
             <div class="stat-value">${{ "{:,.0f}".format(total_nequi) }}</div>
         </div>
         
-        <div class="stat-card daviplata">
-            <div class="stat-title">Daviplata</div>
-            <div class="stat-value">${{ "{:,.0f}".format(total_daviplata) }}</div>
+        <div class="stat-card tarjeta">
+            <div class="stat-title">Tarjeta</div>
+            <div class="stat-value">${{ "{:,.0f}".format(total_tarjeta) }}</div>
+        </div>
+        
+        <div class="stat-card otro">
+            <div class="stat-title">Otro</div>
+            <div class="stat-value">${{ "{:,.0f}".format(total_otro) }}</div>
         </div>
     </div>
     
@@ -433,10 +433,10 @@
                     <select name="metodo">
                         <option value="" {% if filtros.metodo == '' %}selected{% endif %}>Todos</option>
                         <option value="Efectivo" {% if filtros.metodo == 'Efectivo' %}selected{% endif %}>Efectivo</option>
-                        <option value="Tarjeta" {% if filtros.metodo == 'Tarjeta' %}selected{% endif %}>Tarjeta</option>
-                        <option value="Transferencia" {% if filtros.metodo == 'Transferencia' %}selected{% endif %}>Transferencia</option>
+                        <option value="Bancolombia" {% if filtros.metodo == 'Bancolombia' %}selected{% endif %}>Bancolombia</option>
                         <option value="Nequi" {% if filtros.metodo == 'Nequi' %}selected{% endif %}>Nequi</option>
-                        <option value="Daviplata" {% if filtros.metodo == 'Daviplata' %}selected{% endif %}>Daviplata</option>
+                        <option value="Tarjeta" {% if filtros.metodo == 'Tarjeta' %}selected{% endif %}>Tarjeta</option>
+                        <option value="Otro" {% if filtros.metodo == 'Otro' %}selected{% endif %}>Otro</option>
                     </select>
                 </div>
                 

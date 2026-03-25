@@ -200,29 +200,19 @@
                            value="{{ request.form.get('monto', '') }}">
                 </div>
 
-                <div class="form-group">
-                    <label for="metodo_pago">Método de pago *</label>
-                    <select id="metodo_pago" name="metodo_pago" required>
-                        <option value="">Seleccione...</option>
-                        <option value="Efectivo">Efectivo</option>
-                        <option value="Tarjeta">Tarjeta</option>
-                        <option value="Transferencia">Transferencia</option>
-                        <option value="Nequi">Nequi</option>
-                        <option value="Daviplata">Daviplata</option>
-                    </select>
-                </div>
+                <select id="metodo_pago" name="metodo_pago">
+                    <option value="">Seleccione...</option>
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Bancolombia">Bancolombia</option>
+                    <option value="Nequi">Nequi</option>
+                    <option value="Tarjeta">Tarjeta</option>
+                    <option value="Otro">Otro</option>
+                </select>
 
                 <!-- Fecha y Pagado por -->
                 <div class="form-group">
                     <label for="fecha">Fecha *</label>
                     <input type="date" id="fecha" name="fecha" value="{{ today }}" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="pagado_por">Pagado por</label>
-                    <input type="text" id="pagado_por" name="pagado_por" 
-                           placeholder="Ej: El paciente, su madre..."
-                           value="{{ request.form.get('pagado_por', '') }}">
                 </div>
 
                 <!-- En el form-grid, después del campo pagado_por o donde prefieras -->

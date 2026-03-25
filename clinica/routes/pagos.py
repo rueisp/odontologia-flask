@@ -7,6 +7,7 @@ import random
 import string
 from io import BytesIO
 from xhtml2pdf import pisa
+import pytz
 
 pagos_bp = Blueprint('pagos', __name__, url_prefix='/pagos')
 
@@ -29,7 +30,8 @@ def nuevo_pago():
         try:
             # Procesar el formulario
             fecha = datetime.strptime(request.form.get('fecha'), '%Y-%m-%d').date()
-            hora = datetime.now().time()
+            colombia_tz = pytz.timezone('America/Bogota')
+            hora = datetime.now(colombia_tz).time()
             descripcion = request.form.get('descripcion')
             monto = int(request.form.get('monto', 0))
             metodo_pago = request.form.get('metodo_pago')
@@ -272,11 +274,10 @@ def lista_pagos():
     # Estadísticas generales (sin paginación)
     total_general_all = db.session.query(func.sum(PagoUnificado.monto)).filter_by(usuario_id=current_user.id).scalar() or 0
     total_efectivo = db.session.query(func.sum(PagoUnificado.monto)).filter_by(usuario_id=current_user.id, metodo_pago='Efectivo').scalar() or 0
-    total_tarjeta = db.session.query(func.sum(PagoUnificado.monto)).filter_by(usuario_id=current_user.id, metodo_pago='Tarjeta').scalar() or 0
-    total_transferencia = db.session.query(func.sum(PagoUnificado.monto)).filter_by(usuario_id=current_user.id, metodo_pago='Transferencia').scalar() or 0
+    total_bancolombia = db.session.query(func.sum(PagoUnificado.monto)).filter_by(usuario_id=current_user.id, metodo_pago='Bancolombia').scalar() or 0
     total_nequi = db.session.query(func.sum(PagoUnificado.monto)).filter_by(usuario_id=current_user.id, metodo_pago='Nequi').scalar() or 0
-    total_daviplata = db.session.query(func.sum(PagoUnificado.monto)).filter_by(usuario_id=current_user.id, metodo_pago='Daviplata').scalar() or 0
-    
+    total_tarjeta = db.session.query(func.sum(PagoUnificado.monto)).filter_by(usuario_id=current_user.id, metodo_pago='Tarjeta').scalar() or 0
+    total_otro = db.session.query(func.sum(PagoUnificado.monto)).filter_by(usuario_id=current_user.id, metodo_pago='Otro').scalar() or 0
     total_pagos = PagoUnificado.query.filter_by(usuario_id=current_user.id).count()
     pagos_pacientes = PagoUnificado.query.filter_by(usuario_id=current_user.id, es_rapido=False).count()
     pagos_rapidos = PagoUnificado.query.filter_by(usuario_id=current_user.id, es_rapido=True).count()
@@ -287,10 +288,10 @@ def lista_pagos():
         paginacion=paginacion,
         total_general=total_general_all,
         total_efectivo=total_efectivo,
-        total_tarjeta=total_tarjeta,
-        total_transferencia=total_transferencia,
+        total_bancolombia=total_bancolombia,
         total_nequi=total_nequi,
-        total_daviplata=total_daviplata,
+        total_tarjeta=total_tarjeta,
+        total_otro=total_otro,
         total_pagos=total_pagos,
         pagos_pacientes=pagos_pacientes,
         pagos_rapidos=pagos_rapidos,
