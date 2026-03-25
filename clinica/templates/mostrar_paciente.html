@@ -180,7 +180,7 @@
                     </div>
                     <div class="data-item">
                         <span class="label">Fecha Nacimiento</span>
-                        <span class="value">{{ paciente.fecha_nacimiento }}</span>
+                        <span class="value">{{ paciente.fecha_nacimiento.strftime('%d/%m/%Y') if paciente.fecha_nacimiento else 'N/A' }}</span>
                     </div>
 
                     <!-- Fila 3: Edad y Teléfono -->

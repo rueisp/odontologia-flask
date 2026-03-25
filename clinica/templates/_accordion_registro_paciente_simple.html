@@ -54,8 +54,10 @@
                 </div>
                 <div class="col-md-3">
                     <label for="fecha_nacimiento" class="form-label">Fecha de Nacimiento <span class="text-danger">*</span></label>
-                    <input type="date" class="form-control" id="fecha_nacimiento" name="fecha_nacimiento"
-                        value="{{ paciente.fecha_nacimiento or '' }}" required>
+                    <input type="text" class="form-control" id="fecha_nacimiento" name="fecha_nacimiento"
+                        value="{{ paciente.fecha_nacimiento.strftime('%d/%m/%Y') if paciente and paciente.fecha_nacimiento else '' }}" 
+                        placeholder="dd/mm/aaaa"
+                        required>
                 </div>
                 <div class="col-md-3">
                     <label for="edad" class="form-label">Edad <span class="text-danger">*</span></label>
@@ -223,5 +225,17 @@
             </div>
         </div>
     </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof flatpickr !== 'undefined') {
+            flatpickr("#fecha_nacimiento", {
+                dateFormat: "d/m/Y",
+                locale: "es",
+                maxDate: "today",
+                allowInput: true
+            });
+        }
+    });
+    </script>
 </div>
 

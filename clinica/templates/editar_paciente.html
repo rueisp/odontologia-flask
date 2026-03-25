@@ -68,14 +68,18 @@
                             edadInput.value = ''; 
                             return; 
                         }
-                        const fechaNacimiento = new Date(fechaNacimientoInput.value);
-                        const hoy = new Date();
-                        let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
-                        const mes = hoy.getMonth() - fechaNacimiento.getMonth();
-                        if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNacimiento.getDate())) {
-                            edad--;
+                        // Convertir de dd/mm/yyyy a Date
+                        const partes = fechaNacimientoInput.value.split('/');
+                        if (partes.length === 3) {
+                            const fechaNacimiento = new Date(partes[2], partes[1] - 1, partes[0]);
+                            const hoy = new Date();
+                            let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
+                            const mes = hoy.getMonth() - fechaNacimiento.getMonth();
+                            if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNacimiento.getDate())) {
+                                edad--;
+                            }
+                            edadInput.value = edad >= 0 ? edad : '';
                         }
-                        edadInput.value = edad >= 0 ? edad : '';
                     };
                     
                     // 🔥 CALCULAR EDAD AL CARGAR LA PÁGINA

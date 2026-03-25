@@ -35,9 +35,10 @@
 
                 <div>
                     <label for="fecha" class="block text-gray-700 text-sm font-bold mb-2">Fecha:</label>
-                    <input type="date" name="fecha" id="fecha" 
-                           value="{{ form_data.fecha_val if form_data and form_data.fecha_val is not none else cita.fecha.strftime('%Y-%m-%d') }}" 
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    <input type="text" name="fecha" id="fecha" 
+                        value="{{ form_data.fecha_val if form_data and form_data.fecha_val is not none else cita.fecha.strftime('%d/%m/%Y') if cita.fecha else '' }}" 
+                        placeholder="dd/mm/aaaa"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                 </div>
 
                 <div>
@@ -93,4 +94,19 @@
         </div>
     </div>
 </div>
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof flatpickr !== 'undefined') {
+        flatpickr("#fecha", {
+            dateFormat: "d/m/Y",
+            locale: "es",
+            minDate: "today",
+            allowInput: true
+        });
+    }
+});
+</script>
+{% endblock %}
 {% endblock %}

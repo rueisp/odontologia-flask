@@ -8,6 +8,17 @@ from clinica.models import Cita, Paciente, Usuario
 from clinica import db
 from sqlalchemy import func, extract
 from sqlalchemy.orm import load_only
+import locale
+
+# Intentar configurar locale en español
+try:
+    locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
+except:
+    try:
+        locale.setlocale(locale.LC_TIME, 'spanish')
+    except:
+        pass  # Si no funciona, mantiene el locale por defecto
+
 
 main_bp = Blueprint('main', __name__)
 

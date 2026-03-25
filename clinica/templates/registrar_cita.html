@@ -118,8 +118,9 @@
             <!-- Columna Fecha -->
             <div class="flex flex-col">
                 <label class="text-[10px] font-bold text-gray-400 uppercase ml-2 mb-1">Fecha</label>
-                <input type="date" name="fecha" id="fecha"
-                    class="w-full px-3 py-2 bg-white border border-transparent rounded-xl text-sm text-gray-900 shadow-sm focus:ring-1 focus:ring-black transition-all outline-none appearance-none"
+                <input type="text" name="fecha" id="fecha"
+                    class="w-full px-3 py-2 bg-white border border-transparent rounded-xl text-sm text-gray-900 shadow-sm focus:ring-1 focus:ring-black transition-all outline-none"
+                    placeholder="dd/mm/aaaa"
                     value="{{ form_values.get('fecha_val', request.args.get('fecha', '')) }}" required>
             </div>
 
@@ -314,13 +315,19 @@
             // 👇 NUEVO: Validación de disponibilidad de horario 👇
             const horaInput = document.getElementById('hora');
             const fechaInput = document.getElementById('fecha');
-            
+
             if (horaInput && fechaInput) {
                 horaInput.addEventListener('change', function() {
-                    const fecha = fechaInput.value;
+                    let fecha = fechaInput.value;  // <-- Cambiar const a let
                     const hora = this.value;
                     
                     if (fecha && hora) {
+                        // Convertir fecha de dd/mm/yyyy a yyyy-mm-dd para la API
+                        const partes = fecha.split('/');
+                        if (partes.length === 3) {
+                            fecha = `${partes[2]}-${partes[1]}-${partes[0]}`;
+                        }
+                        
                         fetch(`/calendario/verificar_disponibilidad?fecha=${fecha}&hora=${hora}`)
                             .then(response => response.json())
                             .then(data => {
@@ -330,6 +337,20 @@
                                 }
                             })
                             .catch(error => console.error('Error verificando disponibilidad:', error));
+                    }
+                });
+            }
+
+            // Inicializar flatpickr para el campo de fecha
+            if (typeof flatpickr !== 'undefined') {
+                flatpickr("#fecha", {
+                    dateFormat: "d/m/Y",
+                    locale: "es",
+                    minDate: "today",
+                    allowInput: true,
+                    onChange: function(selectedDates, dateStr, instance) {
+                        // Cuando cambia la fecha, se puede agregar lógica adicional si es necesario
+                        console.log("Fecha seleccionada:", dateStr);
                     }
                 });
             }
