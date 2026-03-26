@@ -91,7 +91,7 @@ def nuevo_pago():
             return redirect(url_for('pagos.nuevo_pago'))
     
     # GET - Mostrar formulario
-    today = date.today().isoformat()
+    today = date.today().strftime('%d/%m/%Y')
     return render_template('pagos/rapido.html', today=today)
 
 # ============================================================
@@ -303,7 +303,7 @@ def lista_pagos():
 # ============================================================
 @pagos_bp.route('/<int:pago_id>/pdf')
 def generar_pdf(pago_id):
-    from clinica.models import PagoUnificado
+    from clinica.models import PagoUnificado, Usuario
     from datetime import datetime
     
     pago = PagoUnificado.query.get_or_404(pago_id)
@@ -314,10 +314,14 @@ def generar_pdf(pago_id):
         flash('Acceso no autorizado', 'danger')
         return redirect(url_for('main.index'))
     
+    # Obtener el usuario que creó el pago
+    usuario = Usuario.query.get(pago.usuario_id)
+    nombre_usuario = usuario.nombre_completo or usuario.username if usuario else 'Sistema'
+    
     html = render_template('pagos/recibo_pdf_xhtml.html', 
                          pago=pago,
                          now=datetime.now,
-                         current_user=None)
+                         nombre_usuario=nombre_usuario)
     
     try:
         pdf_buffer = BytesIO()
@@ -340,7 +344,7 @@ def generar_pdf(pago_id):
         
     except Exception as e:
         return f"Error: {str(e)}", 500
-
+    
 # ============================================================
 # RUTA PARA VISTA LIMPIA DE CAPTURA (PÚBLICA CON TOKEN)
 # ============================================================

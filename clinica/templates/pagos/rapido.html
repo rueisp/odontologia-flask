@@ -196,23 +196,30 @@
                 <div class="form-group">
                     <label for="monto">Monto (COP) *</label>
                     <input type="number" id="monto" name="monto" min="0" step="1000" 
-                           placeholder="50000" required
-                           value="{{ request.form.get('monto', '') }}">
+                        placeholder="50000" required
+                        value="{{ request.form.get('monto', '') }}">
                 </div>
 
-                <select id="metodo_pago" name="metodo_pago">
-                    <option value="">Seleccione...</option>
-                    <option value="Efectivo">Efectivo</option>
-                    <option value="Bancolombia">Bancolombia</option>
-                    <option value="Nequi">Nequi</option>
-                    <option value="Tarjeta">Tarjeta</option>
-                    <option value="Otro">Otro</option>
-                </select>
+                <div class="form-group">
+                    <label for="metodo_pago">Método de pago *</label>
+                    <select id="metodo_pago" name="metodo_pago" class="w-full border border-gray-200 rounded-2xl px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black">
+                        <option value="">Seleccione...</option>
+                        <option value="Efectivo">Efectivo</option>
+                        <option value="Bancolombia">Bancolombia</option>
+                        <option value="Nequi">Nequi</option>
+                        <option value="Tarjeta">Tarjeta</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
 
                 <!-- Fecha y Pagado por -->
                 <div class="form-group">
                     <label for="fecha">Fecha *</label>
-                    <input type="date" id="fecha" name="fecha" value="{{ today }}" required>
+                    <input type="text" id="fecha" name="fecha" 
+                        value="{{ today }}" 
+                        placeholder="dd/mm/aaaa"
+                        class="w-full border border-gray-200 rounded-2xl px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                        required>
                 </div>
 
                 <!-- En el form-grid, después del campo pagado_por o donde prefieras -->
@@ -339,6 +346,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Inicializar Lucide icons
     if (typeof lucide !== 'undefined') {
         lucide.createIcons();
+    }
+
+    // Inicializar flatpickr para el campo de fecha
+    if (typeof flatpickr !== 'undefined') {
+        flatpickr("#fecha", {
+            dateFormat: "d/m/Y",
+            locale: "es",
+            maxDate: "today",
+            allowInput: true
+        });
     }
 });
 </script>

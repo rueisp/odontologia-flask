@@ -168,7 +168,7 @@
         
         <div class="recibo-header">
             <h1>🧾 RECIBO DE PAGO</h1>
-            <div class="clinica-nombre">CLÍNICA DENTAL</div>
+            <div class="clinica-nombre">ODONTOLOGÍA DR RUEIS PITRE</div>
         </div>
         
         <div style="text-align: center;">
@@ -203,14 +203,6 @@
                 <div class="label">Método de pago</div>
                 <div class="valor">{{ pago.metodo_pago }}</div>
             </div>
-            
-            <!-- Fila 4: Pagado por (si existe) -->
-            {% if pago.pagado_por %}
-            <div class="campo">
-                <div class="label">Pagado por</div>
-                <div class="valor">{{ pago.pagado_por }}</div>
-            </div>
-            {% endif %}
             
             <!-- Fila 5: Observación (si existe) -->
             {% if pago.observacion %}

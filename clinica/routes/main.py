@@ -28,8 +28,19 @@ def index():
     # 1. Fecha y Hora Local
     local_timezone = pytz.timezone('America/Bogota')
     now_in_local_tz = datetime.now(local_timezone)
-    fecha_actual_formateada = now_in_local_tz.strftime('%A, %d de %B de %Y')
-    
+
+    # Diccionario manual para días y meses en español
+    dias_semana = {
+        0: 'lunes', 1: 'martes', 2: 'miércoles', 3: 'jueves',
+        4: 'viernes', 5: 'sábado', 6: 'domingo'
+    }
+    meses = {
+        1: 'enero', 2: 'febrero', 3: 'marzo', 4: 'abril',
+        5: 'mayo', 6: 'junio', 7: 'julio', 8: 'agosto',
+        9: 'septiembre', 10: 'octubre', 11: 'noviembre', 12: 'diciembre'
+    }
+
+    fecha_actual_formateada = f"{dias_semana[now_in_local_tz.weekday()]}, {now_in_local_tz.day} de {meses[now_in_local_tz.month]} de {now_in_local_tz.year}"
     # 2. CITAS DE HOY
     hoy_date = now_in_local_tz.date()
     LIMITE_CITAS_VISIBLES = 5  # Cambia este valor según prefieras
