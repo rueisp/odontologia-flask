@@ -29,7 +29,7 @@ def nuevo_pago():
     if request.method == 'POST':
         try:
             # Procesar el formulario
-            fecha = datetime.strptime(request.form.get('fecha'), '%Y-%m-%d').date()
+            fecha = datetime.strptime(request.form.get('fecha'), '%d/%m/%Y').date()
             colombia_tz = pytz.timezone('America/Bogota')
             hora = datetime.now(colombia_tz).time()
             descripcion = request.form.get('descripcion')

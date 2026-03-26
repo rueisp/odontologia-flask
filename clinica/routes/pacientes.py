@@ -255,7 +255,7 @@ def editar_pago_paciente(pago_id):
     
     if request.method == 'POST':
         try:
-            pago.fecha = datetime.strptime(request.form.get('fecha'), '%Y-%m-%d').date()
+            pago.fecha = datetime.strptime(request.form.get('fecha'), '%d/%m/%Y').date()
             pago.descripcion = request.form.get('descripcion')
             pago.monto = int(request.form.get('monto', 0))
             pago.metodo_pago = request.form.get('metodo_pago')
