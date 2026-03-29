@@ -146,27 +146,19 @@ fieldset.border legend {
 /* Usamos el ID específico del formulario de edición (#patientEditForm) 
    para ganar prioridad sobre cualquier estilo genérico de "lectura". */
 
-#patientEditForm textarea,
-#patientEditForm input.form-control,
-#patientEditForm select.form-select {
-    /* 1. Restaurar visibilidad y tamaño */
-    min-height: 38px !important;    /* Altura estándar de Bootstrap */
-    height: auto !important;
-    opacity: 1 !important;          /* Asegurar que sea visible */
-    visibility: visible !important;
-    display: block !important;      /* Asegurar que ocupe espacio */
-
-    /* 2. Restaurar apariencia de campo editable */
-    padding: 10px 15px !important;  /* Relleno cómodo para escribir */
-    background-color: #ffffff !important;
-    border: 1px solid #ced4da !important;
-    color: #212529 !important;      /* Texto negro */
-    
-    /* 3. Restaurar márgenes */
-    margin-bottom: 15px !important;
+/* AJUSTE FINAL PARA EDICIÓN ULTRA-COMPACTA */
+#patientEditForm textarea.form-control {
+    min-height: auto !important;    /* Quita cualquier altura mínima forzada */
+    height: auto !important;         /* Permite que crezca según el rows="2" */
+    padding: 4px 10px !important;   /* Reduce el grosor interno al mínimo */
+    line-height: 1.4 !important;    /* Ajusta el espacio entre líneas */
+    font-size: 14px !important;     /* Tamaño de letra igual al de creación */
 }
 
-/* Caso especial para textareas grandes (como Evolución o Motivo) */
-#patientEditForm textarea {
-    min-height: 80px !important; /* Un poco más alto para párrafos */
+/* También ajustamos los inputs normales para que coincidan */
+#patientEditForm input.form-control {
+    height: 34px !important;        /* Altura estándar delgada */
+    padding: 4px 10px !important;
 }
+
+

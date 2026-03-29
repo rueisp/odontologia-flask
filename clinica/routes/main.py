@@ -4,11 +4,12 @@ from flask_login import login_required, current_user, login_user, logout_user
 from datetime import datetime, timedelta, time
 import pytz
 # Importamos los modelos necesarios SOLAMENTE
-from clinica.models import Cita, Paciente, Usuario
+from clinica.models import Cita, Paciente, Usuario, Plan, UsuarioPlan, SolicitudPago
 from clinica import db
 from sqlalchemy import func, extract
 from sqlalchemy.orm import load_only
 import locale
+
 
 # Intentar configurar locale en español
 try:
@@ -22,9 +23,21 @@ except:
 
 main_bp = Blueprint('main', __name__)
 
+
 @main_bp.route("/")
+def inicio():
+    """Landing page pública"""
+    if current_user.is_authenticated:
+        return redirect(url_for('main.dashboard'))
+    
+    from clinica.models import Plan
+    planes = Plan.query.filter_by(activo=True).order_by(Plan.orden).all()
+    return render_template('landing.html', planes=planes)
+
+
+@main_bp.route("/dashboard")
 @login_required
-def index():
+def dashboard():
     # 1. Fecha y Hora Local
     local_timezone = pytz.timezone('America/Bogota')
     now_in_local_tz = datetime.now(local_timezone)
@@ -217,10 +230,11 @@ def index():
     )
 
 
+
 @main_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('main.index'))
+        return redirect(url_for('main.dashboard'))
 
     if request.method == 'POST':
         username_o_email = request.form.get('usuario')
@@ -234,59 +248,13 @@ def login():
             login_user(usuario_encontrado, remember=request.form.get('remember_me') is not None)
             flash('Has iniciado sesión correctamente.', 'success')
             next_page = request.args.get('next')
-            return redirect(next_page or url_for('main.index'))
+            return redirect(next_page or url_for('main.dashboard'))
         else:
             flash('Credenciales inválidas. Por favor, verifica tu usuario y contraseña.', 'danger')
 
     return render_template('login.html')
 
-@main_bp.route('/registro', methods=['GET', 'POST'])
-def registro():
-    if current_user.is_authenticated:
-        return redirect(url_for('main.index'))
 
-    if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        email = request.form.get('email', '').strip().lower()
-        password = request.form.get('password')
-        confirm_password = request.form.get('confirm_password')
-
-        if not all([username, email, password, confirm_password]):
-            flash('Todos los campos son obligatorios.', 'danger')
-            return render_template('registro.html')
-
-        if password != confirm_password:
-            flash('Las contraseñas no coinciden.', 'danger')
-            return render_template('registro.html')
-
-        if Usuario.query.filter_by(username=username).first():
-            flash('El nombre de usuario ya está en uso. Por favor, elige otro.', 'danger')
-            return render_template('registro.html')
-
-        if Usuario.query.filter_by(email=email).first():
-            flash('El correo electrónico ya está registrado.', 'danger')
-            return render_template('registro.html')
-
-        nuevo_usuario = Usuario(
-            username=username, 
-            email=email, 
-            is_admin=False 
-        )
-        nuevo_usuario.set_password(password) 
-
-        try:
-            db.session.add(nuevo_usuario)
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            current_app.logger.error(f"Error al registrar nuevo usuario: {e}", exc_info=True)
-            flash("Ocurrió un error al crear la cuenta. Por favor, inténtalo más tarde.", 'danger')
-            return render_template('registro.html')
-
-        flash('¡Tu cuenta ha sido creada exitosamente! Ahora puedes iniciar sesión.', 'success')
-        return redirect(url_for('main.login'))
-
-    return render_template('registro.html')
 
 @main_bp.route('/logout')
 @login_required
@@ -297,7 +265,7 @@ def logout():
 
 @main_bp.route('/home') 
 def ruta_a_inicio(): 
-    return redirect(url_for('main.index'))
+    return redirect(url_for('main.dashboard'))
 
 @main_bp.route('/perfil', methods=['GET', 'POST'])
 @login_required 
@@ -344,6 +312,90 @@ def perfil():
 @login_required
 def test():
     return render_template('test.html')
+
+
+@main_bp.route('/registro', methods=['GET', 'POST'])
+def registro():
+
+ 
+    
+    plan_nombre = request.args.get('plan', 'trial')
+    plan = Plan.query.filter_by(nombre=plan_nombre, activo=True).first()
+    
+    if not plan:
+        flash('Plan no válido', 'danger')
+        return redirect(url_for('main.inicio'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+        plan_recibido = request.form.get('plan', 'trial')
+        
+        # Validar campos
+        if not all([username, email, password, confirm_password]):
+            flash('Todos los campos son obligatorios', 'danger')
+            return render_template('registro.html', plan=plan)
+        
+        if password != confirm_password:
+            flash('Las contraseñas no coinciden', 'danger')
+            return render_template('registro.html', plan=plan)
+        
+        # Verificar si ya existe
+        if Usuario.query.filter_by(email=email).first():
+            flash('Este email ya está registrado', 'danger')
+            return render_template('registro.html', plan=plan)
+        
+        if Usuario.query.filter_by(username=username).first():
+            flash('Este nombre de usuario ya existe', 'danger')
+            return render_template('registro.html', plan=plan)
+        
+        # Crear usuario
+        nuevo_usuario = Usuario(
+            username=username,
+            email=email,
+            nombre_completo=request.form.get('nombre_completo', ''),
+            is_admin=False
+        )
+        nuevo_usuario.set_password(password)
+        db.session.add(nuevo_usuario)
+        db.session.flush()
+        
+        colombia_tz = pytz.timezone('America/Bogota')
+        ahora = datetime.now(colombia_tz)
+        
+        if plan.nombre == 'trial':
+            usuario_plan = UsuarioPlan(
+                usuario_id=nuevo_usuario.id,
+                plan_id=plan.id,
+                estado='activo',
+                fecha_inicio=ahora,
+                fecha_fin=ahora + timedelta(days=7),
+                es_trial=True,
+                trial_dias_restantes=7
+            )
+            db.session.add(usuario_plan)
+            db.session.commit()
+            flash('¡Registro exitoso! Ya puedes iniciar sesión.', 'success')
+            return redirect(url_for('main.login'))
+        
+        else:
+            # Plan de pago: crear solicitud de pago
+            solicitud = SolicitudPago(
+                user_id=nuevo_usuario.id,
+                plan_id=plan.id,
+                plan_nombre=plan.nombre,
+                monto_cop=plan.precio_cop,
+                estado='PENDIENTE'
+            )
+            db.session.add(solicitud)
+            db.session.commit()
+            
+            flash('Registro exitoso. Completa el pago para activar tu plan.', 'info')
+            return redirect(url_for('planes.instrucciones_pago', solicitud_id=solicitud.id))
+    
+    return render_template('registro.html', plan=plan)
 
 
 @main_bp.route('/test-simple')

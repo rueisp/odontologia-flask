@@ -1,33 +1,83 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from flask_login import login_required, current_user # <--- 1. AGREGAR ESTA IMPORTACIÓN
+from flask_login import login_required, current_user
 from ..models import db, Cita, Paciente
+from datetime import datetime  # Importar para manejar fechas
 
 citas_bp = Blueprint('citas', __name__)
 
 @citas_bp.route('/citas/registrar/<int:paciente_id>', methods=['GET', 'POST'])
-@login_required # <--- Es bueno proteger la ruta
+@login_required
 def registrar_cita(paciente_id):
     paciente = Paciente.query.get_or_404(paciente_id)
 
     if request.method == 'POST':
+        # Obtener los datos del formulario
+        fecha_str = request.form['fecha']
+        hora_str = request.form['hora']
+        doctor_nombre = request.form.get('doctor', '')  # Obtener el doctor del formulario
+        
+        # Si no viene doctor, usar el current_user
+        if not doctor_nombre:
+            doctor_nombre = current_user.username
+        
+        # Convertir fecha y hora
+        try:
+            # Intentar formato DD/MM/YYYY (como viene del flatpickr)
+            fecha = datetime.strptime(fecha_str, '%d/%m/%Y').date()
+            print(f"Fecha convertida: {fecha}")
+        except:
+            try:
+                # Intentar formato YYYY-MM-DD
+                fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+                print(f"Fecha convertida: {fecha}")
+            except Exception as e:
+                flash(f'Formato de fecha inválido: {fecha_str}', 'danger')
+                return redirect(url_for('citas.registrar_cita', paciente_id=paciente_id))
+        
+        try:
+            # Convertir hora (formato HH:MM)
+            hora = datetime.strptime(hora_str, '%H:%M').time()
+            print(f"Hora convertida: {hora}")
+        except Exception as e:
+            flash(f'Formato de hora inválido: {hora_str}', 'danger')
+            return redirect(url_for('citas.registrar_cita', paciente_id=paciente_id))
+        
+        # ✅ VERIFICAR SI EL HORARIO YA ESTÁ OCUPADO PARA ESE DOCTOR
+        cita_existente = Cita.query.filter(
+            Cita.fecha == fecha,
+            Cita.hora == hora,
+            Cita.doctor == doctor_nombre,  # Usar el nombre del doctor
+            Cita.is_deleted == False
+        ).first()
+        
+        print(f"Buscando cita existente para fecha={fecha}, hora={hora}, doctor={doctor_nombre}")
+        print(f"Cita encontrada: {cita_existente}")
+        
+        if cita_existente:
+            flash(f'Este horario ya está ocupado para el doctor {doctor_nombre}. Por favor, selecciona otro horario.', 'danger')
+            return redirect(url_for('citas.registrar_cita', paciente_id=paciente_id))
+        
+        # Crear la nueva cita
         nueva_cita = Cita(
             paciente_id=paciente.id,
-            fecha=request.form['fecha'],
-            hora=request.form['hora'],
-            motivo=request.form['motivo'],
-            observaciones=request.form.get('observaciones'),
-            
-            # ▼▼▼ 2. AGREGAR ESTAS DOS LÍNEAS ▼▼▼
-            odontologo_id=current_user.id,        # Para que sume en el panel
-            doctor=current_user.username          # Para llenar el campo de texto obligatorio
-            # ▲▲▲ FIN DE LOS CAMBIOS ▲▲▲
+            fecha=fecha,
+            hora=hora,
+            motivo=request.form.get('motivo', ''),
+            observaciones=request.form.get('observaciones', ''),
+            odontologo_id=current_user.id,
+            doctor=doctor_nombre,
+            is_deleted=False
         )
+        
         db.session.add(nueva_cita)
         db.session.commit()
-        flash('Cita registrada exitosamente.')
+        
+        flash('Cita registrada exitosamente.', 'success')
         return redirect(url_for('pacientes.ver_historial_citas', id=paciente.id))
 
+    # GET - Mostrar formulario
     return render_template('registrar_cita.html', paciente=paciente)
+
 
 # ... (El resto del archivo editar_cita y eliminar_cita déjalo igual)
 @citas_bp.route('/citas/editar/<int:id>', methods=['GET', 'POST'])

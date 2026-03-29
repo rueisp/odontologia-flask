@@ -92,7 +92,7 @@
                 </a>
                 
                 <!-- Botón para ir al panel principal -->
-                <a href="{{ url_for('main.index') }}" 
+                <a href="{{ url_for('main.dashboard') }}" 
                 class="p-2 hover:bg-gray-200 rounded-full transition"
                 title="Ir al inicio">
                     <i data-lucide="home" class="w-5 h-5"></i>
@@ -107,12 +107,17 @@
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-bold text-gray-900">{{ nombre_mes }} {{ anio_actual }}</h3>
                         <div class="flex gap-1">
-                            <a href="{{ url_for('calendario.vista_diaria', fecha=(fecha_seleccionada.replace(month=mes_actual-1 if mes_actual>1 else 12, year=anio_actual-1 if mes_actual==1 else anio_actual)).strftime('%Y-%m-%d')) }}" 
-                               class="p-1 hover:bg-gray-100 rounded-full">
+                            {% set anio_anterior = anio_actual if mes_actual > 1 else anio_actual - 1 %}
+                            {% set mes_anterior = mes_actual - 1 if mes_actual > 1 else 12 %}
+                            <a href="{{ url_for('calendario.vista_diaria', fecha=date(anio_anterior, mes_anterior, 1).strftime('%Y-%m-%d')) }}" 
+                            class="p-1 hover:bg-gray-100 rounded-full">
                                 <i data-lucide="chevron-left" class="w-4 h-4"></i>
                             </a>
-                            <a href="{{ url_for('calendario.vista_diaria', fecha=(fecha_seleccionada.replace(month=mes_actual+1 if mes_actual<12 else 1, year=anio_actual+1 if mes_actual==12 else anio_actual)).strftime('%Y-%m-%d')) }}" 
-                               class="p-1 hover:bg-gray-100 rounded-full">
+                            
+                            {% set anio_siguiente = anio_actual if mes_actual < 12 else anio_actual + 1 %}
+                            {% set mes_siguiente = mes_actual + 1 if mes_actual < 12 else 1 %}
+                            <a href="{{ url_for('calendario.vista_diaria', fecha=date(anio_siguiente, mes_siguiente, 1).strftime('%Y-%m-%d')) }}" 
+                            class="p-1 hover:bg-gray-100 rounded-full">
                                 <i data-lucide="chevron-right" class="w-4 h-4"></i>
                             </a>
                         </div>
@@ -124,14 +129,13 @@
                     </div>
                     
                     <!-- Cuadrícula del mes -->
-                    {% for semana in calendario_mes %}
+                    {% for semana in dias_del_mes %}
                     <div class="grid grid-cols-7 gap-1 mb-1">
-                        {% for dia in semana %}
-                            {% if dia != 0 %}
-                                {% set dia_fecha = fecha_seleccionada.replace(day=dia) %}
-                                <a href="{{ url_for('calendario.vista_diaria', fecha=dia_fecha.strftime('%Y-%m-%d')) }}" 
-                                   class="mini-calendar-day {% if dia_fecha == fecha_seleccionada %}selected{% endif %}">
-                                    {{ dia }}
+                        {% for dia_data in semana %}
+                            {% if dia_data %}
+                                <a href="{{ url_for('calendario.vista_diaria', fecha=dia_data.fecha.strftime('%Y-%m-%d')) }}" 
+                                class="mini-calendar-day {% if dia_data.es_seleccionada %}selected{% endif %}">
+                                    {{ dia_data.dia }}
                                 </a>
                             {% else %}
                                 <div class="mini-calendar-day other-month"></div>

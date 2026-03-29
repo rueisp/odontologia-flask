@@ -196,21 +196,42 @@
         });
 
         document.addEventListener('DOMContentLoaded', function() {
-            // Lógica de edad
             const fechaNacimientoInput = document.getElementById('fecha_nacimiento');
             const edadInput = document.getElementById('edad');
+            
+            const calcularEdad = () => {
+                if (!fechaNacimientoInput.value) {
+                    edadInput.value = '';
+                    return;
+                }
+                
+                // El input type="date" devuelve formato YYYY-MM-DD
+                const partes = fechaNacimientoInput.value.split('-');
+                if (partes.length === 3) {
+                    const año = parseInt(partes[0]);
+                    const mes = parseInt(partes[1]) - 1;
+                    const dia = parseInt(partes[2]);
+                    
+                    const fechaNacimiento = new Date(año, mes, dia);
+                    if (!isNaN(fechaNacimiento.getTime())) {
+                        const hoy = new Date();
+                        let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
+                        const mesDiff = hoy.getMonth() - fechaNacimiento.getMonth();
+                        if (mesDiff < 0 || (mesDiff === 0 && hoy.getDate() < fechaNacimiento.getDate())) {
+                            edad--;
+                        }
+                        edadInput.value = edad >= 0 ? edad : '';
+                    }
+                }
+            };
+            
             if (fechaNacimientoInput && edadInput) { 
-                fechaNacimientoInput.addEventListener('change', function () {
-                    const fechaNacimiento = new Date(this.value);
-                    const hoy = new Date();
-                    let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
-                    const mes = hoy.getMonth() - fechaNacimiento.getMonth();
-                    if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNacimiento.getDate())) { edad--; }
-                    edadInput.value = edad;
-                });
+                calcularEdad(); // Calcular si hay valor inicial
+                fechaNacimientoInput.addEventListener('change', calcularEdad);
+                fechaNacimientoInput.addEventListener('blur', calcularEdad);
             }
 
-            // Guardado del formulario
+            // Guardado del formulario (el resto de tu código se mantiene igual)
             const mainForm = document.getElementById('patientMainForm');
             const mainSaveButton = document.getElementById('mainSaveButton'); 
 

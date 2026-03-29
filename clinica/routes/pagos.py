@@ -111,7 +111,7 @@ def ver_pago(pago_id):
     # Verificar permisos
     if pago.usuario_id != current_user.id and not current_user.is_admin:
         flash('No tienes permiso para ver este pago', 'danger')
-        return redirect(url_for('main.index'))
+        return redirect(url_for('main.dashboard'))
     
     # Variables para WhatsApp
     telefono = None
@@ -312,7 +312,7 @@ def generar_pdf(pago_id):
     token = request.args.get('token')
     if token != pago.codigo:
         flash('Acceso no autorizado', 'danger')
-        return redirect(url_for('main.index'))
+        return redirect(url_for('main.dashboard'))
     
     # Obtener el usuario que creó el pago
     usuario = Usuario.query.get(pago.usuario_id)

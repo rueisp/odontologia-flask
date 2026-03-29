@@ -54,9 +54,8 @@
                 </div>
                 <div class="col-md-3">
                     <label for="fecha_nacimiento" class="form-label">Fecha de Nacimiento <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="fecha_nacimiento" name="fecha_nacimiento"
-                        value="{{ paciente.fecha_nacimiento.strftime('%d/%m/%Y') if paciente and paciente.fecha_nacimiento else '' }}" 
-                        placeholder="dd/mm/aaaa"
+                    <input type="date" class="form-control" id="fecha_nacimiento" name="fecha_nacimiento"
+                        value="{{ paciente.fecha_nacimiento if paciente.fecha_nacimiento else '' }}" 
                         required>
                 </div>
                 <div class="col-md-3">

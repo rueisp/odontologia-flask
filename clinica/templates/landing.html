@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudentApp - Software Dental</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+            color: #1f2937;
+        }
+        
+        /* Header */
+        .navbar {
+            padding: 1.5rem 0;
+            background: transparent;
+        }
+        
+        .navbar-brand {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #1f2937;
+        }
+        
+        .navbar-brand span {
+            color: #10b981;
+        }
+        
+        .btn-outline-dark {
+            border-radius: 50px;
+            padding: 0.5rem 1.5rem;
+            font-weight: 500;
+        }
+        
+        .btn-dark {
+            border-radius: 50px;
+            padding: 0.5rem 1.5rem;
+            font-weight: 500;
+            background: #1f2937;
+        }
+        
+        /* Hero Section */
+        .hero {
+            padding: 4rem 0 6rem;
+            text-align: center;
+        }
+        
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #1f2937 0%, #10b981 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .hero p {
+            font-size: 1.2rem;
+            color: #6b7280;
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+        
+        /* Plan Cards */
+        .plan-card {
+            background: white;
+            border-radius: 2rem;
+            padding: 2rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            height: 100%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.05);
+            border: 1px solid #e5e7eb;
+        }
+        
+        .plan-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .plan-recommended {
+            border: 2px solid #10b981;
+            position: relative;
+        }
+        
+        .plan-recommended::before {
+            content: 'RECOMENDADO';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #10b981;
+            color: white;
+            padding: 0.25rem 1rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .plan-card h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+        
+        .plan-price {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #1f2937;
+            margin-bottom: 1.5rem;
+        }
+        
+        .plan-price span {
+            font-size: 1rem;
+            font-weight: 400;
+            color: #9ca3af;
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 1.5rem 0;
+        }
+        
+        .feature-list li {
+            padding: 0.5rem 0;
+            color: #4b5563;
+        }
+        
+        .feature-list li i {
+            color: #10b981;
+            margin-right: 0.75rem;
+        }
+        
+        .btn-plan {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 50px;
+            font-weight: 600;
+            text-align: center;
+            display: inline-block;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        
+        .btn-plan-primary {
+            background: #1f2937;
+            color: white;
+        }
+        
+        .btn-plan-primary:hover {
+            background: #111827;
+            color: white;
+        }
+        
+        .btn-plan-outline {
+            border: 2px solid #1f2937;
+            color: #1f2937;
+        }
+        
+        .btn-plan-outline:hover {
+            background: #1f2937;
+            color: white;
+        }
+        
+        /* Features Section */
+        .features {
+            padding: 5rem 0;
+            background: white;
+        }
+        
+        .feature-card {
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .feature-icon {
+            width: 80px;
+            height: 80px;
+            background: #f3f4f6;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+        }
+        
+        .feature-icon i {
+            font-size: 2rem;
+            color: #10b981;
+        }
+        
+        /* FAQ Section */
+        .faq {
+            padding: 5rem 0;
+            background: #f9fafb;
+        }
+        
+        .faq-item {
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .faq-question {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .faq-answer {
+            color: #6b7280;
+            margin-bottom: 0;
+        }
+        
+        /* Footer */
+        .footer {
+            background: #1f2937;
+            color: #9ca3af;
+            padding: 3rem 0;
+            text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+            .plan-card {
+                margin-bottom: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="/">Cloudent<span>App</span></a>
+            <div>
+                <a href="{{ url_for('main.login') }}" class="btn btn-outline-dark me-2">Iniciar Sesión</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>Gestiona tu clínica dental<br>de forma inteligente</h1>
+            <p>Historia clínica digital, agenda de citas, control de pagos y más. Todo en un solo lugar.</p>
+        </div>
+    </section>
+
+    <!-- Plans Section -->
+    <section class="container py-5">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">Planes que se adaptan a ti</h2>
+            <p class="text-muted">Elige el plan perfecto para tu clínica</p>
+        </div>
+        
+        <div class="row g-4">
+            {% for plan in planes %}
+            <div class="col-md-4">
+                <div class="plan-card {% if plan.nombre == 'basico' %}plan-recommended{% endif %}">
+                    <h3>{{ plan.nombre|title }}</h3>
+                    <div class="plan-price">
+                        {% if plan.precio_cop == 0 %}
+                            Gratis
+                        {% else %}
+                            ${{ "{:,.0f}".format(plan.precio_cop) }}
+                        {% endif %}
+                        <span>/mes</span>
+                    </div>
+                    <p class="text-muted">{{ plan.descripcion or 'Ideal para profesionales independientes' }}</p>
+                    
+                    <div class="text-center mb-3">
+                        <span class="badge bg-dark">{{ plan.limite_pacientes_diario }} pacientes/día</span>
+                    </div>
+                    
+                    <ul class="feature-list">
+                        {% if plan.caracteristicas and plan.caracteristicas.features %}
+                            {% for feature in plan.caracteristicas.features %}
+                            <li><i class="fas fa-check-circle"></i> {{ feature }}</li>
+                            {% endfor %}
+                        {% else %}
+                            <li><i class="fas fa-check-circle"></i> Acceso completo al sistema</li>
+                            <li><i class="fas fa-check-circle"></i> Historia clínica digital</li>
+                            <li><i class="fas fa-check-circle"></i> Agenda de citas</li>
+                            <li><i class="fas fa-check-circle"></i> Control de pagos</li>
+                            <li><i class="fas fa-check-circle"></i> Soporte incluido</li>
+                        {% endif %}
+                    </ul>
+                    
+                    <a href="{{ url_for('main.registro', plan=plan.nombre) }}" class="btn-plan {% if plan.precio_cop == 0 %}btn-plan-outline{% else %}btn-plan-primary{% endif %}">
+                        {% if plan.precio_cop == 0 %}
+                            Comenzar Trial Gratis
+                        {% else %}
+                            Elegir Plan
+                        {% endif %}
+                    </a>
+                    
+                    {% if plan.precio_cop == 0 %}
+                    <p class="text-center text-muted small mt-3">Sin tarjeta de crédito requerida</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="fw-bold">Todo lo que necesitas</h2>
+                <p class="text-muted">Herramientas completas para tu práctica dental</p>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-notes-medical"></i>
+                        </div>
+                        <h5>Historia Clínica Digital</h5>
+                        <p class="text-muted">Registro completo de pacientes, evoluciones y tratamientos</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                        <h5>Agenda de Citas</h5>
+                        <p class="text-muted">Gestiona tus citas de forma fácil y recuerda a tus pacientes</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h5>Control de Pagos</h5>
+                        <p class="text-muted">Registra ingresos, genera recibos y lleva tus finanzas</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="fw-bold">Preguntas Frecuentes</h2>
+                <p class="text-muted">Resolvemos tus dudas</p>
+            </div>
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="faq-item">
+                        <div class="faq-question">¿Puedo cambiar de plan en cualquier momento?</div>
+                        <div class="faq-answer">Sí, puedes cambiar entre planes de pago en cualquier momento. El cambio se reflejará en tu próximo ciclo de facturación.</div>
+                    </div>
+                    <div class="faq-item">
+                        <div class="faq-question">¿Qué pasa si excedo el límite diario de pacientes?</div>
+                        <div class="faq-answer">Podrás ver la información existente, pero no podrás crear nuevos pacientes hasta el siguiente día. Considera actualizar a un plan con mayor límite.</div>
+                    </div>
+                    <div class="faq-item">
+                        <div class="faq-question">¿El plan trial incluye todas las funciones?</div>
+                        <div class="faq-answer">Sí, el trial de 7 días incluye acceso completo a todas las funciones del sistema para que puedas probarlo antes de suscribirte.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 CloudentApp - Software para clínicas dentales</p>
+            <p class="small mt-2">¿Preguntas? <a href="#" class="text-white">Contáctanos</a></p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

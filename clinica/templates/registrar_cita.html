@@ -119,9 +119,10 @@
             <div class="flex flex-col">
                 <label class="text-[10px] font-bold text-gray-400 uppercase ml-2 mb-1">Fecha</label>
                 <input type="text" name="fecha" id="fecha"
-                    class="w-full px-3 py-2 bg-white border border-transparent rounded-xl text-sm text-gray-900 shadow-sm focus:ring-1 focus:ring-black transition-all outline-none"
-                    placeholder="dd/mm/aaaa"
-                    value="{{ form_values.get('fecha_val', request.args.get('fecha', '')) }}" required>
+                        class="w-full px-3 py-2 bg-white border border-transparent rounded-xl text-sm text-gray-900 shadow-sm focus:ring-1 focus:ring-black transition-all outline-none"
+                        placeholder="dd/mm/aaaa"
+                        autocomplete="off"
+                        value="{{ form_values.get('fecha_val', request.args.get('fecha', '')) }}" required>
             </div>
 
             <!-- Columna Hora -->
@@ -349,7 +350,6 @@
                     minDate: "today",
                     allowInput: true,
                     onChange: function(selectedDates, dateStr, instance) {
-                        // Cuando cambia la fecha, se puede agregar lógica adicional si es necesario
                         console.log("Fecha seleccionada:", dateStr);
                     }
                 });

@@ -37,10 +37,17 @@ def eliminar_imagen(ruta_imagen_relativa):
 def convertir_a_fecha(valor_str):
     if not valor_str or not isinstance(valor_str, str):
         return None
+    # Intentar primero dd/mm/yyyy (formato del formulario)
+    try:
+        return datetime.strptime(valor_str, '%d/%m/%Y').date()
+    except (ValueError, TypeError):
+        pass
+    # Intentar luego yyyy-mm-dd (formato ISO)
     try:
         return datetime.strptime(valor_str, '%Y-%m-%d').date()
     except (ValueError, TypeError):
         return None
+    
 
 # --- FUNCIÓN get_index_panel_data OPTIMIZADA (SIN CAMPOS INNECESARIOS) ---
 def get_index_panel_data(today_date: date, current_time: time):

@@ -94,6 +94,14 @@ def mostrar_paciente(id):
 
     paciente_data, evoluciones_procesadas, full_public_id_trazos = obtener_paciente_service(id, current_user)
     
+    # 🔥 CONVERTIR FECHA DE STRING A OBJETO DATE 🔥
+    from datetime import datetime
+    if 'fecha_nacimiento' in paciente_data and isinstance(paciente_data['fecha_nacimiento'], str):
+        try:
+            paciente_data['fecha_nacimiento'] = datetime.strptime(paciente_data['fecha_nacimiento'], '%d/%m/%Y').date()
+        except:
+            pass
+    
     return render_template('mostrar_paciente.html',
                           paciente=paciente_data,
                           evoluciones_ordenadas=evoluciones_procesadas,
@@ -132,8 +140,13 @@ def editar_paciente(id):
             from datetime import datetime
             fecha_obj = datetime.strptime(paciente.fecha_nacimiento, '%d/%m/%Y')
             paciente.fecha_nacimiento = fecha_obj.strftime('%Y-%m-%d')
+            # Guardar versión para mostrar en formato dd/mm/yyyy
+            paciente.fecha_nacimiento_display = fecha_obj.strftime('%d/%m/%Y')
         except:
             paciente.fecha_nacimiento = ''
+            paciente.fecha_nacimiento_display = ''
+    else:
+        paciente.fecha_nacimiento_display = ''
 
     # Renderizar template sin datos de ubicación
     return render_template('editar_paciente.html', 
@@ -208,7 +221,7 @@ def agregar_pago_paciente_unificado_nuevo(paciente_id):
         nuevo_pago = PagoUnificado(
             paciente_id=paciente_id,
             paciente_nombre=f"{paciente.primer_nombre} {paciente.primer_apellido}",
-            fecha=datetime.strptime(request.form.get('fecha'), '%Y-%m-%d').date(),
+            fecha=datetime.strptime(request.form.get('fecha'), '%d/%m/%Y').date(),
             hora=datetime.now(colombia_tz).time(),
             descripcion=request.form.get('descripcion'),
             monto=int(request.form.get('monto', 0)),

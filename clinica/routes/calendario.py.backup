@@ -46,6 +46,9 @@ def construir_dias_del_mes(anio, mes, citas_del_mes_obj, dia_hoy_local, mes_hoy_
     for dia_num in range(1, total_dias_en_mes + 1):
         fecha_actual_dia = date(anio, mes, dia_num)
         citas_en_dia_actual = [c for c in citas_del_mes_obj if date.fromisoformat(c['fecha']) == fecha_actual_dia]
+        print(f"Fecha actual día: {fecha_actual_dia}, Citas en este día: {len(citas_en_dia_actual)}")
+        for c in citas_en_dia_actual:
+            print(f"  - Cita ID: {c['id']}, Paciente: {c['paciente_nombre_completo']}")
         citas_preparadas = []
         for cita_dict in citas_en_dia_actual:
             citas_preparadas.append({
@@ -148,6 +151,10 @@ def mostrar_calendario():
         )
 
     citas_del_mes = query_citas.order_by(Cita.fecha, Cita.hora).all()
+    print(f"=== CITAS DEL MES ===")
+    for cita in citas_del_mes:
+        print(f"Cita ID: {cita.id}, Paciente ID: {cita.paciente_id}, Nombre: {cita.paciente_nombres_str}, Fecha: {cita.fecha}")
+    print(f"====================")
     current_full_path_for_template = request.full_path
 
     # Procesar citas para el template
@@ -206,16 +213,31 @@ def mostrar_calendario():
 @calendario_bp.route('/registrar_cita', methods=['GET', 'POST'])
 @login_required
 def registrar_cita():
+    from datetime import datetime
+    import pytz
+    
+    local_tz = pytz.timezone('America/Bogota')
+    fecha_hoy = datetime.now(local_tz).strftime('%d/%m/%Y')
+    
     next_url_get = request.args.get('next')
     fecha_preseleccionada_str = request.args.get('fecha') if request.method == 'GET' else None
-    hora_preseleccionada_str = request.args.get('hora') if request.method == 'GET' else None  # ← NUEVO
+    hora_preseleccionada_str = request.args.get('hora') if request.method == 'GET' else None
+    
+    # Convertir de ISO (yyyy-mm-dd) a dd/mm/yyyy si viene en la URL
+    if fecha_preseleccionada_str:
+        try:
+            fecha_obj = datetime.strptime(fecha_preseleccionada_str, '%Y-%m-%d')
+            fecha_preseleccionada_str = fecha_obj.strftime('%d/%m/%Y')
+        except ValueError:
+            pass
+    
     form_values = {
         'paciente_preseleccionado_id': '',
         'paciente_preseleccionado_nombre': '',
         'paciente_nombres_val': '', 'paciente_apellidos_val': '', 'paciente_edad_val': '',
         'paciente_documento_val': '', 'paciente_telefono_val': '',
-        'fecha_val': fecha_preseleccionada_str or '', 'hora_val': '',
-        'hora_val': hora_preseleccionada_str or '',  # ← NUEVO
+        'fecha_val': fecha_preseleccionada_str or fecha_hoy,
+        'hora_val': hora_preseleccionada_str or '',
         'doctor_val': '', 'motivo_val': '', 'observaciones_val': '',
         'next_url': next_url_get or '',
     }
@@ -260,7 +282,7 @@ def registrar_cita():
                 flash("Fecha, Hora y Doctor son campos obligatorios para la cita.", "error")
                 return render_template('registrar_cita.html', form_values=form_values)
             try:
-                fecha_obj = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+                fecha_obj = datetime.strptime(fecha_str, "%d/%m/%Y").date()
                 hora_obj = datetime.strptime(hora_str, "%H:%M").time()
             except ValueError:
                 flash("Formato de fecha u hora inválido.", "error")
@@ -313,77 +335,137 @@ def registrar_cita():
             flash(f"Ocurrió un error inesperado al guardar la cita: {str(e)}", "error")
             current_app.logger.error(f"Error detallado al guardar cita: {e}", exc_info=True)
             return render_template('registrar_cita.html', form_values=form_values)
+        
+
+    # 🔥 AGREGAR EL PRINT AQUÍ 🔥
+    print(f"=== DEBUG ===")
+    print(f"fecha_val en template: {form_values.get('fecha_val')}")
+    print(f"request.args.get('fecha'): {request.args.get('fecha')}")
+    print(f"fecha_preseleccionada_str: {fecha_preseleccionada_str}")
+    print(f"==============")
+
     return render_template('registrar_cita.html', form_values=form_values)
 
 @calendario_bp.route('/editar_cita/<int:cita_id>', methods=['GET', 'POST'])
 @login_required
 def editar_cita(cita_id):
+    from datetime import datetime
+    
     cita_obj = Cita.query.get_or_404(cita_id)
+    
+    # Verificar permisos
     if not current_user.is_admin and cita_obj.paciente_id:
         paciente = Paciente.query.get(cita_obj.paciente_id)
         if paciente and paciente.odontologo_id != current_user.id:
             flash("Acceso denegado. No tienes permiso para editar esta cita.", "danger")
             return redirect(url_for('.mostrar_calendario'))
+    
+    # Obtener lista de pacientes para el select
     query_pacientes_para_dropdown = Paciente.query.filter_by(is_deleted=False)
     if not current_user.is_admin:
         query_pacientes_para_dropdown = query_pacientes_para_dropdown.filter_by(odontologo_id=current_user.id)
     todos_los_pacientes = query_pacientes_para_dropdown.order_by(Paciente.apellidos, Paciente.nombres).all()
+    
     next_url_get = request.args.get('next')
+    
+    # Preparar datos para el template
     form_data_edit = {
         'selected_paciente_id': str(cita_obj.paciente_id) if cita_obj.paciente_id else '',
-        'fecha_val': cita_obj.fecha.strftime('%Y-%m-%d'),
+        'fecha_val': cita_obj.fecha.strftime('%d/%m/%Y'),
         'hora_val': cita_obj.hora.strftime('%H:%M'),
         'doctor_val': cita_obj.doctor,
         'motivo_val': cita_obj.motivo or '',
         'observaciones_val': cita_obj.observaciones or '',
-        'next_url': next_url_get
+        'next_url': next_url_get,
+        'paciente_nombres_str': cita_obj.paciente_nombres_str or '',
+        'paciente_apellidos_str': cita_obj.paciente_apellidos_str or '',
+        'paciente_telefono_str': cita_obj.paciente_telefono_str or ''
     }
+    
     if request.method == 'POST':
         current_next_url = request.form.get('next') or next_url_get
         form_data_edit['next_url'] = current_next_url
+        
         paciente_id_form = request.form.get('paciente_id')
+                
+        
+        # 🔥 AGREGAR ESTOS PRINTS 🔥
+        print("=== DEBUG EDITAR CITA ===")
+        print(f"paciente_id_form recibido: '{paciente_id_form}'")
+        print(f"cita_obj.paciente_id ANTES: {cita_obj.paciente_id}")
+        print(f"cita_obj.paciente_nombres_str ANTES: {cita_obj.paciente_nombres_str}")
+        print("========================")
         fecha_str = request.form.get('fecha')
         hora_str = request.form.get('hora')
         doctor_form = request.form.get('doctor')
         motivo_form = request.form.get('motivo')
         observaciones_form = request.form.get('observaciones')
-        if paciente_id_form and not current_user.is_admin:
-            paciente_destino = Paciente.query.filter_by(id=int(paciente_id_form), odontologo_id=current_user.id, is_deleted=False).first()
-            if not paciente_destino:
-                flash("Error: Se intentó asignar la cita a un paciente que no te pertenece o no existe.", "danger")
-                return render_template('editar_cita.html', cita=cita_obj, pacientes=todos_los_pacientes, form_data=form_data_edit)
+        
+        # Campos para paciente no registrado
+        paciente_nombres_form = request.form.get('paciente_nombres_str', '').strip()
+        paciente_apellidos_form = request.form.get('paciente_apellidos_str', '').strip()
+        paciente_telefono_form = request.form.get('paciente_telefono_str', '').strip()
+        
         form_data_edit.update({
             'selected_paciente_id': paciente_id_form,
             'fecha_val': fecha_str,
             'hora_val': hora_str,
             'doctor_val': doctor_form,
             'motivo_val': motivo_form,
-            'observaciones_val': observaciones_form
+            'observaciones_val': observaciones_form,
+            'paciente_nombres_str': paciente_nombres_form,
+            'paciente_apellidos_str': paciente_apellidos_form,
+            'paciente_telefono_str': paciente_telefono_form
         })
+        
         if not (fecha_str and hora_str and doctor_form):
             flash("Fecha, hora y doctor son campos obligatorios.", "error")
             return render_template('editar_cita.html', cita=cita_obj, pacientes=todos_los_pacientes, form_data=form_data_edit)
+        
         try:
-            cita_obj.paciente_id = int(paciente_id_form) if paciente_id_form else None
-            cita_obj.fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+            # Manejar paciente
+            if paciente_id_form and paciente_id_form.strip():
+                            # 🔥 AGREGAR ESTOS PRINTS 🔥
+                print("=== DESPUÉS DE ACTUALIZAR ===")
+                print(f"cita_obj.paciente_id DESPUÉS: {cita_obj.paciente_id}")
+                print(f"cita_obj.paciente_nombres_str DESPUÉS: {cita_obj.paciente_nombres_str}")
+                print("=============================")
+                # Se seleccionó un paciente registrado
+                cita_obj.paciente_id = int(paciente_id_form)
+                # Limpiar campos de texto
+                cita_obj.paciente_nombres_str = None
+                cita_obj.paciente_apellidos_str = None
+                cita_obj.paciente_telefono_str = None
+            else:
+                # Paciente no registrado - usar campos de texto
+                cita_obj.paciente_id = None
+                cita_obj.paciente_nombres_str = paciente_nombres_form if paciente_nombres_form else None
+                cita_obj.paciente_apellidos_str = paciente_apellidos_form if paciente_apellidos_form else None
+                cita_obj.paciente_telefono_str = paciente_telefono_form if paciente_telefono_form else None
+            
+            # Actualizar fecha y hora
+            cita_obj.fecha = datetime.strptime(fecha_str, "%d/%m/%Y").date()
             cita_obj.hora = datetime.strptime(hora_str, "%H:%M").time()
-        except ValueError:
-            flash("Formato de fecha u hora inválido.", "error")
-            return render_template('editar_cita.html', cita=cita_obj, pacientes=todos_los_pacientes, form_data=form_data_edit)
-        cita_obj.doctor = doctor_form
-        cita_obj.motivo = motivo_form or None
-        cita_obj.observaciones = observaciones_form or None
-        try:
+            cita_obj.doctor = doctor_form
+            cita_obj.motivo = motivo_form or None
+            cita_obj.observaciones = observaciones_form or None
+            
             db.session.commit()
             flash("Cita actualizada correctamente.", "success")
+            
+        except ValueError as e:
+            flash(f"Formato de fecha u hora inválido: {e}", "error")
+            return render_template('editar_cita.html', cita=cita_obj, pacientes=todos_los_pacientes, form_data=form_data_edit)
         except Exception as e:
             db.session.rollback()
             flash(f"Error al actualizar la cita: {e}", "error")
             current_app.logger.error(f"Error detallado al editar cita: {e}", exc_info=True)
             return render_template('editar_cita.html', cita=cita_obj, pacientes=todos_los_pacientes, form_data=form_data_edit)
+        
         if form_data_edit['next_url'] and is_safe_url(form_data_edit['next_url']):
             return redirect(form_data_edit['next_url'])
         return redirect(url_for('.mostrar_calendario', anio=cita_obj.fecha.year, mes=cita_obj.fecha.month))
+    
     return render_template('editar_cita.html', cita=cita_obj, pacientes=todos_los_pacientes, form_data=form_data_edit)
 
 # --- RUTA: Historial de Citas por Paciente (CON MODIFICACIONES) ---
@@ -562,7 +644,7 @@ def vista_diaria():
         Cita.is_deleted == False
     )
     
-    # Cargar pacientes relacionados por separado (MUCHO MÁS RÁPIDO)
+    # Cargar pacientes relacionados por separado
     citas_del_dia = query_citas.all()
     paciente_ids = list(set([c.paciente_id for c in citas_del_dia if c.paciente_id]))
     
@@ -574,7 +656,8 @@ def vista_diaria():
                 Paciente.id,
                 Paciente.nombres,
                 Paciente.apellidos,
-                Paciente.telefono
+                Paciente.telefono,
+                Paciente.odontologo_id
             )
         ).filter(Paciente.id.in_(paciente_ids)).all()
         
@@ -586,7 +669,7 @@ def vista_diaria():
     for cita in citas_del_dia:
         hora_key = cita.hora.strftime('%H:%M')
         
-        # Obtener datos del paciente (de la caché o de los campos guardados)
+        # Obtener datos del paciente
         if cita.paciente_id and cita.paciente_id in pacientes_dict:
             paciente = pacientes_dict[cita.paciente_id]
             paciente_nombre = paciente.nombres or ''
@@ -602,7 +685,6 @@ def vista_diaria():
             if cita.paciente_id and cita.paciente_id in pacientes_dict:
                 if pacientes_dict[cita.paciente_id].odontologo_id != current_user.id:
                     continue
-            # Si no tiene paciente, todos pueden verlo (citas genéricas)
         
         citas_por_hora[hora_key] = {
             'id': cita.id,
@@ -640,15 +722,36 @@ def vista_diaria():
     import calendar
     cal = calendar.monthcalendar(anio_actual, mes_actual)
     
+    # Crear lista de fechas válidas para el template
+    dias_del_mes = []
+    for semana in cal:
+        fila = []
+        for dia in semana:
+            if dia != 0:
+                try:
+                    fecha_dia = date(anio_actual, mes_actual, dia)
+                    fila.append({
+                        'dia': dia,
+                        'fecha': fecha_dia,
+                        'es_seleccionada': fecha_dia == fecha_seleccionada
+                    })
+                except ValueError:
+                    fila.append(None)
+            else:
+                fila.append(None)
+        dias_del_mes.append(fila)
+    
     return render_template('vista_diaria.html',
                           fecha_seleccionada=fecha_seleccionada,
                           franjas=franjas,
                           mes_actual=mes_actual,
                           anio_actual=anio_actual,
                           nombre_mes=nombre_mes,
-                          calendario_mes=cal,
+                          dias_del_mes=dias_del_mes,
                           nombres_meses=NOMBRES_MESES_ESP,
-                          timedelta=timedelta)
+                          timedelta=timedelta,
+                          date=date)
+
 
 @calendario_bp.route('/verificar_disponibilidad', methods=['GET'])
 @login_required
@@ -661,7 +764,7 @@ def verificar_disponibilidad():
         return jsonify({'disponible': False, 'error': 'Faltan parámetros'})
     
     try:
-        fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+        fecha_obj = datetime.strptime(fecha_str, '%d/%m/%Y').date()
         hora_obj = datetime.strptime(hora_str, '%H:%M').time()
         
         cita_existente = Cita.query.filter(

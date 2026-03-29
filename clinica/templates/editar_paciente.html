@@ -58,7 +58,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             try {
-                // --- CÁLCULO DE EDAD ---
+                // --- CÁLCULO DE EDAD PARA TYPE="DATE" ---
                 const fechaNacimientoInput = document.getElementById('fecha_nacimiento');
                 const edadInput = document.getElementById('edad');
                 
@@ -68,10 +68,14 @@
                             edadInput.value = ''; 
                             return; 
                         }
-                        // Convertir de dd/mm/yyyy a Date
-                        const partes = fechaNacimientoInput.value.split('/');
+                        
+                        // El input type="date" devuelve formato YYYY-MM-DD
+                        const fechaValue = fechaNacimientoInput.value;
+                        const partes = fechaValue.split('-');
+                        
                         if (partes.length === 3) {
-                            const fechaNacimiento = new Date(partes[2], partes[1] - 1, partes[0]);
+                            // partes[0] = año, partes[1] = mes, partes[2] = día
+                            const fechaNacimiento = new Date(partes[0], partes[1] - 1, partes[2]);
                             const hoy = new Date();
                             let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
                             const mes = hoy.getMonth() - fechaNacimiento.getMonth();
@@ -82,12 +86,11 @@
                         }
                     };
                     
-                    // 🔥 CALCULAR EDAD AL CARGAR LA PÁGINA
+                    // Calcular edad al cargar la página
                     calcularEdad();
                     
-                    // 🔥 CALCULAR EDAD CUANDO CAMBIA LA FECHA
+                    // Calcular edad cuando cambia la fecha
                     fechaNacimientoInput.addEventListener('change', calcularEdad);
-                    fechaNacimientoInput.addEventListener('blur', calcularEdad); // Por si acaso
                 }
 
                 // --- DENTIGRAMA ---

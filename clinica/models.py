@@ -91,14 +91,10 @@ class Cita(db.Model):
     __tablename__ = 'cita'
 
     id = db.Column(db.Integer, primary_key=True)
-    
-    # ============================================================
-    # CAMPOS ORIGINALES - NO TOCAR
-    # ============================================================
     paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=True) 
-    paciente_nombres_str = db.Column(db.String(100), nullable=False, default='Paciente sin registrar') 
-    paciente_apellidos_str = db.Column(db.String(100), nullable=False, default='') 
-    paciente_telefono_str = db.Column(db.String(50), nullable=True, default='')
+    paciente_nombres_str = db.Column(db.String(100), nullable=True)  # ✅ Cambiado
+    paciente_apellidos_str = db.Column(db.String(100), nullable=True)  # ✅ Cambiado
+    paciente_telefono_str = db.Column(db.String(50), nullable=True)
     fecha = db.Column(db.Date, nullable=False)
     hora = db.Column(db.Time, nullable=False)
     motivo = db.Column(db.String(255), nullable=True)
@@ -109,7 +105,6 @@ class Cita(db.Model):
     estado = db.Column(db.String(20), default='pendiente', nullable=False)
     is_deleted = db.Column(db.Boolean, default=False, nullable=False, index=True)
     deleted_at = db.Column(db.DateTime, nullable=True)
-    
 
 
 class Usuario(UserMixin, db.Model):

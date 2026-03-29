@@ -56,6 +56,17 @@
                 <label for="confirm_password" class="form-label">Confirmar Contraseña</label>
                 <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
             </div>
+            <!-- Mostrar plan seleccionado -->
+            <input type="hidden" name="plan" value="{{ plan.nombre if plan else 'trial' }}">
+            <div class="alert alert-light border mb-3">
+                <small class="text-muted">Plan seleccionado:</small>
+                <strong class="text-success">{{ plan.nombre|title if plan else 'Trial' }}</strong>
+                {% if plan and plan.precio_cop > 0 %}
+                    - <strong>${{ "{:,.0f}".format(plan.precio_cop) }}</strong>/mes
+                {% else %}
+                    - <strong>Gratis por 7 días</strong>
+                {% endif %}
+            </div>
             <div class="d-grid">
                 <button type="submit" class="btn btn-black">Crear Cuenta</button>
             </div>

@@ -21,16 +21,40 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="col-span-2">
                     <label for="paciente_id" class="block text-gray-700 text-sm font-bold mb-2">Paciente:</label>
-                    <select name="paciente_id" id="paciente_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        {% for paciente_opt in pacientes %} 
-                            <option value="{{ paciente_opt.id }}" 
-                                    {% if (form_data and form_data.selected_paciente_id and paciente_opt.id == form_data.selected_paciente_id|int) or (paciente_opt.id == cita.paciente_id) %}
-                                        selected
-                                    {% endif %}>
-                                {{ paciente_opt.nombres }} {{ paciente_opt.apellidos }}
-                            </option>
-                        {% endfor %}
-                    </select>
+                    
+                    {% if cita.paciente_id %}
+                        <!-- Paciente registrado: mostrar select -->
+                        <select name="paciente_id" id="paciente_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">-- Seleccione un paciente --</option>
+                            {% for paciente_opt in pacientes %} 
+                                <option value="{{ paciente_opt.id }}" 
+                                        {% if paciente_opt.id == cita.paciente_id %}selected{% endif %}>
+                                    {{ paciente_opt.nombres }} {{ paciente_opt.apellidos }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    {% else %}
+                        <!-- Paciente no registrado: mostrar campos de texto -->
+                        <div class="space-y-2">
+                            <input type="text" 
+                                name="paciente_nombres_str"
+                                value="{{ form_data.paciente_nombres_str if form_data else cita.paciente_nombres_str }}"
+                                placeholder="Nombres del paciente"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <input type="text" 
+                                name="paciente_apellidos_str"
+                                value="{{ form_data.paciente_apellidos_str if form_data else cita.paciente_apellidos_str }}"
+                                placeholder="Apellidos del paciente"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <input type="tel" 
+                                name="paciente_telefono_str"
+                                value="{{ form_data.paciente_telefono_str if form_data else cita.paciente_telefono_str }}"
+                                placeholder="Teléfono"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <input type="hidden" name="paciente_id" value="">
+                        <small class="text-gray-500 text-xs">Paciente sin registrar en el sistema</small>
+                    {% endif %}
                 </div>
 
                 <div>

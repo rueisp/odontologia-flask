@@ -1,6 +1,6 @@
 # clinica/services/plan_service.py
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from clinica import db
 from clinica.models import Plan, Usuario, UsuarioPlan, LimiteDiario
 
@@ -134,49 +134,54 @@ class PlanService:
     
     @staticmethod
     def verificar_limite_diario(usuario_id, fecha=None):
-        """Verificar y actualizar límite diario para un usuario"""
+        from clinica.models import LimiteDiario, UsuarioPlan, Plan
+        from clinica import db
+        from datetime import date
+        
         if fecha is None:
-            fecha = datetime.utcnow().date()
+            fecha = date.today()
         
-        # Obtener plan actual
-        plan_info = PlanService.obtener_plan_actual_usuario(usuario_id)
-        if not plan_info:
-            return {'error': 'Usuario sin plan activo'}
-        
-        plan = plan_info['plan']
-        usuario_plan = plan_info['usuario_plan']
-        
-        # Obtener o crear límite diario
+        # Buscar límite diario existente
         limite_diario = LimiteDiario.query.filter_by(
-            usuario_id=usuario_id,
+            usuario_id=usuario_id, 
             fecha=fecha
         ).first()
         
-        if not limite_diario:
-            # Calcular límite según día del trial
-            limite_actual = plan.limite_pacientes_diario
+        # Si no existe, crearlo
+        if limite_diario is None:
+            # Obtener el plan activo del usuario
+            usuario_plan = UsuarioPlan.query.filter_by(
+                usuario_id=usuario_id,
+                estado='activo'
+            ).first()
             
-            if usuario_plan.es_trial and usuario_plan.trial_pacientes_primeros_7_dias:
-                # Calcular días desde inicio del trial
-                dias_desde_inicio = (fecha - usuario_plan.fecha_inicio.date()).days
-                if dias_desde_inicio < 7:
-                    limite_actual = plan.limite_pacientes_diario_primeros_7_dias
+            if usuario_plan:
+                plan = Plan.query.get(usuario_plan.plan_id)
+                limite_actual = plan.limite_pacientes_diario if plan else 10
+                es_trial = usuario_plan.es_trial
+            else:
+                # Si no tiene plan, usar límite por defecto (10)
+                limite_actual = 10
+                es_trial = False
             
+            # Crear nuevo registro de límite diario
             limite_diario = LimiteDiario(
                 usuario_id=usuario_id,
                 fecha=fecha,
+                contador_pacientes=0,
                 limite_actual=limite_actual,
-                es_dia_trial=usuario_plan.es_trial,
-                dia_numero_trial=(fecha - usuario_plan.fecha_inicio.date()).days + 1 if usuario_plan.es_trial else None
+                es_dia_trial=es_trial
             )
             db.session.add(limite_diario)
-            
+            db.session.commit()
         
+        # Devolver diccionario con los datos necesarios
         return {
             'limite_diario': limite_diario,
-            'plan': plan,
-            'usuario_plan': usuario_plan,
-            'puede_crear': limite_diario.contador_pacientes < limite_diario.limite_actual
+            'puede_crear': limite_diario.contador_pacientes < limite_diario.limite_actual,
+            'contador': limite_diario.contador_pacientes,
+            'limite': limite_diario.limite_actual,
+            'limite_restante': limite_diario.limite_actual - limite_diario.contador_pacientes
         }
     
     @staticmethod
@@ -214,8 +219,11 @@ class PlanService:
     def obtener_estadisticas_usuario(usuario_id):
         """Obtener estadísticas del usuario para mostrar en dashboard"""
         from datetime import datetime
+        import pytz
         
-        fecha_hoy = datetime.utcnow().date()
+        # Usar zona horaria de Colombia
+        colombia_tz = pytz.timezone('America/Bogota')
+        fecha_hoy = datetime.now(colombia_tz).date()
         
         # Obtener plan actual
         plan_info = PlanService.obtener_plan_actual_usuario(usuario_id)
@@ -224,10 +232,36 @@ class PlanService:
         
         # Obtener límite diario
         limite_info = PlanService.verificar_limite_diario(usuario_id, fecha_hoy)
-        if 'error' in limite_info:
-            return None
         
-        limite_diario = limite_info['limite_diario']
+        # Verificar si hay error en el límite
+        if not limite_info or 'error' in limite_info:
+            # Si hay error, devolver estadísticas básicas sin límite
+            return {
+                'plan_actual': plan_info['plan'].nombre,
+                'es_trial': plan_info['es_trial'],
+                'dias_restantes_trial': None,
+                'pacientes_hoy': 0,
+                'limite_hoy': plan_info['plan'].limite_pacientes_diario if plan_info['plan'] else 10,
+                'dia_trial_actual': None,
+                'fecha_fin_plan': plan_info['fecha_fin'],
+                'limite_alcanzado': False
+            }
+        
+        # Obtener el objeto limite_diario
+        limite_diario = limite_info.get('limite_diario')
+        
+        # Si no hay limite_diario, crear uno básico
+        if not limite_diario:
+            return {
+                'plan_actual': plan_info['plan'].nombre,
+                'es_trial': plan_info['es_trial'],
+                'dias_restantes_trial': None,
+                'pacientes_hoy': 0,
+                'limite_hoy': plan_info['plan'].limite_pacientes_diario if plan_info['plan'] else 10,
+                'dia_trial_actual': None,
+                'fecha_fin_plan': plan_info['fecha_fin'],
+                'limite_alcanzado': False
+            }
         
         # Calcular días restantes de trial
         dias_restantes = None
@@ -239,11 +273,11 @@ class PlanService:
             'plan_actual': plan_info['plan'].nombre,
             'es_trial': plan_info['es_trial'],
             'dias_restantes_trial': dias_restantes,
-            'pacientes_hoy': limite_diario.contador_pacientes,
-            'limite_hoy': limite_diario.limite_actual,
-            'dia_trial_actual': limite_diario.dia_numero_trial if limite_diario.es_dia_trial else None,
+            'pacientes_hoy': limite_diario.contador_pacientes if hasattr(limite_diario, 'contador_pacientes') else 0,
+            'limite_hoy': limite_diario.limite_actual if hasattr(limite_diario, 'limite_actual') else 10,
+            'dia_trial_actual': limite_diario.dia_numero_trial if hasattr(limite_diario, 'dia_numero_trial') and limite_diario.es_dia_trial else None,
             'fecha_fin_plan': plan_info['fecha_fin'],
-            'limite_alcanzado': limite_diario.contador_pacientes >= limite_diario.limite_actual
+            'limite_alcanzado': (limite_diario.contador_pacientes >= limite_diario.limite_actual) if hasattr(limite_diario, 'contador_pacientes') and hasattr(limite_diario, 'limite_actual') else False
         }
     
     @staticmethod

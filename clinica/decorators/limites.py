@@ -27,7 +27,7 @@ def verificar_limite_pacientes(f):
             if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return jsonify({'success': False, 'error': 'No tienes un plan activo'}), 403
             flash('No tienes un plan activo. Por favor, contacta al administrador.', 'danger')
-            return redirect(url_for('main.index'))
+            return redirect(url_for('main.dashboard'))
         
         if not verificacion['puede_crear']:
             # Registrar intento de exceder límite
@@ -52,7 +52,7 @@ def verificar_limite_pacientes(f):
                 }), 429  # 429 Too Many Requests
             
             flash(f'Límite diario alcanzado: {verificacion["limite_diario"].contador_pacientes}/{verificacion["limite_diario"].limite_actual} pacientes hoy. Vuelve mañana o actualiza tu plan.', 'warning')
-            return redirect(url_for('main.index'))
+            return redirect(url_for('main.dashboard'))
         
         return f(*args, **kwargs)
     
@@ -113,7 +113,7 @@ def solo_lectura_si_expirado(f):
         if usuario_plan.fecha_fin and usuario_plan.fecha_fin < datetime.utcnow():
             if request.method in ['POST', 'PUT', 'DELETE', 'PATCH']:
                 flash('Tu suscripción ha expirado. Solo puedes ver información. Suscríbete para editar.', 'warning')
-                return redirect(request.referrer or url_for('main.index'))
+                return redirect(request.referrer or url_for('main.dashboard'))
         
         return f(*args, **kwargs)
     
