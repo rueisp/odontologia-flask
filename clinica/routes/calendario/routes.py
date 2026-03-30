@@ -8,6 +8,7 @@ import pytz
 from ...models import db, Cita, Paciente
 from clinica.campos_activos import CAMPOS_PACIENTE_ACTIVOS
 from . import calendario_bp
+from ...decorators.limites import verificar_suscripcion_activa
 
 NOMBRES_MESES_ESP = [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -60,11 +61,14 @@ def construir_dias_del_mes(anio, mes, citas_del_mes_obj, dia_hoy_local, mes_hoy_
 
 @calendario_bp.route('/')
 @login_required
+@verificar_suscripcion_activa  # 🔒 Paso 1: Bloquea el acceso si el plan expiró
 def mostrar_calendario():
     local_timezone = pytz.timezone('America/Bogota')
     now_in_local_tz = datetime.now(local_timezone)
+    
     anio_actual = request.args.get('anio', default=now_in_local_tz.year, type=int)
     mes_actual = request.args.get('mes', default=now_in_local_tz.month, type=int)
+    
     dia_hoy_local = now_in_local_tz.day
     mes_hoy_local = now_in_local_tz.month
     anio_hoy_local = now_in_local_tz.year
@@ -72,10 +76,11 @@ def mostrar_calendario():
     try:
         date(anio_actual, mes_actual, 1)
     except ValueError:
-        flash("Mes o año inválido.", "warning")
         anio_actual = now_in_local_tz.year
         mes_actual = now_in_local_tz.month
 
+    # 🛡️ Paso 2: Consulta blindada. 
+    # Filtramos directamente por odontologo_id == current_user.id
     query_citas = Cita.query.options(
         db.load_only(
             Cita.id, Cita.paciente_id, Cita.fecha, Cita.hora, Cita.motivo,
@@ -84,54 +89,31 @@ def mostrar_calendario():
         )
     ).filter(
         Cita.is_deleted == False,
+        Cita.odontologo_id == current_user.id,  # ✨ CLAVE: Solo mis citas
         extract('year', Cita.fecha) == anio_actual,
         extract('month', Cita.fecha) == mes_actual
     )
     
-    if not current_user.is_admin:
-        from ...models import Paciente
-        paciente_ids_subq = db.session.query(Paciente.id).filter(
-            Paciente.odontologo_id == current_user.id,
-            Paciente.is_deleted == False
-        ).subquery()
-        query_citas = query_citas.filter(
-            or_(
-                Cita.paciente_id.in_(paciente_ids_subq),
-                Cita.paciente_id == None
-            )
-        )
-    else:
-        from ...models import Paciente
-        query_citas = query_citas.outerjoin(
-            Paciente, Cita.paciente_id == Paciente.id
-        ).filter(
-            or_(
-                Paciente.is_deleted == False,
-                Cita.paciente_id == None
-            )
-        )
+    # --- Nota: He eliminado los bloques "if not current_user.is_admin" ---
+    # En un SaaS, cada doctor es "dueño" de su espacio, por lo que 
+    # filtrar por su ID es suficiente y más seguro.
 
     citas_del_mes = query_citas.order_by(Cita.fecha, Cita.hora).all()
     current_full_path_for_template = request.full_path
 
     citas_para_construir = []
     for cita_obj in citas_del_mes:
+        # Lógica para obtener el nombre (simplificada)
         paciente_nombre_completo = "Paciente sin registrar"
         if cita_obj.paciente_id:
             from ...models import Paciente
             paciente = Paciente.query.get(cita_obj.paciente_id)
             if paciente and not paciente.is_deleted:
                 paciente_nombre_completo = f"{paciente.nombres} {paciente.apellidos}"
-            else:
-                if cita_obj.paciente_nombres_str and cita_obj.paciente_apellidos_str:
-                    paciente_nombre_completo = f"{cita_obj.paciente_nombres_str} {cita_obj.paciente_apellidos_str}"
-                elif cita_obj.paciente_nombres_str:
-                    paciente_nombre_completo = cita_obj.paciente_nombres_str
         else:
-            if cita_obj.paciente_nombres_str and cita_obj.paciente_apellidos_str:
-                paciente_nombre_completo = f"{cita_obj.paciente_nombres_str} {cita_obj.paciente_apellidos_str}"
-            elif cita_obj.paciente_nombres_str:
-                paciente_nombre_completo = cita_obj.paciente_nombres_str
+            nombres = cita_obj.paciente_nombres_str or ""
+            apellidos = cita_obj.paciente_apellidos_str or ""
+            paciente_nombre_completo = f"{nombres} {apellidos}".strip() or "Paciente sin registrar"
         
         citas_para_construir.append({
             'id': cita_obj.id,
@@ -151,6 +133,7 @@ def mostrar_calendario():
 
     dias_render = construir_dias_del_mes(anio_actual, mes_actual, citas_para_construir,
                                          dia_hoy_local, mes_hoy_local, anio_hoy_local)
+    
     nombre_mes_actual_display = NOMBRES_MESES_ESP[mes_actual-1]
 
     return render_template('calendario.html',

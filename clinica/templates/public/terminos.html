@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Términos y Condiciones - CloudentApp</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+    <style>
+        .legal-content { padding: 120px 0 80px; max-width: 800px; margin: 0 auto; }
+        .legal-content h2 { color: #2c3e50; margin-bottom: 30px; border-bottom: 2px solid #27ae60; padding-bottom: 10px; }
+        .legal-content h4 { color: #2c3e50; margin-top: 25px; margin-bottom: 10px; }
+        .legal-content p, .legal-content li { font-size: 1.1rem; color: #444; margin-bottom: 15px; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #27ae60; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container legal-content">
+        <a href="/" class="back-link">← Volver al inicio</a>
+        <h2>Términos y Condiciones de CloudentApp</h2>
+        <p><strong>Fecha de entrada en vigencia:</strong> 26 de febrero de 2026</p>
+        
+        <h4>1. Aceptación de los Términos</h4>
+        <p>Al registrarse y utilizar CloudentApp, el odontólogo usuario acepta íntegramente estos Términos y Condiciones.</p>
+        
+        <h4>2. Naturaleza del Servicio</h4>
+        <p>CloudentApp es una <strong>herramienta de apoyo administrativo</strong>. No constituye un sistema de historia clínica oficial ni reemplaza los registros exigidos por la normativa sanitaria colombiana (Resolución 3100 de 2019).</p>
+        
+        <h4>3. Responsabilidad del Usuario</h4>
+        <p>El Usuario es un profesional independiente y único responsable por la veracidad de los datos y por obtener los consentimientos de sus pacientes conforme a la Ley 1581 de 2012.</p>
+        
+        <h4>4. Suscripciones y Pagos</h4>
+        <ul>
+            <li><strong>Prueba gratuita:</strong> 7 días con límite diario de pacientes.</li>
+            <li><strong>Planes de Pago:</strong> Basico ($20,000 COP/mes) y Pro ($30,000 COP/mes).</li>
+            <li>La activación se realiza tras el reporte de pago manual.</li>
+        </ul>
+        
+        <h4>5. Cancelación y Modo Solo Lectura</h4>
+        <p>Al vencer la suscripción, la cuenta entrará en modo **Solo Lectura**. El usuario podrá consultar y exportar sus datos existentes, pero no podrá crear nuevos registros hasta realizar el pago.</p>
+        
+        <h4>6. Legislación Aplicable</h4>
+        <p>Estos Términos se rigen por las leyes de la República de Colombia.</p>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>© 2026 CloudentApp - Creado por un dentista para dentistas</p>
+        </div>
+    </footer>
+</body>
+</html>

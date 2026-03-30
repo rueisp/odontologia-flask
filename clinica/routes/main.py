@@ -9,6 +9,7 @@ from clinica import db
 from sqlalchemy import func, extract
 from sqlalchemy.orm import load_only
 import locale
+from clinica.decorators.limites import verificar_suscripcion_activa
 
 
 # Intentar configurar locale en español
@@ -37,6 +38,7 @@ def inicio():
 
 @main_bp.route("/dashboard")
 @login_required
+@verificar_suscripcion_activa
 def dashboard():
     # 1. Fecha y Hora Local
     local_timezone = pytz.timezone('America/Bogota')
@@ -402,3 +404,11 @@ def registro():
 @login_required
 def test_simple():
     return render_template('test_simple.html')
+
+@main_bp.route('/terminos')
+def terminos():
+    return render_template('public/terminos.html')
+
+@main_bp.route('/privacidad')
+def privacidad():
+    return render_template('public/privacidad.html')

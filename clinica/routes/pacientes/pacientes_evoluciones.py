@@ -2,9 +2,9 @@
 from flask import Blueprint, redirect, url_for, flash, request, render_template, current_app
 from flask_login import login_required, current_user
 from sqlalchemy.orm import load_only
-from ..extensions import db
-from ..models import Paciente, Evolucion
-from ..campos_activos import load_only_evolucion_activo
+from ...extensions import db
+from ...models import Paciente, Evolucion
+from ...campos_activos import load_only_evolucion_activo
 
 from datetime import date, datetime
 import pytz

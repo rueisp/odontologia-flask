@@ -257,7 +257,7 @@
                                 </p>
                             </div>
                             <div class="ms-2">
-                                <a href="{{ url_for('evoluciones.editar_evolucion', id=evolucion.id) }}"
+                                <a href="{{ url_for('pacientes.editar_evolucion', id=evolucion.id) }}"
                                 class="btn btn-sm btn-outline-secondary">
                                     Editar
                                 </a>
@@ -270,7 +270,7 @@
                 </div>
                 <hr>
                 <h4 class="h6 mb-3 mt-4">Añadir Nueva Evolución</h4>
-                <form action="{{ url_for('evoluciones.agregar_evolucion', paciente_id=paciente.id) }}" method="post" class="evolucion-form"> 
+                <form action="{{ url_for('pacientes.agregar_evolucion', paciente_id=paciente.id) }}" method="post" class="evolucion-form"> 
                     <div class="mb-3 position-relative">
                         <textarea id="evolucion-textarea" name="descripcion" class="form-control" rows="3" placeholder="Escribe aquí la nueva evolución..." required></textarea>
                         <button type="button" id="btn-dictado" class="btn-dictado" title="Dictar evolución">

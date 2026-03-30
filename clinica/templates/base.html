@@ -55,6 +55,23 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
+
+        <!-- 🔥 BANNER DE EXPIRACIÓN SAAS (COLOCAR AQUÍ) 🔥 -->
+        {% if estadisticas_plan and estadisticas_plan.alerta_expiracion and estadisticas_plan.alerta_expiracion.mostrar %}
+        <div class="mx-4 mt-4 {{ estadisticas_plan.alerta_expiracion.clase }} text-white px-6 py-3 rounded-2xl shadow-lg flex items-center justify-between animate-pulse">
+            <div class="flex items-center gap-3">
+                <i data-lucide="{{ estadisticas_plan.alerta_expiracion.icono }}" class="w-6 h-6 text-white"></i>
+                <span class="font-bold text-sm md:text-base">
+                    {{ estadisticas_plan.alerta_expiracion.mensaje }}
+                </span>
+            </div>
+            <a href="{{ url_for('planes.mostrar_planes') }}" 
+            class="bg-white text-gray-900 px-3 py-1.5 rounded-xl font-bold text-xs hover:bg-gray-100 transition-colors whitespace-nowrap ml-4">
+                VER PLANES
+            </a>
+        </div>
+        {% endif %}
+
     
         {% block content %}{% endblock %}
     </main>

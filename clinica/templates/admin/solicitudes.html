@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    
+    <!-- Encabezado con Título y Botón de Regreso -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Panel de Control SaaS</h1>
+            <p class="text-gray-600">Administra pagos y usuarios de CloudentApp</p>
+        </div>
+        
+        <!-- Botón para volver al Dashboard principal -->
+        <a href="{{ url_for('main.dashboard') }}" 
+           class="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 px-5 py-2.5 rounded-2xl font-bold transition-all border border-gray-200 shadow-sm hover:shadow-md transform active:scale-95">
+            <i data-lucide="layout-dashboard" class="w-5 h-5 text-purple-600"></i>
+            Ir al Dashboard
+        </a>
+    </div>
+
+    <!-- PESTAÑAS (Tabs simples con JS básico) -->
+    <div class="flex gap-4 mb-6 border-b border-gray-200">
+        <button onclick="switchTab('pagos')" id="btn-pagos" class="pb-4 px-4 font-bold border-b-2 border-purple-600 text-purple-600">
+            Pagos Pendientes ({{ solicitudes|length }})
+        </button>
+        <button onclick="switchTab('usuarios')" id="btn-usuarios" class="pb-4 px-4 font-bold text-gray-400 border-b-2 border-transparent">
+            Todos los Usuarios ({{ usuarios|length }})
+        </button>
+    </div>
+
+    <!-- SECCIÓN 1: PAGOS PENDIENTES -->
+    <div id="tab-pagos" class="block">
+        {% if solicitudes %}
+        <div class="bg-white shadow-xl rounded-2xl overflow-hidden">
+            <table class="w-full text-left">
+                <thead class="bg-gray-50 text-gray-500 text-sm">
+                    <tr>
+                        <th class="px-6 py-4">Usuario</th>
+                        <th class="px-6 py-4">Plan</th>
+                        <th class="px-6 py-4">Monto</th>
+                        <th class="px-6 py-4">Acción</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for s in solicitudes %} <!-- Aquí empieza la 's' -->
+                    <tr>
+                        <td class="px-6 py-4">
+                            <p class="font-bold">{{ s.usuario.username }}</p>
+                            <p class="text-xs text-gray-400">{{ s.usuario.email }}</p>
+                        </td>
+                        <td class="px-6 py-4 uppercase text-xs font-bold">{{ s.plan_nombre }}</td>
+                        <td class="px-6 py-4 font-bold text-green-600">${{ "{:,.0f}".format(s.monto_cop) }}</td>
+                        
+                        <!-- Los botones DEBEN estar aquí adentro para que reconozcan la 's' -->
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-2">
+                                <form action="{{ url_for('admin.aprobar_pago', solicitud_id=s.id) }}" method="POST">
+                                    <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-bold">
+                                        Aprobar
+                                    </button>
+                                </form>
+
+                                <form action="{{ url_for('admin.rechazar_solicitud', solicitud_id=s.id) }}" method="POST" 
+                                    onsubmit="return confirm('¿Borrar solicitud?');">
+                                    <button type="submit" class="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-bold">
+                                        Rechazar
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %} <!-- Aquí termina la 's'. Nada fuera de aquí puede usar s.id -->
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-center py-10 bg-white rounded-2xl text-gray-400">No hay pagos pendientes.</p>
+        {% endif %}
+    </div>
+
+    <!-- SECCIÓN 2: LISTA DE USUARIOS -->
+    <div id="tab-usuarios" class="hidden">
+        <div class="bg-white shadow-xl rounded-2xl overflow-hidden">
+            <table class="w-full text-left">
+                <thead class="bg-gray-50 text-gray-500 text-sm">
+                    <tr>
+                        <th class="px-6 py-4">Doctor / Usuario</th>
+                        <th class="px-6 py-4">Plan Actual</th>
+                        <th class="px-6 py-4">Vencimiento</th>
+                        <th class="px-6 py-4 text-center">Acciones Rápidas</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for u in usuarios %}
+                        {% set p_activo = u.planes|selectattr('estado', 'equalto', 'activo')|first %}
+                        <tr class="{% if u.is_admin %}bg-purple-50{% endif %}">
+                            <td class="px-6 py-4">
+                                <span class="font-bold text-gray-800">{{ u.username }}</span>
+                                {% if u.is_admin %}<span class="ml-2 bg-purple-200 text-purple-700 text-[10px] px-2 py-0.5 rounded-full">ADMIN</span>{% endif %}
+                                <p class="text-xs text-gray-400">{{ u.email }}</p>
+                            </td>
+                            <td class="px-6 py-4">
+                                {% if p_activo %}
+                                    <span class="text-sm font-semibold text-blue-600 uppercase">{{ p_activo.plan.nombre }}</span>
+                                    {% if p_activo.es_trial %}<span class="text-[10px] text-gray-400 block">Periodo Trial</span>{% endif %}
+                                {% else %}
+                                    <span class="text-sm text-gray-300">Sin plan</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4">
+                                {% if p_activo and p_activo.fecha_fin %}
+                                    <p class="text-sm font-mono">{{ p_activo.fecha_fin.strftime('%d/%m/%Y') }}</p>
+                                {% else %}
+                                    <p class="text-sm text-gray-300">--/--/----</p>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                {% if p_activo and not u.is_admin %}
+                                <form action="{{ url_for('admin.extender_plan', usuario_id=u.id) }}" method="POST">
+                                    <button class="text-xs bg-gray-100 hover:bg-purple-600 hover:text-white text-gray-600 px-3 py-1.5 rounded-lg transition-all font-bold">
+                                        +30 Días de Regalo
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    function switchTab(tab) {
+        const tabPagos = document.getElementById('tab-pagos');
+        const tabUsuarios = document.getElementById('tab-usuarios');
+        const btnPagos = document.getElementById('btn-pagos');
+        const btnUsuarios = document.getElementById('btn-usuarios');
+
+        if (tab === 'pagos') {
+            tabPagos.classList.replace('hidden', 'block');
+            tabUsuarios.classList.replace('block', 'hidden');
+            btnPagos.className = "pb-4 px-4 font-bold border-b-2 border-purple-600 text-purple-600";
+            btnUsuarios.className = "pb-4 px-4 font-bold text-gray-400 border-b-2 border-transparent";
+        } else {
+            tabPagos.classList.replace('block', 'hidden');
+            tabUsuarios.classList.replace('hidden', 'block');
+            btnUsuarios.className = "pb-4 px-4 font-bold border-b-2 border-purple-600 text-purple-600";
+            btnPagos.className = "pb-4 px-4 font-bold text-gray-400 border-b-2 border-transparent";
+        }
+    }
+</script>
+{% endblock %}

@@ -217,69 +217,80 @@ class PlanService:
 
     @staticmethod
     def obtener_estadisticas_usuario(usuario_id):
-        """Obtener estadísticas del usuario para mostrar en dashboard"""
         from datetime import datetime
         import pytz
+        from clinica.models import Usuario # Asegúrate de importar Usuario
         
-        # Usar zona horaria de Colombia
         colombia_tz = pytz.timezone('America/Bogota')
         fecha_hoy = datetime.now(colombia_tz).date()
         
-        # Obtener plan actual
+        # 1. Obtener datos del usuario
+        user = Usuario.query.get(usuario_id)
+        if not user:
+            return None
+
         plan_info = PlanService.obtener_plan_actual_usuario(usuario_id)
-        if not plan_info:
+        
+        # 2. Si NO es admin y no tiene plan, no devolvemos nada
+        if not plan_info and not user.is_admin:
             return None
         
-        # Obtener límite diario
+        # Si es admin pero no tiene registro de plan (puede pasar), 
+        # le asignamos valores por defecto para que no falle el dashboard
+        if not plan_info:
+            nombre_plan = "Administrador"
+            es_trial = False
+            fecha_fin = None
+            dias_restantes = 999
+        else:
+            nombre_plan = plan_info['plan'].nombre
+            es_trial = plan_info['es_trial']
+            fecha_fin = plan_info['fecha_fin']
+            # Calculamos días restantes reales
+            f_fin = fecha_fin.date() if hasattr(fecha_fin, 'date') else fecha_fin
+            dias_restantes = (f_fin - fecha_hoy).days
+
+        # 3. Obtener límite diario (uso de hoy)
         limite_info = PlanService.verificar_limite_diario(usuario_id, fecha_hoy)
-        
-        # Verificar si hay error en el límite
-        if not limite_info or 'error' in limite_info:
-            # Si hay error, devolver estadísticas básicas sin límite
-            return {
-                'plan_actual': plan_info['plan'].nombre,
-                'es_trial': plan_info['es_trial'],
-                'dias_restantes_trial': None,
-                'pacientes_hoy': 0,
-                'limite_hoy': plan_info['plan'].limite_pacientes_diario if plan_info['plan'] else 10,
-                'dia_trial_actual': None,
-                'fecha_fin_plan': plan_info['fecha_fin'],
-                'limite_alcanzado': False
-            }
-        
-        # Obtener el objeto limite_diario
         limite_diario = limite_info.get('limite_diario')
         
-        # Si no hay limite_diario, crear uno básico
-        if not limite_diario:
-            return {
-                'plan_actual': plan_info['plan'].nombre,
-                'es_trial': plan_info['es_trial'],
-                'dias_restantes_trial': None,
-                'pacientes_hoy': 0,
-                'limite_hoy': plan_info['plan'].limite_pacientes_diario if plan_info['plan'] else 10,
-                'dia_trial_actual': None,
-                'fecha_fin_plan': plan_info['fecha_fin'],
-                'limite_alcanzado': False
-            }
-        
-        # Calcular días restantes de trial
-        dias_restantes = None
-        if plan_info['es_trial'] and plan_info['fecha_fin']:
-            dias_restantes = (plan_info['fecha_fin'].date() - fecha_hoy).days
-            dias_restantes = max(0, dias_restantes)  # No negativo
-        
+        # --- Lógica de Alerta de Expiración ---
+        alerta = {
+            'mostrar': False,
+            'clase': '',
+            'mensaje': '',
+            'icono': ''
+        }
+
+        # 🔥 LA CLAVE: Si es Admin, NUNCA mostramos la alerta de expiración
+        if not user.is_admin:
+            if dias_restantes <= 0:
+                alerta = {
+                    'mostrar': True,
+                    'clase': 'bg-red-600',
+                    'mensaje': 'Tu plan ha expirado. Estás en modo "Solo Lectura".',
+                    'icono': 'alert-circle'
+                }
+            elif dias_restantes <= 3:
+                alerta = {
+                    'mostrar': True,
+                    'clase': 'bg-yellow-500',
+                    'mensaje': f'Tu acceso vence en {dias_restantes} días. Renueva ahora para evitar bloqueos.',
+                    'icono': 'clock'
+                }
+
         return {
-            'plan_actual': plan_info['plan'].nombre,
-            'es_trial': plan_info['es_trial'],
-            'dias_restantes_trial': dias_restantes,
-            'pacientes_hoy': limite_diario.contador_pacientes if hasattr(limite_diario, 'contador_pacientes') else 0,
-            'limite_hoy': limite_diario.limite_actual if hasattr(limite_diario, 'limite_actual') else 10,
-            'dia_trial_actual': limite_diario.dia_numero_trial if hasattr(limite_diario, 'dia_numero_trial') and limite_diario.es_dia_trial else None,
-            'fecha_fin_plan': plan_info['fecha_fin'],
-            'limite_alcanzado': (limite_diario.contador_pacientes >= limite_diario.limite_actual) if hasattr(limite_diario, 'contador_pacientes') and hasattr(limite_diario, 'limite_actual') else False
+            'plan_actual': nombre_plan,
+            'es_trial': es_trial,
+            'ya_uso_trial': PlanService.ya_uso_trial(usuario_id), # 🔥 AGREGA ESTA LÍNEA
+            'dias_restantes': "Ilimitado" if user.is_admin else dias_restantes,
+            'pacientes_hoy': limite_diario.contador_pacientes if limite_diario else 0,
+            'limite_hoy': "∞" if user.is_admin else (limite_diario.limite_actual if limite_diario else 10),
+            'fecha_fin_plan': fecha_fin,
+            'alerta_expiracion': alerta 
         }
     
+
     @staticmethod
     def verificar_expiraciones():
         """Verificar y desactivar planes expirados"""
@@ -297,3 +308,58 @@ class PlanService:
         
         db.session.commit()
         return len(expirados)
+    
+    @staticmethod
+    def activar_plan(usuario_id, plan_id):
+        """
+        Activa un plan para un usuario (usualmente tras verificar pago manual).
+        Establece 30 días de vigencia a partir de hoy.
+        """
+        from clinica.models import UsuarioPlan, Plan
+        from clinica import db
+        from datetime import datetime, timedelta
+        import pytz
+
+        colombia_tz = pytz.timezone('America/Bogota')
+        ahora = datetime.now(colombia_tz)
+
+        # 1. Desactivar cualquier plan anterior que esté 'activo' o 'trial'
+        UsuarioPlan.query.filter_by(usuario_id=usuario_id, estado='activo').update({'estado': 'expirado'})
+        
+        # 2. Obtener datos del nuevo plan
+        plan = Plan.query.get(plan_id)
+        if not plan:
+            return False, "Plan no encontrado"
+
+        # 3. Crear el nuevo registro de UsuarioPlan
+        # Si es el plan 'trial', son 7 días. Si es 'basico' o 'pro', son 30 días.
+        dias_vigencia = 7 if plan.nombre == 'trial' else 30
+        
+        nuevo_usuario_plan = UsuarioPlan(
+            usuario_id=usuario_id,
+            plan_id=plan_id,
+            estado='activo',
+            es_trial=(plan.nombre == 'trial'),
+            fecha_inicio=ahora,
+            fecha_fin=ahora + timedelta(days=dias_vigencia)
+        )
+
+        try:
+            db.session.add(nuevo_usuario_plan)
+            db.session.commit()
+            return True, f"Plan {plan.nombre} activado por {dias_vigencia} días."
+        except Exception as e:
+            db.session.rollback()
+            return False, f"Error al activar el plan: {str(e)}"
+        
+
+    @staticmethod
+    def ya_uso_trial(usuario_id):
+        """Revisa en el historial si el usuario ya tuvo un plan trial"""
+        from clinica.models import UsuarioPlan
+        # Buscamos cualquier registro que sea trial, sin importar si está activo o expirado
+        registro = UsuarioPlan.query.filter_by(
+            usuario_id=usuario_id, 
+            es_trial=True
+        ).first()
+        return registro is not None   

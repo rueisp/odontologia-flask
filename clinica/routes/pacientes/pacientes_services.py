@@ -8,11 +8,12 @@ import pytz
 from flask import request, jsonify, flash, current_app
 from sqlalchemy import or_
 from sqlalchemy.orm import load_only
-from ..extensions import db
+from ...extensions import db
 # IMPORTANTE: Asegúrate de importar EPS y Municipio aquí
-from ..models import Paciente, Cita, Evolucion, AuditLog
-from ..utils import allowed_file, convertir_a_fecha, extract_public_id_from_url
+from ...models import Paciente, Cita, Evolucion, AuditLog
+from ...utils import allowed_file, convertir_a_fecha, extract_public_id_from_url
 from clinica.campos_activos import load_only_paciente_activo, load_only_evolucion_activo
+from clinica.services.plan_service import PlanService # Agrega esta línea arriba
 # =========================================================================
 # === FUNCIONES AUXILIARES PARA CLOUDINARY ===
 # =========================================================================
@@ -385,6 +386,9 @@ def crear_paciente_service(form_data, files, usuario):
         # Guardar en base de datos
         db.session.add(nuevo_paciente)
         db.session.commit()
+
+                # 🔥 NUEVO: Incrementar el contador de pacientes del día para el SaaS
+        PlanService.incrementar_contador_paciente(usuario.id)
         
         # ==============================================================================
         # 4. DENTIGRAMA (si se envió)

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aviso de Privacidad - CloudentApp</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+    <style>
+        .legal-content { padding: 120px 0 80px; max-width: 800px; margin: 0 auto; }
+        .legal-content h2 { color: #2c3e50; margin-bottom: 30px; border-bottom: 2px solid #27ae60; padding-bottom: 10px; }
+        .legal-content h4 { color: #2c3e50; margin-top: 25px; margin-bottom: 10px; }
+        .legal-content p, .legal-content li { font-size: 1.1rem; color: #444; margin-bottom: 15px; text-align: justify; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #27ae60; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container legal-content">
+        <a href="/" class="back-link">← Volver al inicio</a>
+        <h2>Aviso de Privacidad</h2>
+        <p><strong>Última actualización:</strong> 26 de febrero de 2026</p>
+        
+        <h4>1. Responsable del Tratamiento</h4>
+        <p><strong>CloudentApp</strong> es una aplicación operada por [Tu Nombre], dentista emprendedor, actuando como proveedor tecnológico. Contacto: [tucorreo@ejemplo.com]</p>
+        
+        <h4>2. Información que Recolectamos</h4>
+        <p><strong>De los odontólogos usuarios:</strong> nombre, correo electrónico, número de contacto, especialidad.</p>
+        <p><strong>De los pacientes (gestionada por el odontólogo):</strong> nombres, datos de contacto, historia clínica, imágenes, odontograma. Esta información es almacenada por CloudentApp por cuenta y bajo la total responsabilidad del odontólogo usuario.</p>
+        
+        <h4>3. Finalidades del Tratamiento</h4>
+        <ul>
+            <li>Permitir la gestión de pacientes y citas por parte del odontólogo.</li>
+            <li>Almacenar la información que el odontólogo sube a la plataforma.</li>
+            <li>Mejorar nuestros servicios y soporte técnico.</li>
+            <li>Enviar comunicaciones sobre el servicio.</li>
+        </ul>
+        
+        <h4>4. Responsabilidad del Usuario (Odontólogo)</h4>
+        <p>El odontólogo usuario <strong>es el único responsable</strong> del tratamiento de los datos personales de sus pacientes, incluyendo datos sensibles de salud, conforme a la Ley 1581 de 2012. CloudentApp actúa únicamente como <strong>encargado del tratamiento</strong> y proveedor tecnológico.</p>
+        
+        <h4>5. Derechos de los Titulares</h4>
+        <p>Los odontólogos usuarios pueden conocer, actualizar, rectificar y solicitar la supresión de sus datos escribiendo a [tucorreo@ejemplo.com].</p>
+
+        <h4>6. Seguridad</h4>
+        <p>Implementamos medidas técnicas razonables (encriptación, acceso restringido) para proteger la información en nuestra base de datos Supabase.</p>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>© 2026 CloudentApp - Creado por un dentista para dentistas</p>
+        </div>
+    </footer>
+</body>
+</html>

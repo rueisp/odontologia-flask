@@ -44,31 +44,41 @@ def mostrar_planes():
 @planes_bp.route('/planes/elegir/<int:plan_id>')  
 @login_required
 def elegir_plan(plan_id):
-    """Permite al usuario cambiar de plan"""
     plan = Plan.query.get_or_404(plan_id)
 
     if plan.nombre == 'trial':
-        flash('El plan Trial se activa automáticamente. Por favor, elige un plan de pago.', 'warning')
-        return redirect(url_for('planes.mostrar_planes'))
-    
+        # 🔥 NUEVA SEGURIDAD:
+        if PlanService.ya_uso_trial(current_user.id):
+            flash('Ya has utilizado tu periodo de prueba anteriormente. Por favor, elige un plan de pago.', 'warning')
+            return redirect(url_for('planes.mostrar_planes'))
+        
+        # Si no lo ha usado, lo activamos
+        exito, mensaje = PlanService.activar_plan(current_user.id, plan.id)
+
+        if exito:
+            flash('¡Tu periodo de prueba de 7 días ha comenzado! Bienvenido.', 'success')
+            return redirect(url_for('main.dashboard')) # Ahora sí puede entrar
+        else:
+            flash(mensaje, 'danger')
+            return redirect(url_for('planes.mostrar_planes'))
+
+    # --- CASO 2: PLANES DE PAGO (Básico/Pro) ---
     try:
-        # Registrar la solicitud de pago
         solicitud_id, monto_cop = PagoService.registrar_solicitud_manual(
             user_id=current_user.id, 
             plan_id=plan.id, 
             plan_nombre=plan.nombre
         )
         
-        # Guardar en sesión para mostrarlo en mi_suscripcion
+        # Guardar en sesión para la UI
         session['plan_seleccionado'] = {
             'id': plan.id,
             'nombre': plan.nombre,
-            'precio': plan.precio_mensual,
+            'precio': plan.precio_cop, # Usamos el campo COP
             'solicitud_id': solicitud_id
         }
         
-        # Redirigir a mi_suscripcion
-        return redirect(url_for('planes.mi_suscripcion'))
+        return redirect(url_for('planes.instrucciones_pago', solicitud_id=solicitud_id))
 
     except Exception as e:
         flash(f'Error al procesar: {str(e)}', 'error')

@@ -167,7 +167,7 @@ class Plan(db.Model):
     limite_pacientes_diario = db.Column(db.Integer, nullable=False, default=10)
     precio_cop = db.Column(db.Integer, nullable=False, default=0) # <-- Precio fijo en Pesos Colombianos
     limite_pacientes_diario_primeros_7_dias = db.Column(db.Integer, nullable=False, default=20)
-    duracion_trial_dias = db.Column(db.Integer, nullable=False, default=30)  # Solo para trial
+    duracion_trial_dias = db.Column(db.Integer, nullable=False, default=7)  # Solo para trial
     caracteristicas = db.Column(db.JSON, nullable=True)  # Lista de características en JSON
     activo = db.Column(db.Boolean, default=True, nullable=False)
     orden = db.Column(db.Integer, default=0, nullable=False)  # Para ordenar en la UI

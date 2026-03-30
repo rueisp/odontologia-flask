@@ -154,29 +154,34 @@
                     {% endif %}
                 </ul>
 
-                <!-- Botón de acción -->
+                <!-- Botón de acción UNIFICADO -->
                 <div class="text-center">
                     {% if plan_actual and plan.id == plan_actual.id %}
-                    <button class="w-full bg-gray-300 text-gray-700 py-4 px-6 rounded-2xl font-bold text-lg cursor-not-allowed">
-                        Plan Actual
-                    </button>
-                    {% elif plan.nombre == 'trial' and estadisticas and estadisticas.es_trial %}
-                    <button class="w-full bg-gray-300 text-gray-700 py-4 px-6 rounded-2xl font-bold text-lg cursor-not-allowed">
-                        Trial Activo
-                    </button>
+                        <!-- CASO 1: Es el plan que tiene activo ahora -->
+                        <button class="w-full bg-gray-300 text-gray-700 py-4 px-6 rounded-2xl font-bold text-lg cursor-not-allowed">
+                            Plan Actual
+                        </button>
+
+                    {% elif plan.nombre == 'trial' and estadisticas_plan.ya_uso_trial %}
+                        <!-- CASO 2: Es la tarjeta de Trial pero YA lo usó antes -->
+                        <button class="w-full bg-gray-100 text-gray-400 py-4 px-6 rounded-2xl font-bold text-lg cursor-not-allowed border border-gray-200" disabled title="Solo se permite un trial por cuenta">
+                            Trial ya utilizado
+                        </button>
+
                     {% else %}
-                    <a href="{{ url_for('planes.elegir_plan', plan_id=plan.id) }}" 
-                    class="block w-full bg-black text-white py-4 px-6 rounded-2xl font-bold text-lg hover:bg-gray-800 transition-colors duration-300 text-center">
-                        {% if plan.precio_mensual == 0 %}
-                            Comenzar Trial Gratis
-                        {% else %}
-                            Elegir Plan
-                        {% endif %}
-                    </a>
+                        <!-- CASO 3: Planes disponibles para elegir o Trial disponible -->
+                        <a href="{{ url_for('planes.elegir_plan', plan_id=plan.id) }}" 
+                        class="block w-full bg-black text-white py-4 px-6 rounded-2xl font-bold text-lg hover:bg-gray-800 transition-colors duration-300 text-center">
+                            {% if plan.nombre == 'trial' %}
+                                Comenzar Trial Gratis
+                            {% else %}
+                                Elegir Plan
+                            {% endif %}
+                        </a>
                     {% endif %}
                     
-                    {% if plan.precio_mensual == 0 %}
-                    <p class="text-sm text-gray-500 mt-3">Sin tarjeta de crédito requerida</p>
+                    {% if plan.nombre == 'trial' %}
+                        <p class="text-sm text-gray-500 mt-3">Sin tarjeta de crédito requerida</p>
                     {% endif %}
                 </div>
             </div>
@@ -202,10 +207,11 @@
             </div>
         </div>
 
-        <!-- Enlace a gestión de suscripción -->
+        <!-- Enlace a gestión de suscripción (CORREGIDO) -->
         {% if estadisticas and not estadisticas.es_trial %}
         <div class="text-center mt-8">
-            <a href="{{ url_for('planes.elegir_plan') }}" class="text-blue-600 hover:text-blue-800 font-medium">
+            <!-- Cambiamos 'elegir_plan' por 'mi_suscripcion' -->
+            <a href="{{ url_for('planes.mi_suscripcion') }}" class="text-blue-600 hover:text-blue-800 font-medium">
                 Gestionar mi suscripción →
             </a>
         </div>

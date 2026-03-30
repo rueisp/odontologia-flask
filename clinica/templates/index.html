@@ -90,8 +90,18 @@
                     <a href="{{ url_for('calendario.mostrar_calendario') }}" class="block py-4 px-5 rounded-2xl text-gray-600 hover:bg-black hover:text-white transition-all duration-200 flex items-center font-semibold text-lg hover:shadow-md"><i data-lucide="calendar-days" class="w-6 h-6 inline-block mr-4"></i> Agendar</a>
                     <a href="{{ url_for('papelera.ver_papelera') }}" class="block py-4 px-5 rounded-2xl text-gray-600 hover:bg-black hover:text-white transition-all duration-200 flex items-center font-semibold text-lg hover:shadow-md"><i data-lucide="trash-2" class="w-6 h-6 inline-block mr-4"></i> Papelera</a>
                     <a href="{{ url_for('pagos.lista_pagos') }}" class="block py-4 px-5 rounded-2xl text-gray-600 hover:bg-black hover:text-white transition-all duration-200 flex items-center font-semibold text-lg hover:shadow-md"><i data-lucide="credit-card" class="w-6 h-6 inline-block mr-4"></i> Pagos</a>
+
+                    <!-- 🔥 BOTÓN DE ADMINISTRACIÓN (SOLO PARA EL DUEÑO DEL SAAS) 🔥 -->
+                    {% if current_user.is_admin %}
+                    <a href="{{ url_for('admin.lista_solicitudes') }}" class="block py-4 px-5 rounded-2xl text-purple-600 hover:bg-purple-600 hover:text-white transition-all duration-200 flex items-center font-semibold text-lg hover:shadow-md border border-purple-100">
+                        <i data-lucide="shield-check" class="w-6 h-6 inline-block mr-4"></i> 
+                        Admin SaaS
+                    </a>
+                    {% endif %}
                 </div>
+
                 <hr class="my-8 border-gray-300">
+                
                 <div class="space-y-3">
                     <a href="{{ url_for('main.perfil') }}" class="block py-4 px-5 rounded-2xl text-gray-600 hover:bg-black hover:text-white transition-all duration-200 flex items-center font-semibold text-lg hover:shadow-md"><i data-lucide="user-cog" class="w-6 h-6 inline-block mr-4"></i> Mi Perfil</a>
                     <a href="{{ url_for('main.logout') }}" class="block py-4 px-5 rounded-2xl text-gray-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200 flex items-center font-semibold text-lg border border-transparent hover:border-red-100"><i data-lucide="log-out" class="w-6 h-6 inline-block mr-4"></i> Salir</a>
@@ -119,6 +129,7 @@
                             <i data-lucide="calendar-days" class="w-4 h-4"></i> Agendar
                         </button>
                     </a>
+                    
                 </div>
 
                 <!-- Mensajes Flash -->

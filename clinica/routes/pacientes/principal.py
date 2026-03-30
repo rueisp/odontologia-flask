@@ -1,24 +1,29 @@
-"""
-Rutas HTTP para el módulo de pacientes.
+# clinica/routes/pacientes/principal.py
 
-Este módulo contiene solo las rutas HTTP, delegando la lógica de negocio
-a pacientes_services.py para mejor mantenibilidad.
-"""
-
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
+from flask import render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
 from datetime import date, datetime
-from clinica.models import Paciente, PagoPaciente
-from ..extensions import db
-import json 
-from sqlalchemy import or_
-import cloudinary.uploader  # <--- AGREGA ESTO
-from clinica.decorators.limites import verificar_limite_pacientes
-from sqlalchemy.orm import load_only
-from clinica.campos_activos import load_only_paciente_activo
 import pytz
-# Importar servicios
-# Importar servicios de pacientes
+from sqlalchemy import or_
+from sqlalchemy.orm import load_only
+
+from clinica.routes.pacientes.pacientes_evoluciones import agregar_evolucion_service
+
+# Extensiones y Modelos (Subimos tres niveles para llegar a la raíz de clinica)
+from ...extensions import db
+from ...models import Paciente, PagoPaciente, PagoUnificado, Cita
+from ...decorators.limites import (
+    verificar_limite_pacientes,
+    verificar_suscripcion_activa,
+    solo_lectura_si_expirado
+)
+from ...campos_activos import load_only_paciente_activo
+
+# IMPORTANTE: Traemos el blueprint desde el __init__.py de ESTA carpeta
+from . import pacientes_bp 
+
+# Importar los servicios (están en la misma carpeta, por eso usamos un solo punto '.')
+# NOTA: Asegúrate que estos archivos existan en esta carpeta
 from .pacientes_services import (
     listar_pacientes_service,
     obtener_paciente_service,
@@ -26,20 +31,11 @@ from .pacientes_services import (
     editar_paciente_service,
     borrar_paciente_service
 )
-from clinica.decorators.limites import (
-    verificar_limite_pacientes,
-    verificar_suscripcion_activa
-)
-
-# Importar servicios de evoluciones
-from .pacientes_evoluciones import agregar_evolucion_service
-from clinica.decorators.limites import solo_lectura_si_expirado
-
-pacientes_bp = Blueprint('pacientes', __name__, url_prefix='/pacientes')
 
 
 @pacientes_bp.route('/crear', methods=['GET', 'POST'])
 @login_required
+@solo_lectura_si_expirado # <-- Bloquea el POST si expiró
 @verificar_suscripcion_activa
 @verificar_limite_pacientes
 def crear_paciente():
@@ -60,7 +56,7 @@ def crear_paciente():
 
 @pacientes_bp.route('/lista', methods=['GET'])
 @login_required
-@verificar_suscripcion_activa
+@solo_lectura_si_expirado
 def lista_pacientes():
     page = request.args.get('page', 1, type=int)
     search_query = request.args.get('buscar', '').strip()
@@ -92,7 +88,7 @@ def lista_pacientes():
 
 @pacientes_bp.route('/<int:id>', methods=['GET', 'POST'])
 @login_required
-@verificar_suscripcion_activa
+@solo_lectura_si_expirado
 def mostrar_paciente(id):
     """Muestra un paciente y permite agregar evoluciones"""
     if request.method == 'POST':
@@ -120,7 +116,6 @@ def mostrar_paciente(id):
 
 @pacientes_bp.route('/<int:id>/editar', methods=['GET', 'POST'])
 @login_required
-@verificar_suscripcion_activa
 @solo_lectura_si_expirado
 def editar_paciente(id):
     """Edita un paciente existente - Versión simplificada"""
@@ -165,7 +160,6 @@ def editar_paciente(id):
 
 @pacientes_bp.route('/<int:id>/borrar', methods=['POST'])
 @login_required
-@verificar_suscripcion_activa
 @solo_lectura_si_expirado
 def borrar_paciente(id):
     """Borra un paciente (soft delete)"""
@@ -208,6 +202,7 @@ def pagos_paciente(paciente_id):
 # En routes/pacientes.py - NUEVA RUTA (reemplaza a agregar_pago_paciente)
 @pacientes_bp.route('/<int:paciente_id>/pagos/nuevo', methods=['POST'])
 @login_required
+@solo_lectura_si_expirado # <-- Agregado: Evita que registren ingresos si no han pagado el SaaS
 def agregar_pago_paciente_unificado_nuevo(paciente_id):
     """Agrega un nuevo pago usando el sistema unificado"""
     from clinica.models import PagoUnificado, Paciente
@@ -262,6 +257,7 @@ def agregar_pago_paciente_unificado_nuevo(paciente_id):
 
 @pacientes_bp.route('/pago/<int:pago_id>/editar', methods=['GET', 'POST'])
 @login_required
+@solo_lectura_si_expirado # <-- Agregado
 def editar_pago_paciente(pago_id):
     """Edita un pago existente (sistema unificado)"""
     from clinica.models import PagoUnificado, Paciente
@@ -312,6 +308,7 @@ def editar_pago_paciente(pago_id):
 
 @pacientes_bp.route('/pago/<int:pago_id>/borrar', methods=['POST'])
 @login_required
+@solo_lectura_si_expirado # <-- Agregado
 def borrar_pago_paciente(pago_id):
     """Elimina un pago del sistema unificado"""
     from clinica.models import PagoUnificado, Paciente
@@ -342,80 +339,5 @@ def borrar_pago_paciente(pago_id):
         return redirect(url_for('pagos.lista_pagos'))
     
     
-    
-@pacientes_bp.route('/obtener_paciente_ajax/<int:id>', methods=['GET'])
-@login_required
-def obtener_paciente_ajax(id):
-    """Endpoint JSON para el panel derecho del dashboard"""
-    try:
-        from .pacientes_services import obtener_paciente_service
-        from clinica.models import Cita
-        from datetime import date, datetime
-        from sqlalchemy import or_
-        
-        paciente_data, evoluciones, public_id = obtener_paciente_service(id, current_user)
-        
-        # --- OBTENER DATOS DE CITAS REALES ---
-        # Última cita (fecha anterior a hoy)
-        ultima_cita = Cita.query.filter(
-            Cita.paciente_id == id,
-            Cita.is_deleted == False,
-            Cita.fecha < date.today()
-        ).order_by(
-            Cita.fecha.desc(), 
-            Cita.hora.desc()
-        ).first()
-        
-        # Próxima cita (fecha posterior a hoy, o hoy pero con hora posterior)
-        proxima_cita = Cita.query.filter(
-            Cita.paciente_id == id,
-            Cita.is_deleted == False,
-            or_(
-                Cita.fecha > date.today(),
-                (Cita.fecha == date.today()) & (Cita.hora > datetime.now().time())
-            )
-        ).order_by(Cita.fecha, Cita.hora).first()
-        
-        # Formatear última cita
-        ultima_cita_info = "No hay citas anteriores"
-        if ultima_cita:
-            fecha_str = ultima_cita.fecha.strftime('%d/%m/%Y')
-            hora_str = ultima_cita.hora.strftime('%H:%M') if ultima_cita.hora else ''
-            motivo = ultima_cita.motivo or 'Sin motivo'
-            ultima_cita_info = f"{fecha_str} {hora_str} - {motivo}"
-        
-        # Formatear próxima cita
-        proxima_cita_info = "No tiene próximas citas"
-        if proxima_cita:
-            fecha_str = proxima_cita.fecha.strftime('%d/%m/%Y')
-            hora_str = proxima_cita.hora.strftime('%H:%M') if proxima_cita.hora else ''
-            motivo = proxima_cita.motivo or 'Sin motivo'
-            proxima_cita_info = f"{fecha_str} {hora_str} - {motivo}"
-        
-        # Mapear los campos
-        response_data = {
-            'id': paciente_data.get('id'),
-            'nombre': f"{paciente_data.get('primer_nombre', '')} {paciente_data.get('primer_apellido', '')}".strip(),
-            'documento': paciente_data.get('documento', 'No especificado'),
-            'telefono': paciente_data.get('telefono', 'No especificado'),
-            'edad': paciente_data.get('edad', 'No especificada'),
-            'fecha_nacimiento': paciente_data.get('fecha_nacimiento', 'No especificado'),
-            'direccion': paciente_data.get('direccion', 'No especificado'),
-            'barrio': paciente_data.get('barrio', 'No especificado'),
-            'email': paciente_data.get('email', 'No especificado'),
-            'alergias': paciente_data.get('alergias', 'No especificado'),
-            'motivo_consulta': paciente_data.get('motivo_consulta', 'No especificado'),
-            'enfermedad_actual': paciente_data.get('enfermedad_actual', 'No especificado'),
-            'observaciones': paciente_data.get('observaciones', 'No especificado'),
-            'dentigrama_url': paciente_data.get('dentigrama_canvas', None),
-            'ultima_cita_info': ultima_cita_info,
-            'proxima_cita_paciente_info': proxima_cita_info
-        }
-        
-        return jsonify(response_data)
-        
-    except Exception as e:
-        print(f"Error en obtener_paciente_ajax: {e}")
-        return jsonify({'error': str(e)}), 500
     
 

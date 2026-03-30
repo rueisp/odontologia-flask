@@ -92,29 +92,29 @@ def verificar_suscripcion_activa(f):
 
 
 def solo_lectura_si_expirado(f):
-    """
-    Decorador que permite solo lectura si el plan expiró.
-    Útil para rutas de edición/eliminación.
-    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             return redirect(url_for('main.login'))
         
-        # Verificar plan actual
         plan_info = PlanService.obtener_plan_actual_usuario(current_user.id)
-        
         if not plan_info:
             return f(*args, **kwargs)
         
         usuario_plan = plan_info['usuario_plan']
         
-        # Si el plan expiró, solo permitir GET (lectura)
+        # Si el plan expiró y se intenta escribir (POST, PUT, DELETE)
         if usuario_plan.fecha_fin and usuario_plan.fecha_fin < datetime.utcnow():
             if request.method in ['POST', 'PUT', 'DELETE', 'PATCH']:
+                # Detectar si es AJAX o JSON
+                if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({
+                        'success': False, 
+                        'error': 'Tu suscripción ha expirado. Modo solo lectura activado.'
+                    }), 403
+                
                 flash('Tu suscripción ha expirado. Solo puedes ver información. Suscríbete para editar.', 'warning')
                 return redirect(request.referrer or url_for('main.dashboard'))
         
         return f(*args, **kwargs)
-    
     return decorated_function

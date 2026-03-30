@@ -13,6 +13,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 import re
 import pytz 
 from sqlalchemy.orm import load_only  # <--- ESTA LÍNEA FALTABA
+from ..decorators.limites import verificar_suscripcion_activa
 
 # --- Importaciones de tus Modelos ---
 from ..models import db, Paciente, Evolucion
@@ -23,6 +24,7 @@ export_bp = Blueprint('export', __name__)
 
 # --- Exportar a Excel (OPTIMIZADO) ---
 @export_bp.route('/exportar_excel/<int:id>')
+@verificar_suscripcion_activa # 🔒 Protegido
 def exportar_excel(id):
     # Cargar solo el paciente con los campos que vamos a exportar
     paciente = db.session.query(Paciente).options(
@@ -88,6 +90,7 @@ def exportar_excel(id):
 
 # --- Exportar a Word (OPTIMIZADO) ---
 @export_bp.route('/exportar_word/<int:id>')
+@verificar_suscripcion_activa # 🔒 Protegido
 def exportar_word(id):
     # Cargar paciente con campos necesarios
     paciente = db.session.query(Paciente).options(
