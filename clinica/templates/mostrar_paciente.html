@@ -135,7 +135,7 @@
                 title="Haz clic para ampliar">
             
             <div class="header-info">
-                <h1>{{ paciente.primer_nombre }} {{ paciente.primer_apellido }}</h1>
+                <h1>{{ paciente.nombres }} {{ paciente.apellidos }}</h1>
                 <p>ID de Paciente: {{ paciente.id }}</p>
             </div>
         </div>
@@ -167,17 +167,11 @@
                     <!-- Fila 1: Nombres y Apellidos -->
                     <div class="data-item">
                         <span class="label">Nombres</span>
-                        <span class="value">
-                            {{ paciente.primer_nombre }}
-                            {% if paciente.segundo_nombre %}{{ " " ~ paciente.segundo_nombre }}{% endif %}
-                        </span>
+                        <span class="value">{{ paciente.nombres or 'N/A' }}</span>
                     </div>
                     <div class="data-item">
                         <span class="label">Apellidos</span>
-                        <span class="value">
-                            {{ paciente.primer_apellido }}
-                            {% if paciente.segundo_apellido %}{{ " " ~ paciente.segundo_apellido }}{% endif %}
-                        </span>
+                        <span class="value">{{ paciente.apellidos or 'N/A' }}</span>
                     </div>
 
                     <!-- Fila 2: Documento y Fecha Nacimiento -->
@@ -335,7 +329,7 @@
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="modalDentigramaLabel">Dentigrama de {{ paciente.primer_nombre }}</h5>
+                <h5 class="modal-title" id="modalDentigramaLabel">Dentigrama de {{ paciente.nombres }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">

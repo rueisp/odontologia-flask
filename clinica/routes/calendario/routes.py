@@ -79,8 +79,7 @@ def mostrar_calendario():
         anio_actual = now_in_local_tz.year
         mes_actual = now_in_local_tz.month
 
-    # 🛡️ Paso 2: Consulta blindada. 
-    # Filtramos directamente por odontologo_id == current_user.id
+    # 🛡️ Consulta optimizada
     query_citas = Cita.query.options(
         db.load_only(
             Cita.id, Cita.paciente_id, Cita.fecha, Cita.hora, Cita.motivo,
@@ -89,27 +88,35 @@ def mostrar_calendario():
         )
     ).filter(
         Cita.is_deleted == False,
-        Cita.odontologo_id == current_user.id,  # ✨ CLAVE: Solo mis citas
+        Cita.odontologo_id == current_user.id,
         extract('year', Cita.fecha) == anio_actual,
         extract('month', Cita.fecha) == mes_actual
     )
-    
-    # --- Nota: He eliminado los bloques "if not current_user.is_admin" ---
-    # En un SaaS, cada doctor es "dueño" de su espacio, por lo que 
-    # filtrar por su ID es suficiente y más seguro.
 
     citas_del_mes = query_citas.order_by(Cita.fecha, Cita.hora).all()
     current_full_path_for_template = request.full_path
 
+    # ============================================================
+    # OPTIMIZACIÓN N+1: Una sola consulta para todos los pacientes
+    # ============================================================
+    # 1. Recolectar todos los IDs de pacientes únicos
+    pacientes_ids = list(set([c.paciente_id for c in citas_del_mes if c.paciente_id]))
+
+    # 2. Una sola consulta para cargar todos los pacientes
+    pacientes_dict = {}
+    if pacientes_ids:
+        from ...models import Paciente
+        pacientes = Paciente.query.filter(Paciente.id.in_(pacientes_ids)).all()
+        pacientes_dict = {p.id: p for p in pacientes}
+
+    # 3. Construir citas sin consultas adicionales
     citas_para_construir = []
     for cita_obj in citas_del_mes:
-        # Lógica para obtener el nombre completo del paciente
         paciente_nombre_completo = "Paciente sin registrar"
         
         if cita_obj.paciente_id:
-            # Intentar cargar paciente real
-            from ...models import Paciente
-            paciente = Paciente.query.get(cita_obj.paciente_id)
+            # Usar el paciente del diccionario (sin consulta extra)
+            paciente = pacientes_dict.get(cita_obj.paciente_id)
             if paciente and not paciente.is_deleted:
                 paciente_nombre_completo = f"{paciente.nombres} {paciente.apellidos}"
             else:
@@ -133,7 +140,7 @@ def mostrar_calendario():
             'estado': cita_obj.estado,
             'paciente_id': cita_obj.paciente_id,
             'paciente_nombre_completo': paciente_nombre_completo,
-            'paciente_telefono_str': cita_obj.pre_telefono or "",  # Usar pre_telefono
+            'paciente_telefono_str': cita_obj.pre_telefono or "",
             'edit_url': url_for('calendario.editar_cita', cita_id=cita_obj.id, next=current_full_path_for_template),
             'delete_url': url_for('calendario.eliminar_cita', cita_id=cita_obj.id, next=current_full_path_for_template),
             'next_url_encoded': quote_plus(current_full_path_for_template)
@@ -154,6 +161,8 @@ def mostrar_calendario():
                         mes_hoy=mes_hoy_local,
                         dia_hoy=dia_hoy_local,
                         current_full_path=current_full_path_for_template)
+
+
 
 @calendario_bp.route('/dia', methods=['GET'])
 @login_required
