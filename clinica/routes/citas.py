@@ -57,17 +57,31 @@ def registrar_cita(paciente_id):
             flash(f'Este horario ya está ocupado para el doctor {doctor_nombre}. Por favor, selecciona otro horario.', 'danger')
             return redirect(url_for('citas.registrar_cita', paciente_id=paciente_id))
         
-        # Crear la nueva cita
-        nueva_cita = Cita(
-            paciente_id=paciente.id,
-            fecha=fecha,
-            hora=hora,
-            motivo=request.form.get('motivo', ''),
-            observaciones=request.form.get('observaciones', ''),
-            odontologo_id=current_user.id,
-            doctor=doctor_nombre,
-            is_deleted=False
-        )
+        if paciente_id:
+            # Caso 1: Paciente ya registrado
+            nueva_cita = Cita(
+                fecha=fecha_obj,
+                hora=hora_obj,
+                doctor=doctor_form,
+                motivo=motivo_form or None,
+                observaciones=observaciones_form or None,
+                odontologo_id=current_user.id,
+                paciente_id=paciente_id
+            )
+        else:
+            # Caso 2: Paciente nuevo - solo nombre, apellido y teléfono
+            nueva_cita = Cita(
+                fecha=fecha_obj,
+                hora=hora_obj,
+                doctor=doctor_form,
+                motivo=motivo_form or None,
+                observaciones=observaciones_form or None,
+                odontologo_id=current_user.id,
+                paciente_id=None,
+                pre_nombres=paciente_nombres,
+                pre_apellidos=paciente_apellidos,
+                pre_telefono=paciente_telefono
+            )
         
         db.session.add(nueva_cita)
         db.session.commit()

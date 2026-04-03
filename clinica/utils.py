@@ -86,8 +86,8 @@ def get_index_panel_data(today_date: date, current_time: time):
             Cita.hora, 
             Cita.motivo,
             Cita.paciente_id,
-            Cita.paciente_nombres_str,
-            Cita.paciente_apellidos_str
+            Cita.paciente.nombres,
+            Cita.paciente.apellidos
         )
     ).filter(
         or_(
@@ -123,8 +123,8 @@ def get_index_panel_data(today_date: date, current_time: time):
             ).get(proxima_cita_obj.paciente_id)
             if paciente and not paciente.is_deleted:
                 paciente_nombre_proxima_cita = f"{paciente.nombres} {paciente.apellidos}"
-        elif proxima_cita_obj.paciente_nombres_str:
-            paciente_nombre_proxima_cita = f"{proxima_cita_obj.paciente_nombres_str} {proxima_cita_obj.paciente_apellidos_str or ''}".strip()
+        elif proxima_cita_obj.paciente.nombres:
+            paciente_nombre_proxima_cita = f"{proxima_cita_obj.paciente.nombres} {proxima_cita_obj.paciente.apellidos or ''}".strip()
         
         proxima_cita_data = {
             'fecha_formateada': f"{fecha_cita_str_buffer} a las {hora_cita_str}",
@@ -142,8 +142,8 @@ def get_index_panel_data(today_date: date, current_time: time):
             Cita.doctor,
             Cita.estado,
             Cita.paciente_id,
-            Cita.paciente_nombres_str,
-            Cita.paciente_apellidos_str
+            Cita.paciente.nombres,
+            Cita.paciente.apellidos
         )
     ).filter(
         Cita.fecha == today_date,
@@ -179,8 +179,8 @@ def get_index_panel_data(today_date: date, current_time: time):
             paciente = pacientes_dict[cita_item.paciente_id]
             if not paciente.is_deleted:
                 paciente_nombre_completo = f"{paciente.nombres} {paciente.apellidos}"
-        elif cita_item.paciente_nombres_str:
-            paciente_nombre_completo = f"{cita_item.paciente_nombres_str} {cita_item.paciente_apellidos_str or ''}".strip()
+        elif cita_item.paciente.nombres:
+            paciente_nombre_completo = f"{cita_item.paciente.nombres} {cita_item.paciente.apellidos or ''}".strip()
         
         citas_hoy_procesadas.append({
             'id': cita_item.id,

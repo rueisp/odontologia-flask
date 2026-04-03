@@ -10,6 +10,8 @@ from sqlalchemy import func, extract
 import locale
 from clinica.decorators.limites import verificar_suscripcion_activa
 from sqlalchemy.orm import load_only
+from clinica.extensions import cache 
+
 
 
 # Intentar configurar locale en español
@@ -39,6 +41,7 @@ def inicio():
 @main_bp.route("/dashboard")
 @login_required
 @verificar_suscripcion_activa
+@cache.cached(timeout=60, key_prefix=lambda: f'dashboard_{current_user.get_id()}')
 def dashboard():
     # 1. Fecha y Hora Local
     local_timezone = pytz.timezone('America/Bogota')
@@ -194,7 +197,11 @@ def dashboard():
             paciente = pacientes_dict[proxima_cita.paciente_id]
             paciente_nombre = f"{paciente.nombres} {paciente.apellidos}".strip()
         else:
-            paciente_nombre = f"{proxima_cita.paciente.nombres or ''} {proxima_cita.paciente.apellidos or ''}".strip() or "Paciente"
+            # ✅ Usar pre_nombres y pre_apellidos en lugar de paciente.nombres
+            paciente_nombre = f"{proxima_cita.pre_nombres or ''} {proxima_cita.pre_apellidos or ''}".strip()
+        
+        if not paciente_nombre:
+            paciente_nombre = "Paciente sin registrar"
         
         proxima_cita_info = {
             'fecha_formateada': proxima_cita.fecha.strftime('%d/%m/%Y'),

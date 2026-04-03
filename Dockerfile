@@ -31,8 +31,12 @@ COPY . .
 # --- NUEVA LÍNEA: Le dice a Flask que tu archivo principal es run.py ---
 ENV FLASK_APP=run.py
 
+# Copiar entrypoint.sh y dar permisos de ejecución
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 # Informamos que el contenedor usará el puerto 8080
 EXPOSE 8080
 
-# Comando de inicio
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "run:app"]
+# Usar entrypoint.sh en lugar de CMD directo
+ENTRYPOINT ["/entrypoint.sh"]

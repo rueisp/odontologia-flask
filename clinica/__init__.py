@@ -1,11 +1,14 @@
 import os
 from flask import Flask, request
-from .extensions import db, migrate, login_manager 
+from .extensions import db, migrate, login_manager, cache 
 import cloudinary
 from dotenv import load_dotenv
 import logging
 from flask.json import dumps as json_dumps
 from .utils import get_transformed_profile_image_url
+from flask_compress import Compress
+
+
 
 # Cargar .env
 if os.path.exists('.env'):
@@ -32,6 +35,8 @@ from .routes.planes import planes_bp
 from clinica.routes.pagos import pagos_bp
 from .routes.admin import admin_bp
 
+
+
 def create_app():
     app = Flask(__name__, instance_relative_config=True) 
 
@@ -43,12 +48,32 @@ def create_app():
         DEBUG=os.environ.get('FLASK_DEBUG') == '1' 
     )
 
-    # ... (el resto de tu lógica de logging y cloudinary se mantiene igual) ...
+    # Configuración de pool de conexiones para Cloud Run
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_size': 5,           # Conexiones por proceso
+    'pool_recycle': 280,      # Reciclar cada 280 segundos
+    'pool_pre_ping': True,    # Verificar conexión antes de usar
+    'max_overflow': 10        # Conexiones extra si hay pico
+}
+
+    app.config['CACHE_TYPE'] = 'SimpleCache'
+    app.config['CACHE_DEFAULT_TIMEOUT'] = 300
+
+    app.config['COMPRESS_MIMETYPES'] = ['text/html', 'text/css', 'text/xml', 'application/json', 'application/javascript']
+    app.config['COMPRESS_LEVEL'] = 6
+    app.config['COMPRESS_MIN_SIZE'] = 500
+
+
+    Compress(app)
 
     # --- 2. INICIALIZAR EXTENSIONES ---
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
+    cache.init_app(app)
+
+
+
         # 🔥 ESTO ES LO QUE FALTA: REGISTRAR FUNCIONES GLOBALES PARA EL HTML 🔥
     app.jinja_env.globals['get_transformed_profile_image_url'] = get_transformed_profile_image_url
     app.jinja_env.globals['get_attr'] = get_attr_safe
