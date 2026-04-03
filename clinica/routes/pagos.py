@@ -207,10 +207,7 @@ def lista_pagos():
     page = request.args.get('page', 1, type=int)
     per_page = 7  # Número de pagos por página
     
-    # DEBUG: Imprimir en consola
-    print(f"=== DEBUG PAGINACIÓN ===")
-    print(f"Página actual: {page}")
-    print(f"Pagos por página: {per_page}")
+
     
     # Obtener filtros
     filtros = {

@@ -413,3 +413,22 @@ def terminos():
 @main_bp.route('/privacidad')
 def privacidad():
     return render_template('public/privacidad.html')
+
+
+
+@main_bp.route('/health', methods=['GET'])
+def health_check():
+    """Endpoint para health checks de Cloud Run"""
+    try:
+        # Verificar conexión a base de datos
+        db.session.execute('SELECT 1')
+        db_status = 'ok'
+    except Exception as e:
+        db_status = 'error'
+        current_app.logger.error(f"Health check DB error: {e}")
+    
+    return {
+        'status': 'ok' if db_status == 'ok' else 'degraded',
+        'database': db_status,
+        'timestamp': datetime.utcnow().isoformat()
+    }, 200 if db_status == 'ok' else 500

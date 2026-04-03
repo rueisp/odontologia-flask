@@ -365,4 +365,7 @@ class PlanService:
             usuario_id=usuario_id, 
             es_trial=True
         ).first()
-        return registro is not None   
+        return registro is not None 
+
+
+ 

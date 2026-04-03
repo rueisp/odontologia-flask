@@ -4,6 +4,7 @@ import os
 import calendar
 import locale
 from datetime import date, datetime, time
+import cloudinary
 from sqlalchemy import func, case, or_, and_
 from sqlalchemy.orm import joinedload
 from .extensions import db
@@ -305,3 +306,24 @@ def get_transformed_profile_image_url(original_url):
         return f"{parts[0]}/upload/{TRANSFORMATION}/{parts[1]}"
         
     return original_url
+
+
+def upload_file_to_cloudinary(file, folder_name="general_uploads"):
+    """Sube un objeto FileStorage a Cloudinary con timeout"""
+    if not file or file.filename == '': 
+        return None
+    if not allowed_file(file.filename): 
+        return None
+
+    try:
+        file.seek(0)
+        # Agregar timeout de 30 segundos
+        upload_result = cloudinary.uploader.upload(
+            file, 
+            folder=folder_name,
+            timeout=30  # 👈 NUEVO: timeout en segundos
+        )
+        return upload_result.get('secure_url')
+    except Exception as e:
+        current_app.logger.error(f"CLOUDINARY ERROR (timeout): {str(e)}", exc_info=True)
+        return None

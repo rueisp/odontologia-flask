@@ -132,7 +132,8 @@
                 data-original-url="{{ paciente.imagen_perfil_url or url_for('static', filename='img/placeholder_avatar.png') }}"
                 alt="Imagen de Perfil"
                 class="header-avatar-large"
-                title="Haz clic para ampliar">
+                title="Haz clic para ampliar"
+                loading="lazy">  <!-- 👈 AGREGAR ESTO -->
             
             <div class="header-info">
                 <h1>{{ paciente.nombres }} {{ paciente.apellidos }}</h1>
@@ -288,7 +289,8 @@
                         <img src="{{ paciente.dentigrama_canvas }}" 
                             alt="Dentigrama del Paciente" 
                             class="img-fluid rounded border"
-                            style="width: 100%; height: auto; object-fit: contain;">
+                            style="width: 100%; height: auto; object-fit: contain;"
+                            loading="lazy">  <!-- 👈 AGREGAR ESTO -->
                     </div>
                     <h5 class="mt-2 text-sm font-medium text-gray-700">Dentigrama Interactivo</h5>
                 </div>

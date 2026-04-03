@@ -44,9 +44,7 @@
                                         WhatsApp
                                     </a>
                                 {% endif %}
-                                {% if cita_info.estado != 'completada' %}<button class="btn-cambiar-estado text-xs bg-black text-white hover:bg-gray-800 py-1 px-3 rounded-lg transition" data-nuevo-estado="completada">Completar</button>{% endif %}
                                 {% if cita_info.estado != 'pendiente' and cita_info.estado != 'cancelada' %}<button class="btn-cambiar-estado text-xs bg-gray-200 text-gray-700 hover:bg-gray-300 py-1 px-3 rounded-lg transition" data-nuevo-estado="pendiente">Pendiente</button>{% endif %}
-                                {% if cita_info.estado != 'cancelada' %}<button class="btn-cambiar-estado text-xs bg-white border border-red-200 text-red-600 hover:bg-red-50 py-1 px-3 rounded-lg transition" data-nuevo-estado="cancelada">Cancelar</button>{% endif %}
                             </div>
                         </div>
                     </div>

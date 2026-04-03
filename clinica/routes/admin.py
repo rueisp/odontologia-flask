@@ -25,12 +25,21 @@ def lista_solicitudes():
                            solicitudes=solicitudes, 
                            usuarios=usuarios)
 
-@admin_bp.route('/aprobar/<int:solicitud_id>', methods=['POST'])
+@admin_bp.route('/aprobar-pago/<int:solicitud_id>', methods=['POST'])
 @login_required
 def aprobar_pago(solicitud_id):
     solo_admin()
     exito, mensaje = PagoService.verificar_pago(solicitud_id)
-    flash(mensaje, 'success' if exito else 'danger')
+    
+    if exito:
+        flash(f'✅ {mensaje}', 'success')
+        # También muestra qué usuario fue activado
+        from clinica.models import SolicitudPago
+        solicitud = SolicitudPago.query.get(solicitud_id)
+        flash(f'Usuario: {solicitud.usuario.username} - Plan: {solicitud.plan_nombre}', 'info')
+    else:
+        flash(f'❌ {mensaje}', 'danger')
+    
     return redirect(url_for('admin.lista_solicitudes'))
 
 @admin_bp.route('/extender-plan/<int:usuario_id>', methods=['POST'])

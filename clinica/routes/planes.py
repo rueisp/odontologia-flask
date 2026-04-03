@@ -154,9 +154,26 @@ def cancelar_suscripcion():
     return redirect(url_for('planes.mi_suscripcion'))
 
 
+@planes_bp.route('/admin/activar-plan/<int:usuario_id>/<int:plan_id>', methods=['POST'])
+@login_required
+def admin_activar_plan(usuario_id, plan_id):
+    """Ruta interna para activar plan manualmente (solo admin)"""
+    if not current_user.is_admin:
+        flash('Acceso denegado', 'danger')
+        return redirect(url_for('main.dashboard'))
+    
+    exito, mensaje = PlanService.activar_plan(usuario_id, plan_id)
+    
+    if exito:
+        flash(mensaje, 'success')
+    else:
+        flash(mensaje, 'danger')
+    
+    return redirect(url_for('admin.usuarios'))  # Ajusta según tu ruta de admin
 
 
 @planes_bp.route("/pago-exitoso")
 @login_required
 def pago_exitoso():
     return "Pago recibido. Estamos verificando la transacción."
+
