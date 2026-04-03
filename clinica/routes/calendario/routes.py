@@ -184,7 +184,8 @@ def vista_diaria():
         )
     ).filter(
         Cita.fecha == fecha_seleccionada,
-        Cita.is_deleted == False
+        Cita.is_deleted == False,
+        Cita.odontologo_id == current_user.id
     )
     
     citas_del_dia = query_citas.all()

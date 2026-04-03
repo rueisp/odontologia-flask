@@ -321,7 +321,7 @@ def borrar_paciente_service(paciente_id, usuario):
 
 
 def crear_paciente_service(form_data, files, usuario):
-    """Crea un nuevo paciente con nombres unificados y gestión SaaS"""
+
     try:
 
         # Crear nueva instancia de Paciente
@@ -333,8 +333,8 @@ def crear_paciente_service(form_data, files, usuario):
         # 1. DATOS BÁSICOS (UNIFICADOS)
         # ==============================================================================
         # Ahora capturamos directamente los nombres y apellidos unificados
-        nuevo_paciente.nombres = form_data.get('primer_nombre', '').strip()
-        nuevo_paciente.apellidos = form_data.get('primer_apellido', '').strip()
+        nuevo_paciente.nombres = form_data.get('nombres', '').strip()
+        nuevo_paciente.apellidos = form_data.get('apellidos', '').strip()
         
         nuevo_paciente.tipo_documento = form_data.get('tipo_documento')
         nuevo_paciente.documento = form_data.get('documento')
