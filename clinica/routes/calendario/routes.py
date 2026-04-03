@@ -85,7 +85,7 @@ def mostrar_calendario():
         db.load_only(
             Cita.id, Cita.paciente_id, Cita.fecha, Cita.hora, Cita.motivo,
             Cita.doctor, Cita.estado, Cita.observaciones,
-            Cita.paciente_nombres_str, Cita.paciente_apellidos_str, Cita.paciente_telefono_str
+            Cita.pre_nombres, Cita.pre_apellidos, Cita.pre_telefono
         )
     ).filter(
         Cita.is_deleted == False,
@@ -103,16 +103,24 @@ def mostrar_calendario():
 
     citas_para_construir = []
     for cita_obj in citas_del_mes:
-        # Lógica para obtener el nombre (simplificada)
+        # Lógica para obtener el nombre completo del paciente
         paciente_nombre_completo = "Paciente sin registrar"
+        
         if cita_obj.paciente_id:
+            # Intentar cargar paciente real
             from ...models import Paciente
             paciente = Paciente.query.get(cita_obj.paciente_id)
             if paciente and not paciente.is_deleted:
                 paciente_nombre_completo = f"{paciente.nombres} {paciente.apellidos}"
+            else:
+                # Paciente eliminado o no existe, usar pre-registro
+                nombres = cita_obj.pre_nombres or ""
+                apellidos = cita_obj.pre_apellidos or ""
+                paciente_nombre_completo = f"{nombres} {apellidos}".strip() or "Paciente sin registrar"
         else:
-            nombres = cita_obj.paciente_nombres_str or ""
-            apellidos = cita_obj.paciente_apellidos_str or ""
+            # Sin paciente_id, usar datos de pre-registro
+            nombres = cita_obj.pre_nombres or ""
+            apellidos = cita_obj.pre_apellidos or ""
             paciente_nombre_completo = f"{nombres} {apellidos}".strip() or "Paciente sin registrar"
         
         citas_para_construir.append({
@@ -125,28 +133,27 @@ def mostrar_calendario():
             'estado': cita_obj.estado,
             'paciente_id': cita_obj.paciente_id,
             'paciente_nombre_completo': paciente_nombre_completo,
-            'paciente_telefono_str': cita_obj.paciente_telefono_str,
+            'paciente_telefono_str': cita_obj.pre_telefono or "",  # Usar pre_telefono
             'edit_url': url_for('calendario.editar_cita', cita_id=cita_obj.id, next=current_full_path_for_template),
             'delete_url': url_for('calendario.eliminar_cita', cita_id=cita_obj.id, next=current_full_path_for_template),
             'next_url_encoded': quote_plus(current_full_path_for_template)
         })
 
     dias_render = construir_dias_del_mes(anio_actual, mes_actual, citas_para_construir,
-                                         dia_hoy_local, mes_hoy_local, anio_hoy_local)
-    
+                                        dia_hoy_local, mes_hoy_local, anio_hoy_local)
+
     nombre_mes_actual_display = NOMBRES_MESES_ESP[mes_actual-1]
 
     return render_template('calendario.html',
-                           anio=anio_actual,
-                           mes=mes_actual,
-                           nombres_meses=NOMBRES_MESES_ESP,
-                           nombre_mes_display=nombre_mes_actual_display,
-                           dias=dias_render,
-                           anio_hoy=anio_hoy_local,
-                           mes_hoy=mes_hoy_local,
-                           dia_hoy=dia_hoy_local,
-                           current_full_path=current_full_path_for_template)
-
+                        anio=anio_actual,
+                        mes=mes_actual,
+                        nombres_meses=NOMBRES_MESES_ESP,
+                        nombre_mes_display=nombre_mes_actual_display,
+                        dias=dias_render,
+                        anio_hoy=anio_hoy_local,
+                        mes_hoy=mes_hoy_local,
+                        dia_hoy=dia_hoy_local,
+                        current_full_path=current_full_path_for_template)
 
 @calendario_bp.route('/dia', methods=['GET'])
 @login_required
@@ -164,7 +171,7 @@ def vista_diaria():
         db.load_only(
             Cita.id, Cita.paciente_id, Cita.fecha, Cita.hora, Cita.motivo,
             Cita.doctor, Cita.estado,
-            Cita.paciente_nombres_str, Cita.paciente_apellidos_str, Cita.paciente_telefono_str
+            Cita.pre_nombres, Cita.pre_apellidos, Cita.pre_telefono
         )
     ).filter(
         Cita.fecha == fecha_seleccionada,
@@ -192,9 +199,10 @@ def vista_diaria():
             paciente_apellidos = paciente.apellidos or ''
             paciente_telefono = paciente.telefono or ''
         else:
-            paciente_nombre = cita.paciente_nombres_str or ''
-            paciente_apellidos = cita.paciente_apellidos_str or ''
-            paciente_telefono = cita.paciente_telefono_str or ''
+            # Usar campos de pre-registro en lugar de cita.paciente
+            paciente_nombre = cita.pre_nombres or ''
+            paciente_apellidos = cita.pre_apellidos or ''
+            paciente_telefono = cita.pre_telefono or ''
         
         if not current_user.is_admin:
             if cita.paciente_id and cita.paciente_id in pacientes_dict:

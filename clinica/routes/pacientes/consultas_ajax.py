@@ -45,7 +45,7 @@ def obtener_paciente_ajax(id):
         query_base = Paciente.query.filter_by(id=id, is_deleted=False)
         if not current_user.is_admin:
             query_base = query_base.filter_by(odontologo_id=current_user.id)
-        paciente = query_base.first_or_404() # Si no se encuentra, Flask devuelve 404
+        paciente = query_base.first_or_404()
 
         hoy = date.today()
         ahora_time = datetime.now().time()
@@ -61,6 +61,7 @@ def obtener_paciente_ajax(id):
             ultima_cita_str = f"{ultima_cita_obj.fecha.strftime('%d %b, %Y')} - {ultima_cita_obj.motivo or 'Consulta'}"
 
         # 2. Próxima cita del paciente
+        from sqlalchemy import case
         proxima_cita_paciente_obj = Cita.query.filter(Cita.paciente_id == id, Cita.is_deleted == False)\
             .filter(Cita.fecha >= hoy)\
             .filter(case((Cita.fecha == hoy, Cita.hora > ahora_time), else_=(Cita.fecha > hoy)))\
@@ -83,27 +84,27 @@ def obtener_paciente_ajax(id):
         if motivo_frecuente_resultado:
             motivo_frecuente_str = motivo_frecuente_resultado.motivo
 
+        # ============================================================
+        # SOLO CAMPOS QUE EXISTEN EN models.py
+        # ============================================================
         paciente_data = {
             'id': paciente.id,
             'nombre': f"{paciente.nombres} {paciente.apellidos}",
-            'nombres': paciente.nombres,      # Enviamos "Jhon Jose" limpio
-            'apellidos': paciente.apellidos,  # Enviamos "Snow Soto" limpio
-            'genero': paciente.genero or 'No especificado',
-            'edad': paciente.edad if paciente.edad is not None else 'No especificada',
-            'fecha_nacimiento': paciente.fecha_nacimiento.strftime('%d/%m/%Y') if paciente.fecha_nacimiento else 'No especificada',
-            'estado': paciente.estado_civil or 'No especificado', 
-            'documento': paciente.documento or 'No especificado',
-            'telefono': paciente.telefono or 'No especificado',
-            'direccion': paciente.direccion or 'No especificado',
-            'email': paciente.email or 'No especificado',
-            'ocupacion': paciente.ocupacion or 'No especificado',
-            'aseguradora': paciente.aseguradora or 'No especificado',
-            'alergias': paciente.alergias or 'No especificado',
-            'enfermedad_actual': paciente.enfermedad_actual or 'No especificado',
-            # --- URLs de imágenes (directamente desde el modelo, ya son URLs de Cloudinary) ---
-            'imagen_1': paciente.imagen_1 or None,
-            'imagen_2': paciente.imagen_2 or None,
+            'nombres': paciente.nombres or '',
+            'apellidos': paciente.apellidos or '',
+            'sexo': paciente.sexo or '',  # ← campo sexo, no genero
+            'edad': paciente.edad if paciente.edad is not None else '',
+            'fecha_nacimiento': paciente.fecha_nacimiento.strftime('%d/%m/%Y') if paciente.fecha_nacimiento else '',
+            'documento': paciente.documento or '',
+            'telefono': paciente.telefono or '',
+            'direccion': paciente.direccion or '',
+            'barrio': paciente.barrio or '',
+            'email': paciente.email or '',
+            'alergias': paciente.alergias or '',
+            'enfermedad_actual': paciente.enfermedad_actual or '',
+            'observaciones': paciente.observaciones or '',
             'dentigrama_url': paciente.dentigrama_canvas or None,
+            'imagen_perfil_url': paciente.imagen_perfil_url or None,
             # --- Datos de Citas ---
             'ultima_cita_info': ultima_cita_str,
             'proxima_cita_paciente_info': proxima_cita_paciente_str,

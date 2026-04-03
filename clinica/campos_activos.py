@@ -34,16 +34,15 @@ from clinica.models import Paciente, Evolucion
 CAMPOS_PACIENTE_ACTIVOS = [
     # --- IDENTIFICACIÓN (SIEMPRE REQUERIDOS) ---
     'id',                       # Clave primaria, indispensable
-    'primer_nombre',            # Nombre principal del paciente
-    'segundo_nombre',           # Se mantiene por compatibilidad (oculto en UI)
-    'primer_apellido',          # Apellido principal
-    'segundo_apellido',         # Se mantiene por compatibilidad (oculto en UI)
+    'nombres',            # Nombre principal del paciente
+    'apellidos',          # Apellido principal
     'tipo_documento',           # CC, TI, CE, etc.
     'documento',                # Número de identificación
     
     # --- DATOS DEMOGRÁFICOS ---
     'fecha_nacimiento',         # Para cálculos de edad y demografía
-    'edad',                     # Cache de edad calculada
+    'edad',
+    'sexo',                                          # Cache de edad calculada
     'telefono',                 # Contacto principal
     'email',                    # Contacto secundario
     'direccion',                # Ubicación residencial
@@ -62,10 +61,7 @@ CAMPOS_PACIENTE_ACTIVOS = [
     
     # --- CONTROL Y ESTADO ---
     'is_deleted',               # Flag para soft delete
-    
-    # --- CAMPOS CALCULADOS (PROPERTIES) ---
-    'nombres',      # Property: primer_nombre + segundo_nombre (compatibilidad)
-    'apellidos'     # Property: primer_apellido + segundo_apellido (compatibilidad)
+
 ]
 
 def load_only_paciente_activo():

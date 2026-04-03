@@ -12,6 +12,36 @@ def is_safe_url(target):
     return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc
 
 
+def convertir_cita_a_paciente(cita_id, odontologo_id):
+    """Convierte una cita con pre-registro a paciente real"""
+    cita = Cita.query.filter_by(id=cita_id, odontologo_id=odontologo_id).first()
+    
+    if not cita or cita.paciente_id is not None:
+        return None
+    
+    if cita.pre_nombres and cita.pre_apellidos:
+        nuevo_paciente = Paciente(
+            nombres=cita.pre_nombres,
+            apellidos=cita.pre_apellidos,
+            telefono=cita.pre_telefono or '',
+            documento=None,
+            odontologo_id=odontologo_id
+        )
+        db.session.add(nuevo_paciente)
+        db.session.flush()
+        
+        cita.paciente_id = nuevo_paciente.id
+        cita.pre_nombres = None
+        cita.pre_apellidos = None
+        cita.pre_telefono = None
+        
+        db.session.commit()
+        return nuevo_paciente
+    
+    return None
+
+
+
 @calendario_bp.route('/registrar_cita', methods=['GET', 'POST'])
 @login_required
 def registrar_cita():
@@ -100,10 +130,7 @@ def registrar_cita():
                 motivo=motivo_form or None,
                 observaciones=observaciones_form or None,
                 odontologo_id=current_user.id,
-                paciente_id=None,
-                paciente_nombres_str=None,
-                paciente_apellidos_str=None,
-                paciente_telefono_str=None,
+                paciente_id=None,  # Si es None, cita sin paciente (temporal)
             )
             
             if paciente_id_seleccionado:
@@ -114,9 +141,9 @@ def registrar_cita():
                     flash("El paciente seleccionado no es válido o ha sido eliminado.", "error")
                     return render_template('registrar_cita.html', form_values=form_values)
             else:
-                nueva_cita.paciente_nombres_str = nombres_pac_form
-                nueva_cita.paciente_apellidos_str = apellidos_pac_form
-                nueva_cita.paciente_telefono_str = telefono_pac_form
+                nueva_cita.pre_nombres = nombres_pac_form
+                nueva_cita.pre_apellidos = apellidos_pac_form
+                nueva_cita.pre_telefono = telefono_pac_form
             
             db.session.add(nueva_cita)
             db.session.commit()
@@ -161,9 +188,10 @@ def editar_cita(cita_id):
         'motivo_val': cita_obj.motivo or '',
         'observaciones_val': cita_obj.observaciones or '',
         'next_url': next_url_get,
-        'paciente_nombres_str': cita_obj.paciente_nombres_str or '',
-        'paciente_apellidos_str': cita_obj.paciente_apellidos_str or '',
-        'paciente_telefono_str': cita_obj.paciente_telefono_str or ''
+        # CAMBIADO: usar campos pre_ en lugar de paciente.
+        'pre_nombres': cita_obj.pre_nombres or '',
+        'pre_apellidos': cita_obj.pre_apellidos or '',
+        'pre_telefono': cita_obj.pre_telefono or ''
     }
     
     if request.method == 'POST':
@@ -174,9 +202,9 @@ def editar_cita(cita_id):
         doctor_form = request.form.get('doctor')
         motivo_form = request.form.get('motivo')
         observaciones_form = request.form.get('observaciones')
-        paciente_nombres_form = request.form.get('paciente_nombres_str', '').strip()
-        paciente_apellidos_form = request.form.get('paciente_apellidos_str', '').strip()
-        paciente_telefono_form = request.form.get('paciente_telefono_str', '').strip()
+        paciente_nombres_form = request.form.get('paciente.nombres', '').strip()
+        paciente_apellidos_form = request.form.get('paciente.apellidos', '').strip()
+        paciente_telefono_form = request.form.get('paciente.telefono', '').strip()
         
         if not (fecha_str and hora_str and doctor_form):
             flash("Fecha, hora y doctor son campos obligatorios.", "error")
@@ -185,14 +213,16 @@ def editar_cita(cita_id):
         try:
             if paciente_id_form and paciente_id_form.strip():
                 cita_obj.paciente_id = int(paciente_id_form)
-                cita_obj.paciente_nombres_str = None
-                cita_obj.paciente_apellidos_str = None
-                cita_obj.paciente_telefono_str = None
+                # CAMBIADO: limpiar pre-registro
+                cita_obj.pre_nombres = None
+                cita_obj.pre_apellidos = None
+                cita_obj.pre_telefono = None
             else:
                 cita_obj.paciente_id = None
-                cita_obj.paciente_nombres_str = paciente_nombres_form or None
-                cita_obj.paciente_apellidos_str = paciente_apellidos_form or None
-                cita_obj.paciente_telefono_str = paciente_telefono_form or None
+                # CAMBIADO: guardar en pre-registro
+                cita_obj.pre_nombres = paciente_nombres_form or None
+                cita_obj.pre_apellidos = paciente_apellidos_form or None
+                cita_obj.pre_telefono = paciente_telefono_form or None
             
             cita_obj.fecha = datetime.strptime(fecha_str, "%d/%m/%Y").date()
             cita_obj.hora = datetime.strptime(hora_str, "%H:%M").time()

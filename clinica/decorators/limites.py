@@ -57,6 +57,7 @@ def verificar_limite_pacientes(f):
         return f(*args, **kwargs)
     
     return decorated_function
+
 def verificar_suscripcion_activa(f):
     """
     Decorador para verificar que el usuario tenga una suscripción activa.
@@ -67,6 +68,10 @@ def verificar_suscripcion_activa(f):
         if not current_user.is_authenticated:
             return redirect(url_for('main.login'))
         
+        # 🔥 1. EL PASE MAESTRO: Si eres admin, entras siempre
+        if getattr(current_user, 'is_admin', False):
+            return f(*args, **kwargs)
+        
         # Verificar plan actual
         plan_info = PlanService.obtener_plan_actual_usuario(current_user.id)
         
@@ -76,14 +81,15 @@ def verificar_suscripcion_activa(f):
         
         usuario_plan = plan_info['usuario_plan']
         
-        # Verificar si el trial expiró
-        if usuario_plan.es_trial and usuario_plan.fecha_fin and usuario_plan.fecha_fin < datetime.utcnow():
-            flash('Tu periodo de prueba ha expirado. Por favor, suscríbete para continuar usando la aplicación.', 'warning')
-            return redirect(url_for('planes.mostrar_planes'))
-        
-        # Verificar si la suscripción está vencida
-        if usuario_plan.fecha_fin and usuario_plan.fecha_fin < datetime.utcnow():
-            flash('Tu suscripción ha expirado. Por favor, renueva tu plan.', 'warning')
+        # 2. COMPARACIÓN SOLO POR FECHA (Sin horas para evitar errores)
+        hoy = datetime.utcnow().date()
+        fecha_vencimiento = usuario_plan.fecha_fin.date() if usuario_plan.fecha_fin else None
+
+        if fecha_vencimiento and fecha_vencimiento < hoy:
+            if usuario_plan.es_trial:
+                flash('Tu periodo de prueba ha expirado.', 'warning')
+            else:
+                flash('Tu suscripción ha expirado. Por favor, renueva tu plan.', 'warning')
             return redirect(url_for('planes.mostrar_planes'))
         
         return f(*args, **kwargs)
@@ -91,29 +97,55 @@ def verificar_suscripcion_activa(f):
     return decorated_function
 
 
+
+def verificar_suscripcion_activa(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return redirect(url_for('main.login'))
+        
+        # 1. BYPASS ADMIN: Tú entras siempre
+        if getattr(current_user, 'is_admin', False):
+            return f(*args, **kwargs)
+        
+        plan_info = PlanService.obtener_plan_actual_usuario(current_user.id)
+        if not plan_info:
+            flash('No tienes un plan activo.', 'danger')
+            return redirect(url_for('planes.mostrar_planes'))
+        
+        usuario_plan = plan_info['usuario_plan']
+        hoy = datetime.utcnow().date()
+        
+        # 2. COMPARACIÓN JUSTA (Solo fecha)
+        if usuario_plan.fecha_fin and usuario_plan.fecha_fin.date() < hoy:
+            flash('Tu suscripción ha expirado. Por favor, renueva tu plan.', 'warning')
+            return redirect(url_for('planes.mostrar_planes'))
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
 def solo_lectura_si_expirado(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             return redirect(url_for('main.login'))
         
+        if getattr(current_user, 'is_admin', False):
+            return f(*args, **kwargs)
+        
         plan_info = PlanService.obtener_plan_actual_usuario(current_user.id)
         if not plan_info:
             return f(*args, **kwargs)
         
         usuario_plan = plan_info['usuario_plan']
+        hoy = datetime.utcnow().date()
         
-        # Si el plan expiró y se intenta escribir (POST, PUT, DELETE)
-        if usuario_plan.fecha_fin and usuario_plan.fecha_fin < datetime.utcnow():
+        if usuario_plan.fecha_fin and usuario_plan.fecha_fin.date() < hoy:
             if request.method in ['POST', 'PUT', 'DELETE', 'PATCH']:
-                # Detectar si es AJAX o JSON
                 if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return jsonify({
-                        'success': False, 
-                        'error': 'Tu suscripción ha expirado. Modo solo lectura activado.'
-                    }), 403
+                    return jsonify({'success': False, 'error': 'Modo solo lectura.'}), 403
                 
-                flash('Tu suscripción ha expirado. Solo puedes ver información. Suscríbete para editar.', 'warning')
+                flash('Modo solo lectura activado por plan expirado.', 'warning')
                 return redirect(request.referrer or url_for('main.dashboard'))
         
         return f(*args, **kwargs)

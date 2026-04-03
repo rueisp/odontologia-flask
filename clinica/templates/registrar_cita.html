@@ -94,22 +94,20 @@
                        {% if form_values.get('paciente_preseleccionado_id') %}disabled{% else %}required{% endif %}>
             </div>
 
-            <!-- FILA 4: Documento (Ancho) y Edad (Pequeño) -->
+            <!-- FILA 4: Documento (2 col) y Edad (1 col) -->
             <div class="grid grid-cols-3 gap-3">
-                <!-- Documento ocupa 2 columnas -->
                 <div class="col-span-2">
                     <input type="text" id="paciente_documento" name="paciente_documento_val" placeholder="Documento / DNI (Op.)"
-                           class="w-full px-3 py-2 bg-white border border-transparent rounded-xl text-sm focus:ring-1 focus:ring-black disabled:bg-gray-100 transition-all outline-none shadow-sm placeholder-gray-500 text-gray-900"
-                           value="{{ form_values.get('paciente_documento_val', '') }}"
-                           {% if form_values.get('paciente_preseleccionado_id') %}disabled{% endif %}>
+                        class="w-full px-3 py-2 bg-white border border-transparent rounded-xl text-sm focus:ring-1 focus:ring-black focus:bg-white disabled:bg-gray-100 transition-all outline-none shadow-sm placeholder-gray-500 text-gray-900"
+                        value="{{ form_values.get('paciente_documento_val', '') }}"
+                        {% if form_values.get('paciente_preseleccionado_id') %}disabled{% endif %}>
                 </div>
 
-                <!-- Edad ocupa 1 columna -->
                 <div class="col-span-1">
                     <input type="number" id="paciente_edad" name="paciente_edad_val" placeholder="Edad" min="0"
-                           class="w-full px-3 py-2 bg-white border border-transparent rounded-xl text-sm focus:ring-1 focus:ring-black disabled:bg-gray-100 transition-all outline-none shadow-sm placeholder-gray-500 text-gray-900 text-center"
-                           value="{{ form_values.get('paciente_edad_val', '') }}"
-                           {% if form_values.get('paciente_preseleccionado_id') %}disabled{% endif %}>
+                        class="w-full px-3 py-2 bg-white border border-transparent rounded-xl text-sm focus:ring-1 focus:ring-black focus:bg-white disabled:bg-gray-100 transition-all outline-none shadow-sm placeholder-gray-500 text-gray-900 text-center"
+                        value="{{ form_values.get('paciente_edad_val', '') }}"
+                        {% if form_values.get('paciente_preseleccionado_id') %}disabled{% endif %}>
                 </div>
             </div>
         </div>
@@ -237,30 +235,23 @@
                 pacienteIdHiddenInput.value = ''; 
             }
 
-            // --- CÓDIGO NUEVO (Solución) ---
+            // Dentro de registrar_cita.html, reemplaza esta función:
+
             async function populateNewPatientFields(patientData) {
-                if (!patientData) { 
+                console.log("Datos recibidos:", patientData);
+
+                if (!patientData || patientData.error) { 
                     clearNewPatientFields();
                     toggleNewPatientFields(true);
                     return;
                 }
 
-                // 1. Priorizamos usar los campos separados si la base de datos los envía
-                if (patientData.nombres && patientData.apellidos) {
-                    inputNombres.value = patientData.nombres;     // Pone "Jhon Jose"
-                    inputApellidos.value = patientData.apellidos; // Pone "Snow Soto"
-                } 
-                // 2. Si por alguna razón solo llega el nombre completo (fallback), usamos la lógica vieja
-                else if (patientData.nombre) {
-                    const nombreCompletoArr = patientData.nombre.split(' ');
-                    inputNombres.value = nombreCompletoArr.shift(); 
-                    inputApellidos.value = nombreCompletoArr.join(' ');
-                }
-
-                // El resto de campos siguen igual...
-                inputTelefono.value = patientData.telefono !== 'No especificado' ? patientData.telefono : '';
-                inputEdad.value = patientData.edad !== 'No especificada' ? patientData.edad : '';
-                inputDocumento.value = patientData.documento !== 'No especificado' ? patientData.documento : '';
+                // Llenado directo sin lógica extra
+                inputNombres.value = patientData.nombres || '';
+                inputApellidos.value = patientData.apellidos || '';
+                inputTelefono.value = patientData.telefono || '';
+                inputEdad.value = patientData.edad || '';
+                inputDocumento.value = patientData.documento || '';
             }
 
             function toggleNewPatientFields(enable) {

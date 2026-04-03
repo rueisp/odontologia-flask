@@ -279,13 +279,16 @@ class PlanService:
                     'icono': 'clock'
                 }
 
+# ... lógica anterior ...
         return {
             'plan_actual': nombre_plan,
             'es_trial': es_trial,
-            'ya_uso_trial': PlanService.ya_uso_trial(usuario_id), # 🔥 AGREGA ESTA LÍNEA
-            'dias_restantes': "Ilimitado" if user.is_admin else dias_restantes,
+            'ya_uso_trial': PlanService.ya_uso_trial(usuario_id),
+            # 🔥 CAMBIO: Enviamos 9999 en lugar de "Ilimitado" para evitar errores de comparación
+            'dias_restantes': 9999 if user.is_admin else dias_restantes,
             'pacientes_hoy': limite_diario.contador_pacientes if limite_diario else 0,
-            'limite_hoy': "∞" if user.is_admin else (limite_diario.limite_actual if limite_diario else 10),
+            # 🔥 CAMBIO: Enviamos 9999 en lugar de "∞"
+            'limite_hoy': 9999 if user.is_admin else (limite_diario.limite_actual if limite_diario else 10),
             'fecha_fin_plan': fecha_fin,
             'alerta_expiracion': alerta 
         }

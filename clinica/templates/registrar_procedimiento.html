@@ -9,7 +9,7 @@
         <h1 class="text-3xl font-bold text-gray-800 mb-2">Registrar Procedimiento</h1>
         <p class="text-gray-600 mb-6">
             Para la cita del <span class="font-semibold">{{ cita.fecha.strftime('%d/%m/%Y') }}</span>
-            del paciente <span class="font-semibold">{{ cita.paciente.nombre_completo if cita.paciente else cita.paciente_nombres_str }}</span>.
+            del paciente <span class="font-semibold">{{ cita.paciente.nombre_completo if cita.paciente else cita.paciente.nombres }}</span>.
         </p>
 
         <form method="POST" action="{{ url_for('procedimientos.registrar_procedimiento', cita_id=cita.id) }}"

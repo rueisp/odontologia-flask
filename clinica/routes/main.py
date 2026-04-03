@@ -7,9 +7,9 @@ import pytz
 from clinica.models import Cita, Paciente, Usuario, Plan, UsuarioPlan, SolicitudPago
 from clinica import db
 from sqlalchemy import func, extract
-from sqlalchemy.orm import load_only
 import locale
 from clinica.decorators.limites import verificar_suscripcion_activa
+from sqlalchemy.orm import load_only
 
 
 # Intentar configurar locale en español
@@ -59,18 +59,9 @@ def dashboard():
     # 2. CITAS DE HOY
     hoy_date = now_in_local_tz.date()
     LIMITE_CITAS_VISIBLES = 5  # Cambia este valor según prefieras
+    # ✅ CAMBIA A:
     citas_hoy = Cita.query.options(
-        load_only(
-            Cita.id, 
-            Cita.paciente_id, 
-            Cita.hora, 
-            Cita.motivo, 
-            Cita.doctor, 
-            Cita.estado,
-            Cita.paciente_nombres_str,
-            Cita.paciente_apellidos_str,
-            Cita.paciente_telefono_str
-        )
+        load_only(Cita.id, Cita.paciente_id, Cita.hora, Cita.motivo, Cita.doctor, Cita.estado)
     ).filter(
         Cita.fecha == hoy_date,
         Cita.is_deleted == False,
@@ -85,22 +76,27 @@ def dashboard():
     pacientes_dict = {}
     if paciente_ids:
         pacientes = Paciente.query.options(
-            load_only(Paciente.id, Paciente.nombres, Paciente.apellidos, Paciente.telefono)
+
         ).filter(Paciente.id.in_(paciente_ids)).all()
         for p in pacientes:
             pacientes_dict[p.id] = p
     
     for cita in citas_hoy:
-        # Obtener nombre completo y teléfono
-        if cita.paciente_id and cita.paciente_id in pacientes_dict:
-            paciente = pacientes_dict[cita.paciente_id]
-            nombre_completo = f"{paciente.nombres} {paciente.apellidos}".strip()
-            telefono = paciente.telefono or ""
+
+        if cita.paciente_id:
+            paciente = pacientes_dict.get(cita.paciente_id)
+            if paciente:
+                nombre_completo = f"{paciente.nombres} {paciente.apellidos}".strip()
+                telefono = paciente.telefono or ""
+            else:
+                nombre_completo = f"{cita.pre_nombres or ''} {cita.pre_apellidos or ''}".strip()
+                telefono = cita.pre_telefono or ""
         else:
-            nombre_completo = f"{cita.paciente_nombres_str or ''} {cita.paciente_apellidos_str or ''}".strip()
-            if not nombre_completo:
-                nombre_completo = "Paciente sin registrar"
-            telefono = cita.paciente_telefono_str or ""
+            nombre_completo = f"{cita.pre_nombres or ''} {cita.pre_apellidos or ''}".strip()
+            telefono = cita.pre_telefono or ""
+
+        if not nombre_completo or nombre_completo == " ":
+            nombre_completo = "Paciente sin registrar"
         
         citas_procesadas.append({
             'id': cita.id,
@@ -118,18 +114,10 @@ def dashboard():
     manana_date = hoy_date + timedelta(days=1)
     fecha_manana_formateada = manana_date.strftime('%A, %d de %B de %Y')
     
+
+    # ✅ CAMBIA A:
     citas_manana = Cita.query.options(
-        load_only(
-            Cita.id, 
-            Cita.paciente_id, 
-            Cita.hora, 
-            Cita.motivo, 
-            Cita.doctor, 
-            Cita.estado,
-            Cita.paciente_nombres_str,
-            Cita.paciente_apellidos_str,
-            Cita.paciente_telefono_str
-        )
+        load_only(Cita.id, Cita.paciente_id, Cita.hora, Cita.motivo, Cita.doctor, Cita.estado)
     ).filter(
         Cita.fecha == manana_date,
         Cita.is_deleted == False,
@@ -143,22 +131,27 @@ def dashboard():
     # Cargar datos de pacientes para mañana (reutilizar pacientes_dict o cargar nuevos)
     if paciente_ids_manana:
         pacientes_manana = Paciente.query.options(
-            load_only(Paciente.id, Paciente.nombres, Paciente.apellidos, Paciente.telefono)
         ).filter(Paciente.id.in_(paciente_ids_manana)).all()
         for p in pacientes_manana:
             if p.id not in pacientes_dict:
                 pacientes_dict[p.id] = p
     
     for cita in citas_manana:
-        if cita.paciente_id and cita.paciente_id in pacientes_dict:
-            paciente = pacientes_dict[cita.paciente_id]
-            nombre_completo = f"{paciente.nombres} {paciente.apellidos}".strip()
-            telefono = paciente.telefono or ""
+        # Para TODAS las citas (hoy y mañana), usa esta lógica:
+        if cita.paciente_id:
+            paciente = pacientes_dict.get(cita.paciente_id)
+            if paciente:
+                nombre_completo = f"{paciente.nombres} {paciente.apellidos}".strip()
+                telefono = paciente.telefono or ""
+            else:
+                nombre_completo = f"{cita.pre_nombres or ''} {cita.pre_apellidos or ''}".strip()
+                telefono = cita.pre_telefono or ""
         else:
-            nombre_completo = f"{cita.paciente_nombres_str or ''} {cita.paciente_apellidos_str or ''}".strip()
-            if not nombre_completo:
-                nombre_completo = "Paciente sin registrar"
-            telefono = cita.paciente_telefono_str or ""
+            nombre_completo = f"{cita.pre_nombres or ''} {cita.pre_apellidos or ''}".strip()
+            telefono = cita.pre_telefono or ""
+
+        if not nombre_completo or nombre_completo == " ":
+            nombre_completo = "Paciente sin registrar"
         
         citas_manana_procesadas.append({
             'id': cita.id,
@@ -186,8 +179,9 @@ def dashboard():
         total_citas_semana = 0
     
     # 4. PRÓXIMA CITA
+    # ✅ CAMBIA A:
     proxima_cita = Cita.query.options(
-        load_only(Cita.id, Cita.fecha, Cita.hora, Cita.paciente_id, Cita.paciente_nombres_str, Cita.paciente_apellidos_str)
+        load_only(Cita.id, Cita.fecha, Cita.hora, Cita.paciente_id)
     ).filter(
         Cita.fecha >= hoy_date,
         Cita.is_deleted == False,
@@ -200,7 +194,7 @@ def dashboard():
             paciente = pacientes_dict[proxima_cita.paciente_id]
             paciente_nombre = f"{paciente.nombres} {paciente.apellidos}".strip()
         else:
-            paciente_nombre = f"{proxima_cita.paciente_nombres_str or ''} {proxima_cita.paciente_apellidos_str or ''}".strip() or "Paciente"
+            paciente_nombre = f"{proxima_cita.paciente.nombres or ''} {proxima_cita.paciente.apellidos or ''}".strip() or "Paciente"
         
         proxima_cita_info = {
             'fecha_formateada': proxima_cita.fecha.strftime('%d/%m/%Y'),

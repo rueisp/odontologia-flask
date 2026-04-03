@@ -16,15 +16,11 @@ class Paciente(db.Model):
     nombres = db.Column(db.String(100), nullable=False)
     apellidos = db.Column(db.String(100), nullable=False)
     
-    # --- Campos de Nombres Separados para RIPS ---
-    primer_nombre = db.Column(db.String(60), nullable=True)
-    segundo_nombre = db.Column(db.String(60), nullable=True)
-    primer_apellido = db.Column(db.String(60), nullable=True)
-    segundo_apellido = db.Column(db.String(60), nullable=True)
     tipo_documento = db.Column(db.String(50), nullable=True)  # ORIGINAL - Se mantiene
     documento = db.Column(db.String(50), unique=True, nullable=True)
     fecha_nacimiento = db.Column(db.Date, nullable=True)
     edad = db.Column(db.Integer, nullable=True)
+    sexo = db.Column(db.String(1), nullable=True)
     email = db.Column(db.String(100), nullable=True)
     telefono = db.Column(db.String(50), nullable=False)
     direccion = db.Column(db.String(200), nullable=True)
@@ -43,40 +39,7 @@ class Paciente(db.Model):
     odontologo = db.relationship('Usuario', back_populates='pacientes')
     evoluciones = db.relationship('Evolucion', backref='paciente', lazy='dynamic')
     
-    # ============================================================
-    # MÉTODOS HELPER PARA CONVERTIR A FORMATO RIPS
-    # ============================================================
-    
-    def get_tipo_documento_rips(self):
-        """Convierte el tipo de documento a formato RIPS (2 caracteres)"""
-        if not self.tipo_documento:
-            return None
-        
-        mapeo = {
-            'CC': 'CC', 'CEDULA': 'CC', 'CÉDULA': 'CC', 'CEDULA DE CIUDADANIA': 'CC',
-            'TI': 'TI', 'TARJETA DE IDENTIDAD': 'TI',
-            'RC': 'RC', 'REGISTRO CIVIL': 'RC',
-            'CE': 'CE', 'CEDULA DE EXTRANJERIA': 'CE',
-            'PA': 'PA', 'PASAPORTE': 'PA',
-            'MS': 'MS', 'MENOR SIN IDENTIFICACION': 'MS',
-            'AS': 'AS', 'ADULTO SIN IDENTIFICACION': 'AS'
-        }
-        
-        tipo_upper = self.tipo_documento.upper().strip()
-        return mapeo.get(tipo_upper, 'CC')  # Por defecto CC
-    
-    def get_genero_rips(self):
-        """Convierte el género a formato RIPS (1 carácter)"""
-        if not self.genero:
-            return None
-        
-        genero_upper = self.genero.upper().strip()
-        if genero_upper in ['M', 'MASCULINO', 'HOMBRE', 'MALE']:
-            return 'M'
-        elif genero_upper in ['F', 'FEMENINO', 'MUJER', 'FEMALE']:
-            return 'F'
-        return 'M'  # Por defecto
-    
+
 
 class Evolucion(db.Model):
     __tablename__ = 'evolucion'
@@ -89,23 +52,31 @@ class Evolucion(db.Model):
 
 class Cita(db.Model):
     __tablename__ = 'cita'
+    __table_args__ = (
+        db.Index('idx_cita_fecha_odontologo', 'fecha', 'odontologo_id'),
+        db.Index('idx_cita_estado', 'estado'),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
-    paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=True) 
-    paciente_nombres_str = db.Column(db.String(100), nullable=True)  # ✅ Cambiado
-    paciente_apellidos_str = db.Column(db.String(100), nullable=True)  # ✅ Cambiado
-    paciente_telefono_str = db.Column(db.String(50), nullable=True)
+    paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=True)
     fecha = db.Column(db.Date, nullable=False)
     hora = db.Column(db.Time, nullable=False)
     motivo = db.Column(db.String(255), nullable=True)
     doctor = db.Column(db.String(100), nullable=False)
-    odontologo_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)
-    odontologo = db.relationship('Usuario', backref='citas')
+    odontologo_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
     observaciones = db.Column(db.Text, nullable=True)
     estado = db.Column(db.String(20), default='pendiente', nullable=False)
     is_deleted = db.Column(db.Boolean, default=False, nullable=False, index=True)
     deleted_at = db.Column(db.DateTime, nullable=True)
-
+    
+    # Campos para pre-registro (solo si paciente_id es NULL)
+    pre_nombres = db.Column(db.String(100), nullable=True)
+    pre_apellidos = db.Column(db.String(100), nullable=True)
+    pre_telefono = db.Column(db.String(50), nullable=True)
+    
+    # Relaciones
+    paciente = db.relationship('Paciente', backref='citas', foreign_keys=[paciente_id])
+    odontologo = db.relationship('Usuario', backref='citas', foreign_keys=[odontologo_id])
 
 class Usuario(UserMixin, db.Model):
     __tablename__ = 'usuarios'

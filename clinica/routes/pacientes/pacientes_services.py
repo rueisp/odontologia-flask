@@ -9,7 +9,6 @@ from flask import request, jsonify, flash, current_app
 from sqlalchemy import or_
 from sqlalchemy.orm import load_only
 from ...extensions import db
-# IMPORTANTE: Asegúrate de importar EPS y Municipio aquí
 from ...models import Paciente, Cita, Evolucion, AuditLog
 from ...utils import allowed_file, convertir_a_fecha, extract_public_id_from_url
 from clinica.campos_activos import load_only_paciente_activo, load_only_evolucion_activo
@@ -130,7 +129,7 @@ def listar_pacientes_service(usuario, page, search_term):
     return query.order_by(Paciente.id.desc()).paginate(page=page, per_page=7, error_out=False)
 
 def obtener_paciente_service(paciente_id, usuario):
-    """Obtiene un paciente con SOLO los campos necesarios para la UI"""
+    """Obtiene un paciente con SOLO los campos necesarios, unificando nombres"""
     # 1. Buscar paciente con campos optimizados
     query = db.session.query(Paciente).options(
         load_only_paciente_activo()
@@ -163,14 +162,14 @@ def obtener_paciente_service(paciente_id, usuario):
             'fecha_formateada': fecha_formateada
         })
 
-    # 4. Construir diccionario SOLO con los campos que necesita el template
+    # 4. Construir diccionario UNIFICADO (Sin campos RIPS de nombres)
     paciente_data = {
-        # Datos básicos
+        # Datos básicos (Ahora unificados)
         'id': paciente.id,
-        'primer_nombre': paciente.primer_nombre or '',
-        'segundo_nombre': paciente.segundo_nombre or '',
-        'primer_apellido': paciente.primer_apellido or '',
-        'segundo_apellido': paciente.segundo_apellido or '',
+        'nombres': paciente.nombres or '',
+        'apellidos': paciente.apellidos or '',
+        
+        # Identificación y contacto
         'tipo_documento': paciente.tipo_documento or '',
         'documento': paciente.documento or '',
         'telefono': paciente.telefono or '',
@@ -180,7 +179,7 @@ def obtener_paciente_service(paciente_id, usuario):
         'direccion': paciente.direccion or '',
         'barrio': paciente.barrio or '',
         
-        # Información clínica (usando los campos reales de tu modelo)
+        # Información clínica (Mantenemos todos los campos)
         'alergias': paciente.alergias or '',
         'motivo_consulta': paciente.motivo_consulta or '',
         'enfermedad_actual': paciente.enfermedad_actual or '',
@@ -188,18 +187,13 @@ def obtener_paciente_service(paciente_id, usuario):
         
         # Multimedia
         'dentigrama_canvas': paciente.dentigrama_canvas,
-        'imagen_perfil_url': paciente.imagen_perfil_url,
-        
-        # Para compatibilidad con templates antiguos
-        'nombres': f"{paciente.primer_nombre} {paciente.segundo_nombre}".strip(),
-        'apellidos': f"{paciente.primer_apellido} {paciente.segundo_apellido}".strip()
+        'imagen_perfil_url': paciente.imagen_perfil_url
     }
 
-    # 5. Obtener public_id del dentigrama si existe
+    # 5. Obtener public_id del dentigrama si existe para trazos
     full_public_id_trazos = None
     if paciente.dentigrama_canvas:
         try:
-            from clinica.utils import extract_public_id_from_url
             full_public_id_trazos = extract_public_id_from_url(paciente.dentigrama_canvas)
         except:
             pass
@@ -216,19 +210,13 @@ def editar_paciente_service(paciente_id, form_data, files, usuario):
     
     try:
         # ==============================================================================
-        # 1. DATOS BÁSICOS
+        # 1. DATOS BÁSICOS (UNIFICADOS)
         # ==============================================================================
-        primer_nombre = form_data.get('primer_nombre', '').strip()
-        primer_apellido = form_data.get('primer_apellido', '').strip()
-
-        paciente.primer_nombre = primer_nombre
-        paciente.segundo_nombre = form_data.get('segundo_nombre', '').strip()
-        paciente.primer_apellido = primer_apellido
-        paciente.segundo_apellido = form_data.get('segundo_apellido', '').strip()
+        # Ahora tomamos directamente los nombres y apellidos del nuevo formulario
+        paciente.nombres = form_data.get('nombres', '').strip()
+        paciente.apellidos = form_data.get('apellidos', '').strip()
         
-        paciente.nombres = f"{paciente.primer_nombre} {paciente.segundo_nombre}".strip()
-        paciente.apellidos = f"{paciente.primer_apellido} {paciente.segundo_apellido}".strip()
-        
+        # Eliminamos la fragmentación de nombres RIPS y la concatenación manual
         paciente.tipo_documento = form_data.get('tipo_documento')
         paciente.documento = form_data.get('documento')
         paciente.email = form_data.get('email')
@@ -238,45 +226,42 @@ def editar_paciente_service(paciente_id, form_data, files, usuario):
         paciente.direccion = form_data.get('direccion')
         paciente.barrio = form_data.get('barrio')
 
-
         # ==============================================================================
-        # 3. DATOS CLÍNICOS
+        # 3. DATOS CLÍNICOS (MANTENIDOS)
         # ==============================================================================
-
         paciente.motivo_consulta = form_data.get('motivo_consulta')
         paciente.enfermedad_actual = form_data.get('enfermedad_actual')
         paciente.alergias = form_data.get('alergias')
         paciente.observaciones = form_data.get('observaciones')
 
         # ==============================================================================
-        # 4. GESTIÓN DE IMÁGENES
+        # 4. GESTIÓN DE IMAGEN DE PERFIL
         # ==============================================================================
         if form_data.get('eliminar_imagen_perfil') == 'true':
             delete_from_cloudinary(paciente.imagen_perfil_url)
             paciente.imagen_perfil_url = None
 
-
         if 'imagen_perfil' in files and files['imagen_perfil'].filename != '':
              nueva_url = upload_file_to_cloudinary(files['imagen_perfil'], "pacientes_perfil")
              if nueva_url:
-                 if paciente.imagen_perfil_url: delete_from_cloudinary(paciente.imagen_perfil_url)
+                 # Borrar la anterior antes de asignar la nueva para ahorrar espacio
+                 if paciente.imagen_perfil_url: 
+                     delete_from_cloudinary(paciente.imagen_perfil_url)
                  paciente.imagen_perfil_url = nueva_url
 
-
         # ==============================================================================
-        # 5. GESTIÓN DEL DENTIGRAMA (CORREGIDO - ERROR DE BORRADO)
+        # 5. GESTIÓN DEL DENTIGRAMA (LÓGICA ORIGINAL PROTEGIDA)
         # ==============================================================================
         raw_dentigrama = form_data.get('dentigrama_url') or form_data.get('dentigrama_canvas')
         
         if raw_dentigrama:
-            # 1. Subimos (o validamos) la imagen. Como usamos el ID del paciente, 
-            # Cloudinary SOBREESCRIBE el archivo existente.
+            # Subimos usando el ID del paciente. 
+            # Cloudinary SOBREESCRIBE el archivo existente al usar el mismo public_id.
             nueva_url = upload_base64_dentigrama(raw_dentigrama, paciente.id)
             
             if nueva_url:
-                # ⚠️ IMPORTANTE: ELIMINAMOS EL DELETE AQUÍ ⚠️
-                # No debemos borrar 'paciente.dentigrama_canvas' antiguo, porque al tener
-                # el mismo nombre público que el nuevo, borraríamos lo que acabamos de subir.
+                # ⚠️ IMPORTANTE: Mantenemos tu corrección de NO borrar 'paciente.dentigrama_canvas' 
+                # antiguo aquí para evitar eliminar por error lo que Cloudinary acaba de actualizar.
                 paciente.dentigrama_canvas = nueva_url
 
         db.session.commit()
@@ -286,8 +271,8 @@ def editar_paciente_service(paciente_id, form_data, files, usuario):
         db.session.rollback()
         current_app.logger.error(f'Error al editar paciente {paciente_id}: {e}', exc_info=True)
         return {'success': False, 'message': f'Error al actualizar el paciente: {str(e)}'}
-
     
+
 def borrar_paciente_service(paciente_id, usuario):
     query = Paciente.query.filter_by(id=paciente_id)
     if not usuario.is_admin:
@@ -336,27 +321,20 @@ def borrar_paciente_service(paciente_id, usuario):
 
 
 def crear_paciente_service(form_data, files, usuario):
-    """Crea un nuevo paciente"""
+    """Crea un nuevo paciente con nombres unificados y gestión SaaS"""
     try:
+
         # Crear nueva instancia de Paciente
         nuevo_paciente = Paciente()
-        
         # Asignar odontólogo actual
         nuevo_paciente.odontologo_id = usuario.id
         
         # ==============================================================================
-        # 1. DATOS BÁSICOS
+        # 1. DATOS BÁSICOS (UNIFICADOS)
         # ==============================================================================
-        primer_nombre = form_data.get('primer_nombre', '').strip()
-        primer_apellido = form_data.get('primer_apellido', '').strip()
-
-        nuevo_paciente.primer_nombre = primer_nombre
-        nuevo_paciente.segundo_nombre = form_data.get('segundo_nombre', '').strip()
-        nuevo_paciente.primer_apellido = primer_apellido
-        nuevo_paciente.segundo_apellido = form_data.get('segundo_apellido', '').strip()
-        
-        nuevo_paciente.nombres = f"{nuevo_paciente.primer_nombre} {nuevo_paciente.segundo_nombre}".strip()
-        nuevo_paciente.apellidos = f"{nuevo_paciente.primer_apellido} {nuevo_paciente.segundo_apellido}".strip()
+        # Ahora capturamos directamente los nombres y apellidos unificados
+        nuevo_paciente.nombres = form_data.get('primer_nombre', '').strip()
+        nuevo_paciente.apellidos = form_data.get('primer_apellido', '').strip()
         
         nuevo_paciente.tipo_documento = form_data.get('tipo_documento')
         nuevo_paciente.documento = form_data.get('documento')
@@ -368,7 +346,7 @@ def crear_paciente_service(form_data, files, usuario):
         nuevo_paciente.barrio = form_data.get('barrio')
         
         # ==============================================================================
-        # 2. INFORMACIÓN CLÍNICA SIMPLE
+        # 2. INFORMACIÓN CLÍNICA SIMPLE (MANTENIDA)
         # ==============================================================================
         nuevo_paciente.alergias = form_data.get('alergias')
         nuevo_paciente.motivo_consulta = form_data.get('motivo_consulta')
@@ -383,19 +361,20 @@ def crear_paciente_service(form_data, files, usuario):
             if nueva_url:
                 nuevo_paciente.imagen_perfil_url = nueva_url
 
-        # Guardar en base de datos
+        # Guardar en base de datos para obtener el ID necesario para el dentigrama
         db.session.add(nuevo_paciente)
         db.session.commit()
 
-                # 🔥 NUEVO: Incrementar el contador de pacientes del día para el SaaS
+        # 🔥 MANTENIDO: Incrementar el contador de pacientes del día para el SaaS
         PlanService.incrementar_contador_paciente(usuario.id)
         
         # ==============================================================================
-        # 4. DENTIGRAMA (si se envió)
+        # 4. DENTIGRAMA (MANTENIENDO TU LÓGICA DE LIMPIEZA EXPLÍCITA)
         # ==============================================================================
         raw_dentigrama = form_data.get('dentigrama_url') or form_data.get('dentigrama_canvas')
         if raw_dentigrama:
-            # Eliminar explícitamente cualquier dentigrama previo de este paciente en Cloudinary
+            # Tu lógica original: Eliminar explícitamente cualquier dentigrama previo 
+            # vinculado a este ID de paciente en Cloudinary antes de subir el nuevo.
             public_id_previo = f"dentigramas_pacientes/dentigrama_paciente_{nuevo_paciente.id}"
             try:
                 resultado = cloudinary.uploader.destroy(public_id_previo, invalidate=True)
@@ -420,4 +399,4 @@ def crear_paciente_service(form_data, files, usuario):
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f'Error al crear paciente: {e}', exc_info=True)
-        return {'success': False, 'message': f'Error al crear el paciente: {str(e)}'}    
+        return {'success': False, 'message': f'Error al crear el paciente: {str(e)}'}

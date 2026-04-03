@@ -37,18 +37,18 @@
                         <!-- Paciente no registrado: mostrar campos de texto -->
                         <div class="space-y-2">
                             <input type="text" 
-                                name="paciente_nombres_str"
-                                value="{{ form_data.paciente_nombres_str if form_data else cita.paciente_nombres_str }}"
+                                name="paciente.nombres"
+                                value="{{ form_data.pre_nombres if form_data else cita.pre_nombres }}"
                                 placeholder="Nombres del paciente"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <input type="text" 
-                                name="paciente_apellidos_str"
-                                value="{{ form_data.paciente_apellidos_str if form_data else cita.paciente_apellidos_str }}"
+                                name="paciente.apellidos"
+                                value="{{ form_data.pre_apellidos if form_data else cita.pre_apellidos }}"
                                 placeholder="Apellidos del paciente"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <input type="tel" 
-                                name="paciente_telefono_str"
-                                value="{{ form_data.paciente_telefono_str if form_data else cita.paciente_telefono_str }}"
+                                name="paciente.telefono"
+                                value="{{ form_data.pre_telefono if form_data else cita.pre_telefono }}"
                                 placeholder="Teléfono"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
