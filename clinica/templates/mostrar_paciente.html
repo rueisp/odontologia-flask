@@ -2,7 +2,7 @@
 
 {% from '_componentes_paciente.html' import render_campo, render_campo_textarea %}
 
-{% block title %}Perfil de {{ paciente.primer_nombre }} {{ paciente.primer_apellido }}{% endblock %}
+{% block title %}Perfil de {{ paciente.nombres }} {{ paciente.apellidos }}{% endblock %}
 
 {% block head_extra %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/perfil_paciente.css') }}">

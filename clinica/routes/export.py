@@ -30,9 +30,9 @@ def exportar_excel(id):
     paciente = db.session.query(Paciente).options(
         load_only(
             Paciente.id,
-            Paciente.primer_nombre,
+            Paciente.nombres,
             Paciente.segundo_nombre,
-            Paciente.primer_apellido,
+            Paciente.apellidos,
             Paciente.segundo_apellido,
             Paciente.tipo_documento,
             Paciente.documento,
@@ -56,9 +56,9 @@ def exportar_excel(id):
     # SOLO los campos que realmente existen y se usan
     campos_exportar = [
         ("ID", paciente.id),
-        ("Primer Nombre", paciente.primer_nombre),
+        ("Primer Nombre", paciente.nombres),
         ("Segundo Nombre", paciente.segundo_nombre),
-        ("Primer Apellido", paciente.primer_apellido),
+        ("Primer Apellido", paciente.apellidos),
         ("Segundo Apellido", paciente.segundo_apellido),
         ("Tipo Documento", paciente.tipo_documento),
         ("Documento", paciente.documento),
@@ -96,9 +96,9 @@ def exportar_word(id):
     paciente = db.session.query(Paciente).options(
         load_only(
             Paciente.id,
-            Paciente.primer_nombre,
+            Paciente.nombres,
             Paciente.segundo_nombre,
-            Paciente.primer_apellido,
+            Paciente.apellidos,
             Paciente.segundo_apellido,
             Paciente.tipo_documento,
             Paciente.documento,
@@ -157,8 +157,8 @@ def exportar_word(id):
     # --- DATOS DE FILIACIÓN (SOLO CAMPOS ESENCIALES) ---
     doc.add_heading('1. Datos de Filiación', level=2)
     campos_filiacion = [
-        ("Nombres", f"{paciente.primer_nombre} {paciente.segundo_nombre or ''}".strip()),
-        ("Apellidos", f"{paciente.primer_apellido} {paciente.segundo_apellido or ''}".strip()),
+        ("Nombres", f"{paciente.nombres} {paciente.segundo_nombre or ''}".strip()),
+        ("Apellidos", f"{paciente.apellidos} {paciente.segundo_apellido or ''}".strip()),
         ("Tipo Doc.", paciente.tipo_documento),
         ("Documento", paciente.documento),
         ("Fecha Nac.", paciente.fecha_nacimiento.strftime('%d/%m/%Y') if paciente.fecha_nacimiento else 'N/A'),

@@ -56,7 +56,7 @@ def editar_evolucion(id):
 
     # Para el GET, cargamos también el nombre del paciente para el template
     paciente_nombre = db.session.query(Paciente).options(
-        load_only(Paciente.primer_nombre, Paciente.primer_apellido)
+        load_only(Paciente.nombres, Paciente.apellidos)
     ).get(evolucion.paciente_id)
     
     return render_template('editar_evolucion.html', 

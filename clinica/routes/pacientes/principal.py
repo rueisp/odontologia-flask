@@ -228,7 +228,7 @@ def agregar_pago_paciente_unificado_nuevo(paciente_id):
         
         nuevo_pago = PagoUnificado(
             paciente_id=paciente_id,
-            paciente_nombre=f"{paciente.primer_nombre} {paciente.primer_apellido}",
+            paciente_nombre=f"{paciente.nombres} {paciente.apellidos}",
             fecha=datetime.strptime(request.form.get('fecha'), '%d/%m/%Y').date(),
             hora=datetime.now(colombia_tz).time(),
             descripcion=request.form.get('descripcion'),

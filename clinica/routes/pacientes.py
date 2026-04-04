@@ -233,7 +233,7 @@ def agregar_pago_paciente_unificado_nuevo(paciente_id):
         
         nuevo_pago = PagoUnificado(
             paciente_id=paciente_id,
-            paciente_nombre=f"{paciente.primer_nombre} {paciente.primer_apellido}",
+            paciente_nombre=f"{paciente.nombres} {paciente.apellidos}",
             fecha=datetime.strptime(request.form.get('fecha'), '%d/%m/%Y').date(),
             hora=datetime.now(colombia_tz).time(),
             descripcion=request.form.get('descripcion'),
@@ -395,7 +395,7 @@ def obtener_paciente_ajax(id):
         # Mapear los campos
         response_data = {
             'id': paciente_data.get('id'),
-            'nombre': f"{paciente_data.get('primer_nombre', '')} {paciente_data.get('primer_apellido', '')}".strip(),
+            'nombre': f"{paciente_data.get('nombres', '')} {paciente_data.get('apellidos', '')}".strip(),
             'documento': paciente_data.get('documento', 'No especificado'),
             'telefono': paciente_data.get('telefono', 'No especificado'),
             'edad': paciente_data.get('edad', 'No especificada'),

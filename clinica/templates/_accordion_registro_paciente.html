@@ -21,9 +21,9 @@ El 'data-bs-parent' en los botones debe apuntar al ID del primer item para mante
             
             <div class="row mb-3">
                 <div class="col-md-3">
-                    <label for="primer_nombre" class="form-label">Primer Nombre <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="primer_nombre" name="primer_nombre"
-                        value="{{ paciente.primer_nombre or '' }}" required>
+                    <label for="nombres" class="form-label">Primer Nombre <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="nombres" name="nombres"
+                        value="{{ paciente.nombres or '' }}" required>
                 </div>
                 <div class="col-md-3">
                     <label for="segundo_nombre" class="form-label">Segundo Nombre</label>
@@ -31,9 +31,9 @@ El 'data-bs-parent' en los botones debe apuntar al ID del primer item para mante
                         value="{{ paciente.segundo_nombre or '' }}">
                 </div>
                 <div class="col-md-3">
-                    <label for="primer_apellido" class="form-label">Primer Apellido <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="primer_apellido" name="primer_apellido"
-                        value="{{ paciente.primer_apellido or '' }}" required>
+                    <label for="apellidos" class="form-label">Primer Apellido <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="apellidos" name="apellidos"
+                        value="{{ paciente.apellidos or '' }}" required>
                 </div>
                 <div class="col-md-3">
                     <label for="segundo_apellido" class="form-label">Segundo Apellido</label>

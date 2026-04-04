@@ -49,7 +49,7 @@ def nuevo_pago():
             if paciente_id:
                 paciente = Paciente.query.get(paciente_id)
                 if paciente:
-                    paciente_nombre = f"{paciente.primer_nombre} {paciente.primer_apellido}"
+                    paciente_nombre = f"{paciente.nombres} {paciente.apellidos}"
                     es_rapido = False
                     # Usar el teléfono del paciente si no se proporcionó uno nuevo
                     if not telefono and paciente.telefono:
