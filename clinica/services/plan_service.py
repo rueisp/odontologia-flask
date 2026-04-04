@@ -141,41 +141,41 @@ class PlanService:
         if fecha is None:
             fecha = date.today()
         
+        # Obtener el plan activo del usuario (SIEMPRE la versión más reciente)
+        usuario_plan = UsuarioPlan.query.filter_by(
+            usuario_id=usuario_id,
+            estado='activo'
+        ).first()
+        
+        if usuario_plan:
+            plan = Plan.query.get(usuario_plan.plan_id)
+            limite_segun_plan = plan.limite_pacientes_diario if plan else 10
+        else:
+            limite_segun_plan = 10
+        
         # Buscar límite diario existente
         limite_diario = LimiteDiario.query.filter_by(
             usuario_id=usuario_id, 
             fecha=fecha
         ).first()
         
-        # Si no existe, crearlo
+        # Si no existe, crearlo con el límite del plan actual
         if limite_diario is None:
-            # Obtener el plan activo del usuario
-            usuario_plan = UsuarioPlan.query.filter_by(
-                usuario_id=usuario_id,
-                estado='activo'
-            ).first()
-            
-            if usuario_plan:
-                plan = Plan.query.get(usuario_plan.plan_id)
-                limite_actual = plan.limite_pacientes_diario if plan else 10
-                es_trial = usuario_plan.es_trial
-            else:
-                # Si no tiene plan, usar límite por defecto (10)
-                limite_actual = 10
-                es_trial = False
-            
-            # Crear nuevo registro de límite diario
             limite_diario = LimiteDiario(
                 usuario_id=usuario_id,
                 fecha=fecha,
                 contador_pacientes=0,
-                limite_actual=limite_actual,
-                es_dia_trial=es_trial
+                limite_actual=limite_segun_plan,  # Usar límite del plan
+                es_dia_trial=(plan.nombre == 'trial' if usuario_plan else False)
             )
             db.session.add(limite_diario)
             db.session.commit()
+        else:
+            # 👈 NUEVO: Si el límite actual es diferente al del plan, actualizarlo
+            if limite_diario.limite_actual != limite_segun_plan:
+                limite_diario.limite_actual = limite_segun_plan
+                db.session.commit()
         
-        # Devolver diccionario con los datos necesarios
         return {
             'limite_diario': limite_diario,
             'puede_crear': limite_diario.contador_pacientes < limite_diario.limite_actual,
@@ -184,6 +184,7 @@ class PlanService:
             'limite_restante': limite_diario.limite_actual - limite_diario.contador_pacientes
         }
     
+        
     @staticmethod
     def incrementar_contador_paciente(usuario_id):
         """Incrementar contador de pacientes creados hoy"""
@@ -312,12 +313,9 @@ class PlanService:
         db.session.commit()
         return len(expirados)
     
+    
     @staticmethod
     def activar_plan(usuario_id, plan_id):
-        """
-        Activa un plan para un usuario (usualmente tras verificar pago manual).
-        Establece 30 días de vigencia a partir de hoy.
-        """
         from clinica.models import UsuarioPlan, Plan
         from clinica import db
         from datetime import datetime, timedelta
@@ -325,28 +323,37 @@ class PlanService:
 
         colombia_tz = pytz.timezone('America/Bogota')
         ahora = datetime.now(colombia_tz)
-
-        # 1. Desactivar cualquier plan anterior que esté 'activo' o 'trial'
+        
+        # 👈 Usar solo fecha, sin hora
+        hoy = ahora.date()
+        
+        # 1. Desactivar cualquier plan anterior
         UsuarioPlan.query.filter_by(usuario_id=usuario_id, estado='activo').update({'estado': 'expirado'})
         
-        # 2. Obtener datos del nuevo plan
         plan = Plan.query.get(plan_id)
         if not plan:
             return False, "Plan no encontrado"
-
-        # 3. Crear el nuevo registro de UsuarioPlan
-        # Si es el plan 'trial', son 7 días. Si es 'basico' o 'pro', son 30 días.
-        dias_vigencia = 7 if plan.nombre == 'trial' else 30
+        
+        # 👈 Calcular días exactos: 7 para trial, 30 para otros
+        if plan.nombre == 'trial':
+            dias_vigencia = 7
+            es_trial = True
+        else:
+            dias_vigencia = 30
+            es_trial = False
+        
+        # 👈 Fecha fin = hoy + días_vigencia (sin horas)
+        fecha_fin = hoy + timedelta(days=dias_vigencia)
         
         nuevo_usuario_plan = UsuarioPlan(
             usuario_id=usuario_id,
             plan_id=plan_id,
             estado='activo',
-            es_trial=(plan.nombre == 'trial'),
-            fecha_inicio=ahora,
-            fecha_fin=ahora + timedelta(days=dias_vigencia)
+            es_trial=es_trial,
+            fecha_inicio=datetime.now(colombia_tz),
+            fecha_fin=datetime.combine(fecha_fin, datetime.min.time())
         )
-
+        
         try:
             db.session.add(nuevo_usuario_plan)
             db.session.commit()
