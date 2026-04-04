@@ -2,10 +2,15 @@ FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Instalar Python 3.10, pip y wkhtmltopdf
 RUN apt-get update && apt-get install -y \
     python3.10 \
     python3-pip \
+    python3-dev \
+    build-essential \
+    pkg-config \
+    libcairo2-dev \
+    libjpeg-dev \
+    libpng-dev \
     wkhtmltopdf \
     xvfb \
     libxrender1 \
@@ -17,26 +22,24 @@ RUN apt-get update && apt-get install -y \
     && ln -sf /usr/bin/python3.10 /usr/bin/python \
     && ln -sf /usr/bin/pip3 /usr/bin/pip
 
+RUN pip install meson ninja
+
 WORKDIR /app
 
-# Copiamos primero los requerimientos para instalar librerías
+# 👈 CREAR CARPETA LOGS
+RUN mkdir -p logs
+
 COPY requirements.txt .
 
-# Instalamos las librerías necesarias
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiamos el resto de tu código al servidor
 COPY . .
 
-# --- NUEVA LÍNEA: Le dice a Flask que tu archivo principal es run.py ---
 ENV FLASK_APP=run.py
 
-# Copiar entrypoint.sh y dar permisos de ejecución
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Informamos que el contenedor usará el puerto 8080
 EXPOSE 8080
 
-# Usar entrypoint.sh en lugar de CMD directo
 ENTRYPOINT ["/entrypoint.sh"]
