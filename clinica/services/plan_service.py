@@ -298,6 +298,9 @@ class PlanService:
     @staticmethod
     def verificar_expiraciones():
         """Verificar y desactivar planes expirados"""
+        import time
+        inicio = time.time()
+        
         ahora = datetime.utcnow()
         
         # Buscar planes activos con fecha_fin pasada
@@ -311,6 +314,8 @@ class PlanService:
             print(f"Plan {usuario_plan.plan.nombre} expirado para usuario {usuario_plan.usuario_id}")
         
         db.session.commit()
+        
+        print(f"⏱️ verificar_expiraciones() tomó: {time.time() - inicio:.3f} segundos")
         return len(expirados)
     
     

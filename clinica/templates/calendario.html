@@ -248,29 +248,13 @@
 
                             <!-- INDICADORES DE CITAS (Píldoras o Puntos) -->
                             {% if dia.citas %}
-                                <div class="w-full px-1 flex flex-col gap-1 items-center z-20"> <!-- Quitamos pointer-events-none -->
-                                    
-                                    <!-- Opción A: Si hay pocas citas (1 o 2), mostrar píldoras con nombre -->
-                                    {% if dia.citas|length <= 2 %}
-                                        {% for cita in dia.citas %}
-                                            <!-- Enlace directo a la vista diaria -->
-                                            <a href="{{ url_for('calendario.vista_diaria', fecha=dia.fecha.strftime('%Y-%m-%d')) }}" 
-                                            class="relative w-full block">
-                                                <div class="event-pill">
-                                                    {{ cita.hora }} {{ cita.paciente_nombre_completo.split()[0] }}
-                                                </div>
-                                            </a>
-                                        {% endfor %}
-                                    
-                                    <!-- Opción B: Si hay muchas citas, mostrar puntos o contador -->
-                                    {% else %}
-                                        <a href="{{ url_for('calendario.vista_diaria', fecha=dia.fecha.strftime('%Y-%m-%d')) }}" 
-                                        class="relative w-full block">
-                                            <div class="event-pill bg-gray-100 text-gray-600 border-l-4 border-gray-400 text-center font-bold">
-                                                {{ dia.citas|length }} Citas
-                                            </div>
-                                        </a>
-                                    {% endif %}
+                                <div class="w-full px-1 flex flex-col gap-1 items-center z-20">
+                                    <a href="{{ url_for('calendario.vista_diaria', fecha=dia.fecha.strftime('%Y-%m-%d')) }}" 
+                                    class="relative w-full block">
+                                        <div class="event-pill bg-gray-100 text-gray-600 border-l-4 border-gray-400 text-center font-bold">
+                                            {{ dia.citas|length }} cita{% if dia.citas|length != 1 %}s{% endif %}
+                                        </div>
+                                    </a>
                                 </div>
                             {% endif %}
 

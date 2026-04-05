@@ -33,6 +33,7 @@ from clinica.routes.pagos import pagos_bp
 from .routes.admin import admin_bp
 
 def create_app():
+ 
     app = Flask(__name__, instance_relative_config=True)
 
     # --- CONFIGURACIÓN ---
@@ -43,13 +44,7 @@ def create_app():
         DEBUG=os.environ.get('FLASK_DEBUG') == '1'
     )
 
-    # Configuración de pool de conexiones
-    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-        'pool_size': 5,
-        'pool_recycle': 280,
-        'pool_pre_ping': True,
-        'max_overflow': 10,
-    }
+
 
     app.config['CACHE_TYPE'] = 'SimpleCache'
     app.config['CACHE_DEFAULT_TIMEOUT'] = 300
@@ -127,12 +122,12 @@ def create_app():
 
         # 👈 AL FINAL, ANTES DE `return app`
     # Verificar expiraciones al iniciar
-    from clinica.services.plan_service import PlanService
-    with app.app_context():
-        expirados = PlanService.verificar_expiraciones()
-        if expirados > 0:
-            print(f"Se desactivaron {expirados} planes expirados")
-    
+    # from clinica.services.plan_service import PlanService
+    # with app.app_context():
+    #     expirados = PlanService.verificar_expiraciones()
+    #     if expirados > 0:
+    #         print(f"Se desactivaron {expirados} planes expirados")
+
     return app
 
 app = create_app()

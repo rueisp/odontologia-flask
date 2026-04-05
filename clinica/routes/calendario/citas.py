@@ -116,7 +116,8 @@ def registrar_cita():
             cita_existente = Cita.query.filter(
                 Cita.fecha == fecha_obj,
                 Cita.hora == hora_obj,
-                Cita.is_deleted == False
+                Cita.is_deleted == False,
+                Cita.odontologo_id == current_user.id  # 👈 Agregar esta línea
             ).first()
 
             if cita_existente:

@@ -26,7 +26,7 @@ class PagoService:
             plan_id=plan_id,
             plan_nombre=plan.nombre,
             monto_cop=monto_cop,
-            estado='PENDIENTE',
+            estado='pendiente',
         )
 
         # 4. Guardar en la base de datos

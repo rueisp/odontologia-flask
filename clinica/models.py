@@ -242,30 +242,18 @@ class Pago(db.Model):
 
 
 class SolicitudPago(db.Model):
-    """Registro de solicitudes de pago manual (para Bancolombia/Nequi)"""
-    __tablename__ = 'solicitudes_pago_manual' # Un nombre diferente para evitar confusión
+    __tablename__ = 'solicitudes_pago_manual'
 
     id = db.Column(db.Integer, primary_key=True)
-    
-    # Claves foráneas y datos del usuario
     user_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
     plan_id = db.Column(db.Integer, db.ForeignKey('planes.id'), nullable=False)
-    
-    # Información de la solicitud
     plan_nombre = db.Column(db.String(80), nullable=False)
     monto_cop = db.Column(db.Integer, nullable=False)
-    
-    # Estado del pago
-    estado = db.Column(db.String(20), default='PENDIENTE', nullable=False) # PENDIENTE, VERIFICADO, CANCELADO
-    
-    # Fechas
+    estado = db.Column(db.String(20), default='PENDIENTE', nullable=False)
     fecha_solicitud = db.Column(db.DateTime, default=db.func.now())
-    fecha_verificacion = db.Column(db.DateTime, nullable=True) # Cuando verificas la transferencia
-    
-    # Archivo o URL de comprobante (opcional)
+    fecha_verificacion = db.Column(db.DateTime, nullable=True)
     comprobante_url = db.Column(db.String(255), nullable=True)
 
-    # Relación (opcional, para acceder al usuario)
     usuario = db.relationship('Usuario', backref='solicitudes_pago')
 
     def __repr__(self):

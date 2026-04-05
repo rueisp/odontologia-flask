@@ -64,84 +64,57 @@
     font-weight: bold;
     /* position: relative; ya está en .day general */
 }
-
-/* NUEVOS ESTILOS PARA EL INDICADOR DE CITAS Y EL POPUP */
-
-.appointment-indicator {
-    font-size: 0.8em; /* Más pequeño */
-    color: #555;
-    margin-top: auto; /* Empuja el indicador y el botón hacia abajo si el day-header está arriba */
-    padding-top: 5px; /* Espacio antes del botón */
-    text-align: left; /* O center si prefieres */
-}
-
-.toggle-appointments-popup {
-    font-size: 0.75em; /* Aún más pequeño para el botón */
-    color: #007bff; /* Azul estándar para enlaces */
-    background: none;
-    border: none;
-    padding: 2px 0; /* Menos padding vertical */
-    margin-top: 2px; /* Espacio reducido después del indicador */
-    cursor: pointer;
-    text-decoration: underline;
-    display: inline-block; /* Para que no ocupe todo el ancho */
-    align-self: flex-start; /* Alinea el botón a la izquierda */
-}
-
-.toggle-appointments-popup:hover {
-    color: #0056b3; /* Azul más oscuro al pasar el mouse */
-}
-
+/* ESTILOS DEL POPUP */
 .appointments-popup {
-    display: none; /* Inicialmente oculto, controlado por JS */
+    display: none;
     position: absolute;
-    top: calc(100% + 5px); /* Un poco debajo del cuadro del día */
+    top: calc(100% + 5px);
     left: 0;
-    z-index: 100; /* Alto z-index para estar por encima de otros elementos */
+    z-index: 100;
     background-color: white;
     border: 1px solid #ccc;
-    border-radius: 8px; /* Bordes redondeados para el popup */
+    border-radius: 8px;
     padding: 12px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.15);
-    min-width: 220px; /* Ancho mínimo del popup */
-    max-width: 280px; /* Ancho máximo del popup */
-    max-height: 170px; /* Altura máxima antes de que aparezca el scroll */
-    overflow-y: auto;  /* Scroll vertical si el contenido excede max-height */
-    text-align: left; /* Alineación del texto a la izquierda */
+    min-width: 220px;
+    max-width: 280px;
+    max-height: 170px;
+    overflow-y: auto;
+    text-align: left;
 }
 
 .appointments-popup h4 {
-    font-size: 0.9em; /* Tamaño del título dentro del popup */
-    font-weight: 600; /* Semi-bold */
+    font-size: 0.9em;
+    font-weight: 600;
     color: #333;
     margin-top: 0;
     margin-bottom: 8px;
     padding-bottom: 5px;
-    border-bottom: 1px solid #eee; /* Línea divisoria sutil */
+    border-bottom: 1px solid #eee;
 }
 
 .appointment-detail {
-    font-size: 0.8em; /* Tamaño del texto de cada cita */
+    font-size: 0.8em;
     color: #444;
-    padding: 4px 0; /* Espaciado vertical para cada cita */
+    padding: 4px 0;
     line-height: 1.4;
 }
 
 .appointment-detail:not(:last-child) {
-    margin-bottom: 3px; /* Espacio entre detalles de citas */
+    margin-bottom: 3px;
 }
 
 .close-popup {
-    display: block; /* Para que ocupe su propia línea */
-    margin-top: 10px; /* Espacio arriba del botón cerrar */
+    display: block;
+    margin-top: 10px;
     padding: 4px 8px;
     font-size: 0.75em;
-    color: #dc3545; /* Rojo para cerrar/cancelar */
+    color: #dc3545;
     background-color: #f8f9fa;
     border: 1px solid #ddd;
     border-radius: 4px;
     cursor: pointer;
-    float: right; /* Alinea el botón cerrar a la derecha */
+    float: right;
 }
 
 .close-popup:hover {
@@ -149,17 +122,80 @@
     color: #c82333;
 }
 
-/* Ajustes para .day.today para que su texto del header sea más visible */
 .day.today .day-header {
-    color: #1a1a1b; /* Un color oscuro para el texto del header en el día de hoy */
+    color: #1a1a1b;
 }
 
-/* Ajustes si el popup se sale de la pantalla (JS también ayuda con esto) */
-/* Si el popup se va a la derecha y se sale, el JS intentará poner right:0 */
-.appointments-popup[style*="right: 0px;"] { /* Si el estilo inline tiene right:0 */
-    left: auto; /* Asegura que 'left' no interfiera */
-}
-.appointments-popup[style*="right: 0%;"] { /* Cubriendo caso con % también */
+.appointments-popup[style*="right: 0px;"],
+.appointments-popup[style*="right: 0%;"] {
     left: auto;
 }
 
+/* ===== RESPONSIVE PARA MÓVIL ===== */
+@media (max-width: 768px) {
+    .calendar-grid {
+        gap: 6px;
+    }
+    
+    .day {
+        padding: 6px 4px;
+        min-height: 80px;
+    }
+    
+    .day-header {
+        font-size: 0.85rem;
+        margin-bottom: 4px;
+    }
+    
+    .appointments-popup {
+        min-width: 180px;
+        max-width: 240px;
+        max-height: 150px;
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 500px) {
+    .calendar-grid {
+        gap: 1px;
+    }
+    
+    .day {
+        padding: 4px 2px;
+        min-height: 65px;
+    }
+}
+
+/* ===== INDICADOR DE CITAS (UNA SOLA LÍNEA) ===== */
+.appointment-indicator {
+    font-size: 11px;
+    color: #555;
+    margin-top: 4px;
+    text-align: center;
+    background: #f0f0f0;
+    padding: 4px 6px;
+    border-radius: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    width: 100%;
+    cursor: pointer;
+}
+
+/* NÚMERO DEL DÍA */
+.day-header {
+    font-weight: 600;
+    font-size: 16px;
+    color: #333;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+/* PANTALLAS MUY PEQUEÑAS */
+@media (max-width: 400px) {
+    .appointment-indicator {
+        font-size: 9px;
+        padding: 3px 4px;
+    }
+}

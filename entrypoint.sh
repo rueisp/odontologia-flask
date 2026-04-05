@@ -1,9 +1,7 @@
 #!/bin/sh
-# Ejecutar migraciones
-echo "Ejecutando migraciones de base de datos..."
-flask db upgrade
+# NO ejecutar migraciones aquí
+# flask db upgrade
 
-# Iniciar Gunicorn con configuración optimizada
 echo "Iniciando Gunicorn..."
 exec gunicorn --bind :8080 \
               --workers 1 \

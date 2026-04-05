@@ -10,7 +10,8 @@ from sqlalchemy import func, extract
 import locale
 from clinica.decorators.limites import verificar_suscripcion_activa
 from sqlalchemy.orm import load_only
-from clinica.extensions import cache 
+from clinica.extensions import cache
+from sqlalchemy import text 
 
 
 
@@ -126,6 +127,15 @@ def dashboard():
         Cita.is_deleted == False,
         Cita.odontologo_id == current_user.id
     ).order_by(Cita.hora).all()
+
+
+    # 👇 PEGA LOS PRINTS AQUÍ 👇
+    print("=== DEBUG CITAS MAÑANA ===")
+    print(f"Fecha mañana: {manana_date}")
+    print(f"Citas encontradas: {len(citas_manana)}")
+    for c in citas_manana:
+        print(f"Cita ID: {c.id}, Paciente ID: {c.paciente_id}, pre_nombres: {c.pre_nombres}, pre_apellidos: {c.pre_apellidos}")
+
     
     # Procesar citas de mañana
     citas_manana_procesadas = []
@@ -248,6 +258,7 @@ def login():
         ).first()
         
         if usuario_encontrado and usuario_encontrado.check_password(contrasena):
+
             login_user(usuario_encontrado, remember=request.form.get('remember_me') is not None)
             flash('Has iniciado sesión correctamente.', 'success')
             next_page = request.args.get('next')
@@ -421,7 +432,7 @@ def health_check():
     """Endpoint para health checks de Cloud Run"""
     try:
         # Verificar conexión a base de datos
-        db.session.execute('SELECT 1')
+        db.session.execute(text('SELECT 1'))  # 👈 CAMBIA ESTO
         db_status = 'ok'
     except Exception as e:
         db_status = 'error'
