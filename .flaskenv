@@ -1,2 +1,0 @@
-FLASK_APP=clinica:create_app
-FLASK_DEBUG=1

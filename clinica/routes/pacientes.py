@@ -19,7 +19,7 @@ from clinica.campos_activos import load_only_paciente_activo
 import pytz
 # Importar servicios
 # Importar servicios de pacientes
-from .pacientes_services import (
+from .pacientes.pacientes_services import (
     listar_pacientes_service,
     obtener_paciente_service,
     crear_paciente_service,
@@ -32,7 +32,7 @@ from clinica.decorators.limites import (
 )
 
 # Importar servicios de evoluciones
-from .pacientes_evoluciones import agregar_evolucion_service
+from .pacientes.pacientes_evoluciones import agregar_evolucion_service
 from clinica.decorators.limites import solo_lectura_si_expirado
 
 pacientes_bp = Blueprint('pacientes', __name__, url_prefix='/pacientes')
@@ -233,7 +233,7 @@ def agregar_pago_paciente_unificado_nuevo(paciente_id):
         
         nuevo_pago = PagoUnificado(
             paciente_id=paciente_id,
-            paciente_nombre=f"{paciente.nombres} {paciente.apellidos}",
+            paciente_nombre=f"{paciente.primer_nombre} {paciente.primer_apellido}",
             fecha=datetime.strptime(request.form.get('fecha'), '%d/%m/%Y').date(),
             hora=datetime.now(colombia_tz).time(),
             descripcion=request.form.get('descripcion'),
@@ -348,7 +348,7 @@ def borrar_pago_paciente(pago_id):
 def obtener_paciente_ajax(id):
     """Endpoint JSON para el panel derecho del dashboard"""
     try:
-        from .pacientes_services import obtener_paciente_service
+        from .pacientes.pacientes_services import obtener_paciente_service
         from clinica.models import Cita
         from datetime import date, datetime
         from sqlalchemy import or_
@@ -395,7 +395,7 @@ def obtener_paciente_ajax(id):
         # Mapear los campos
         response_data = {
             'id': paciente_data.get('id'),
-            'nombre': f"{paciente_data.get('nombres', '')} {paciente_data.get('apellidos', '')}".strip(),
+            'nombre': f"{paciente_data.get('primer_nombre', '')} {paciente_data.get('primer_apellido', '')}".strip(),
             'documento': paciente_data.get('documento', 'No especificado'),
             'telefono': paciente_data.get('telefono', 'No especificado'),
             'edad': paciente_data.get('edad', 'No especificada'),
