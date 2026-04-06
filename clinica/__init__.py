@@ -60,6 +60,7 @@ def create_app():
     migrate.init_app(app, db)
     login_manager.init_app(app)
     cache.init_app(app)
+    
 
         # ============================================================
     # 👇 LOGGING ESTRUCTURADO - PEGA AQUÍ 👇

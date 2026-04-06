@@ -131,8 +131,9 @@ def listar_pacientes_service(usuario, page, search_term):
 def obtener_paciente_service(paciente_id, usuario):
     """Obtiene un paciente con SOLO los campos necesarios, unificando nombres"""
     # 1. Buscar paciente con campos optimizados
-    query = db.session.query(Paciente).filter_by(id=paciente_id, is_deleted=False)
-    # .options(load_only_paciente_activo())  # ← Comentado temporalmente
+    query = db.session.query(Paciente).options(
+        load_only_paciente_activo()
+    ).filter_by(id=paciente_id, is_deleted=False)
     
     if not usuario.is_admin:
         query = query.filter_by(odontologo_id=usuario.id)
